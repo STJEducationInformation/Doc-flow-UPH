@@ -349,7 +349,7 @@
           <button class="btn btn-outline-secondary" onclick="markPrintedRange(false)"><i class="bi bi-arrow-counterclockwise me-1"></i>ล้างเครื่องหมายพิมพ์แล้ว</button>
         </div>
         <div class="alert alert-info mt-3 py-2 small mb-0">
-          <i class="bi bi-info-circle me-1"></i>บาร์โค้ดเป็นแบบ <b>Code 128 (1 มิติ)</b> ไม่มีตัวหนังสือในแถบ รองรับเครื่องสแกนเลเซอร์ Symbol &middot; ป้าย “พิมพ์แล้ว” เป็นตัวช่วยจำบนจอ ไม่ถูกพิมพ์ลงสติกเกอร์
+          <i class="bi bi-info-circle me-1"></i>บาร์โค้ดเป็นแบบ <b>Code 128</b> เข้ารหัสเป็น <b>ตัวอักษร</b> เพื่อให้สแกนได้ถูกต้องแม้แป้นพิมพ์เป็นภาษาไทย (0001 = aaad) &middot; เลขใต้บาร์โค้ดคือเลขแฟ้มสำหรับคนอ่าน &middot; ป้าย “พิมพ์แล้ว” แสดงบนจอเท่านั้น ไม่ถูกพิมพ์ลงสติกเกอร์
         </div>
         <div id="bcInfo" class="mt-3"></div>
         <div id="printArea"><div id="bcGrid" class="row g-2 mt-2"></div></div>
@@ -480,6 +480,38 @@ function api(action, params){
 
 /* ---------- ตัวช่วยทั่วไป ---------- */
 function pad4(c){ const n=parseInt(String(c).replace(/[^0-9]/g,''),10); return isNaN(n)?String(c):String(n).padStart(4,'0'); }
+
+/* ================= ระบบบาร์โค้ดตัวอักษร (กันปัญหาแป้นพิมพ์ภาษาไทย) =================
+   เข้ารหัสเลขแฟ้มเป็นตัวอักษร:  0=a 1=d 2=f 3=i 4=l 5=m 6=o 7=p 8=r 9=s
+   ตัวอักษรเหล่านี้แมปเป็น "พยัญชนะไทยเดี่ยว" (ฟ ก ด ร ส ท น ย พ ห) ที่สแกนติดครบ ไม่หาย
+   ตอนอ่าน รองรับทั้ง: ตัวอักษรอังกฤษ / พยัญชนะไทย / ตัวเลขล้วน / บาร์โค้ดเลขแบบเก่า */
+const ENC_D2L = {'0':'a','1':'d','2':'f','3':'i','4':'l','5':'m','6':'o','7':'p','8':'r','9':'s'};
+const DEC_L2D = {a:'0',d:'1',f:'2',i:'3',l:'4',m:'5',o:'6',p:'7',r:'8',s:'9'};
+// พยัญชนะไทยที่ได้จากการพิมพ์ a d f i l m o p r s ในโหมดไทย (Kedmanee) -> เลข
+const DEC_TH2D = {'\u0E1F':'0','\u0E01':'1','\u0E14':'2','\u0E23':'3','\u0E2A':'4','\u0E17':'5','\u0E19':'6','\u0E22':'7','\u0E1E':'8','\u0E2B':'9'}; // ฟ ก ด ร ส ท น ย พ ห
+// บาร์โค้ด "ตัวเลข" แบบเก่า ถ้าสแกนในโหมดไทย (จ / - ภ ถ ...) -> เลข (คงไว้เพื่อความเข้ากันได้)
+const DEC_OLDTH = {'\u0E08':'0','\u0E45':'1','/':'2','-':'3','\u0E20':'4','\u0E16':'5','\u0E38':'6','\u0E36':'7','\u0E04':'8','\u0E15':'9'};
+
+function encodeFolderBarcode(code){ return pad4(code).split('').map(d=>ENC_D2L[d]||d).join(''); } // 0001 -> aaad
+function looksThai(s){ return /[\u0E00-\u0E7F]/.test(s); }
+const THAI_SCAN_WARN='อ่านบาร์โค้ดไม่ได้ (อาจเป็นบาร์โค้ดเลขแบบเก่าที่สแกนในโหมดไทย)\nกรุณาพิมพ์บาร์โค้ดชุดใหม่ (แบบตัวอักษร) มาติดแฟ้ม หรือสลับแป้นพิมพ์เป็นภาษาอังกฤษ (EN) แล้วสแกนใหม่';
+
+/* ถอดรหัสสิ่งที่สแกน/พิมพ์มา -> {code, warn} */
+function normalizeScan(raw){
+  const t=(raw||'').trim();
+  if(!t) return {code:'', warn:null};
+  const low=t.toLowerCase();
+  if(/^[adfilmoprs]+$/.test(low)) return {code:[...low].map(c=>DEC_L2D[c]).join(''), warn:null};                 // ใหม่ (อังกฤษ)
+  if([...t].every(c=>DEC_TH2D[c]!==undefined)) return {code:[...t].map(c=>DEC_TH2D[c]).join(''), warn:null, converted:true}; // ใหม่ (ไทย)
+  if(/^\d+$/.test(t)) return {code:t, warn:null};                                                                // เลขล้วน
+  if(looksThai(t)){
+    const conv=[...t].map(c=>DEC_OLDTH[c]!==undefined?DEC_OLDTH[c]:c).join('');
+    if(/^\d+$/.test(conv)) return {code:conv, warn:null, converted:true};                                        // เลขเก่าโหมดไทย
+    return {code:null, warn:THAI_SCAN_WARN};
+  }
+  const d=t.replace(/[^0-9]/g,'');
+  return d ? {code:d, warn:null} : {code:null, warn:THAI_SCAN_WARN};
+}
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 function cfg(k){ return (CONFIG && CONFIG[k]!=null && CONFIG[k]!=='') ? CONFIG[k] : DEFAULTS[k]; }
 function stationName(key){ if(!key) return ''; const m={S1:1,S2:2,S3:3,S4:4}; return m[key]?cfg('station'+m[key]):key; }
@@ -763,8 +795,10 @@ async function regScan(code){
   const raw=(code||'').trim();
   regScanInput.value='';
   if(!raw) return;
-  const fc=pad4(raw);
   const info=document.getElementById('regScanInfo');
+  const norm=normalizeScan(raw);
+  if(norm.warn){ beep(false); toast(info,'warning',norm.warn); regScanInput.focus(); return; }
+  const fc=pad4(norm.code);
   if(!ALL_FOLDERS.length){ try{ const d=await api('getFolders'); ALL_FOLDERS=d.folders||[]; }catch(e){} }
   const f=ALL_FOLDERS.find(x=>pad4(x.folderCode)===fc);
   if(!f){ beep(false); toast(info,'danger','ไม่พบแฟ้มรหัส '+fc+' ในระบบ (ยังไม่ได้สร้างแฟ้มนี้?)'); regScanInput.focus(); return; }
@@ -910,8 +944,16 @@ async function doScan(code){
   if(!raw) return;
   const station=document.getElementById('scanStation').value;   // คีย์ S1-S4
   const direction=document.querySelector('input[name="dir"]:checked').value;
-  const folderCode=pad4(raw);
   const el=document.getElementById('scanResult');
+  const norm=normalizeScan(raw);
+  if(norm.warn){
+    beep(false);
+    showScanModal('สแกนในโหมดภาษาไทย', norm.warn, true);
+    document.getElementById('scanEditWrap').style.display='none';
+    sessionLog.unshift({time:new Date(), folderCode:raw, station, direction, ok:false, msg:'โหมดภาษาไทย'});
+    renderSessionLog(); return;
+  }
+  const folderCode=pad4(norm.code);
   let d;
   try{ d=await api('scan',{folderCode, station, direction}); }
   catch(err){
@@ -1004,7 +1046,7 @@ async function renderBarcodes(){
     const col=document.createElement('div'); col.className='col-6 col-md-3 col-lg-2';
     col.innerHTML=`<div class="bc-item ${isP?'bc-printed':''}"><svg id="bc-${code}"></svg>${showNum?`<div class="bc-code">${code}</div>`:''}${isP?'<div class="small text-warning-emphasis d-print-none"><i class="bi bi-check2 me-1"></i>พิมพ์แล้ว</div>':''}</div>`;
     grid.appendChild(col);
-    JsBarcode(`#bc-${code}`, code, {format:'CODE128', displayValue:false, width:2, height:55, margin:6});
+    JsBarcode(`#bc-${code}`, encodeFolderBarcode(code), {format:'CODE128', displayValue:false, width:2, height:55, margin:6});
   });
 }
 async function markPrintedRange(printed){
@@ -1060,7 +1102,10 @@ async function openFolder(code){
 }
 /* ค้นหา/กรองหลายเงื่อนไข */
 async function doTrack(){
-  const kw=(document.getElementById('trackInput').value||'').trim();
+  let kw=(document.getElementById('trackInput').value||'').trim();
+  // ถ้าเป็นการยิงบาร์โค้ดในโหมดไทยที่แปลงได้เป็นเลขล้วน ให้แปลงก่อน (ไม่แตะการค้นหาคำไทยทั่วไป)
+  // ถ้าเป็นการยิงบาร์โค้ด (ตัวอักษร/พยัญชนะไทย/เลขเก่าโหมดไทย) ให้ถอดเป็นเลขก่อน — ไม่แตะการค้นหาคำไทยทั่วไป
+  { const n=normalizeScan(kw); if(n.code && /^\d{3,4}$/.test(n.code) && n.code!==kw) kw=n.code; }
   const dept=document.getElementById('trackDept').value;
   const date=document.getElementById('trackDate').value;
   const listEl=document.getElementById('trackList');
