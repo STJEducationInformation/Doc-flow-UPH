@@ -110,6 +110,7 @@
   .step.next{ background:#fff6e6; color:#8a5a00; border:2px solid #f5b301; font-weight:700; box-shadow:0 6px 16px -8px rgba(245,179,1,.6); }
 
   .bc-item{ border:1px dashed var(--line); border-radius:12px; padding:10px; text-align:center; background:#fff; }
+  .bc-item.bc-printed{ border-color:#f5b301; background:#fffdf5; }
   .dwell-box{ border:1px solid var(--line); border-radius:12px; padding:12px 14px; background:#f7f9fa; height:100%; }
   .dwell-box.dwell-now{ background:#fff6e6; border-color:#f5b301; box-shadow:0 6px 16px -10px rgba(245,179,1,.7); }
   .dwell-box.dwell-now .fw-bold{ color:#8a5a00; }
@@ -321,19 +322,27 @@
       <div class="card-header"><i class="bi bi-upc me-1"></i>พิมพ์บาร์โค้ดติดแฟ้ม (Code 128)</div>
       <div class="card-body">
         <div class="row g-2 align-items-end">
-          <div class="col-6 col-md-2"><label class="form-label">จากแฟ้มที่</label><input id="bcFrom" type="number" min="1" max="200" value="1" class="form-control"></div>
-          <div class="col-6 col-md-2"><label class="form-label">ถึงแฟ้มที่</label><input id="bcTo" type="number" min="1" max="200" value="20" class="form-control"></div>
-          <div class="col-12 col-md-4"><div class="form-check mt-4">
-            <input class="form-check-input" type="checkbox" id="bcShowNum">
-            <label class="form-check-label" for="bcShowNum">แสดงเลขกำกับใต้บาร์โค้ด (ค่าเริ่มต้น: ไม่แสดง)</label></div></div>
-          <div class="col-12 col-md-4 d-flex gap-2">
-            <button class="btn btn-brand w-100" onclick="renderBarcodes()"><i class="bi bi-upc me-1"></i>สร้างบาร์โค้ด</button>
-            <button class="btn btn-outline-brand w-100" onclick="window.print()"><i class="bi bi-printer me-1"></i>พิมพ์</button>
+          <div class="col-6 col-md-2"><label class="form-label">จากแฟ้มที่</label><input id="bcFrom" type="number" min="1" max="9999" value="1" class="form-control"></div>
+          <div class="col-6 col-md-2"><label class="form-label">ถึงแฟ้มที่</label><input id="bcTo" type="number" min="1" max="9999" value="20" class="form-control"></div>
+          <div class="col-12 col-md-8 d-flex flex-wrap gap-3 mt-2">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="bcShowNum">
+              <label class="form-check-label" for="bcShowNum">แสดงเลขกำกับใต้บาร์โค้ด</label></div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="bcOnlyUnprinted">
+              <label class="form-check-label" for="bcOnlyUnprinted">สร้างเฉพาะแฟ้มที่ยังไม่เคยพิมพ์</label></div>
           </div>
         </div>
-        <div class="alert alert-info mt-3 py-2 small mb-0">
-          <i class="bi bi-info-circle me-1"></i>บาร์โค้ดเป็นแบบ <b>Code 128 (1 มิติ)</b> ไม่มีตัวหนังสือในแถบ รองรับเครื่องสแกนเลเซอร์ Symbol
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button class="btn btn-brand" onclick="renderBarcodes()"><i class="bi bi-upc me-1"></i>สร้างบาร์โค้ด</button>
+          <button class="btn btn-outline-brand" onclick="window.print()"><i class="bi bi-printer me-1"></i>พิมพ์</button>
+          <button class="btn btn-warning" onclick="markPrintedRange(true)"><i class="bi bi-check2-square me-1"></i>ทำเครื่องหมายว่าพิมพ์แล้ว</button>
+          <button class="btn btn-outline-secondary" onclick="markPrintedRange(false)"><i class="bi bi-arrow-counterclockwise me-1"></i>ล้างเครื่องหมายพิมพ์แล้ว</button>
         </div>
+        <div class="alert alert-info mt-3 py-2 small mb-0">
+          <i class="bi bi-info-circle me-1"></i>บาร์โค้ดเป็นแบบ <b>Code 128 (1 มิติ)</b> ไม่มีตัวหนังสือในแถบ รองรับเครื่องสแกนเลเซอร์ Symbol &middot; ป้าย “พิมพ์แล้ว” เป็นตัวช่วยจำบนจอ ไม่ถูกพิมพ์ลงสติกเกอร์
+        </div>
+        <div id="bcInfo" class="mt-3"></div>
         <div id="printArea"><div id="bcGrid" class="row g-2 mt-2"></div></div>
       </div>
     </div>
@@ -596,6 +605,7 @@ document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
     if(p==='dashboard') loadDashboard();
     if(p==='register') loadRegister();
     if(p==='scan'){ fillStationSelect(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
+    if(p==='barcode'){ PRINTED_LOADED=false; loadPrinted(); }
     if(p==='track'){ fillTrackDept(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
     if(p==='settings') loadConfigForm();
   });
@@ -859,19 +869,71 @@ function renderSessionLog(){
 }
 
 /* ========================= BARCODE ========================= */
-function renderBarcodes(){
+let PRINTED = new Set();
+let PRINTED_LOADED = false;
+let LAST_BC_CODES = [];
+async function loadPrinted(){
+  try{
+    const d=await api('getFolders');
+    if(d.ok){ ALL_FOLDERS=d.folders||[]; PRINTED=new Set(ALL_FOLDERS.filter(f=>f.printedAt).map(f=>pad4(f.folderCode))); PRINTED_LOADED=true; }
+  }catch(e){}
+}
+async function renderBarcodes(){
+  if(!PRINTED_LOADED) await loadPrinted();
   const from=Math.max(1, parseInt(document.getElementById('bcFrom').value)||1);
-  const to=Math.min(200, parseInt(document.getElementById('bcTo').value)||from);
+  const to=Math.min(TOTAL_FOLDERS, parseInt(document.getElementById('bcTo').value)||from);
   const showNum=document.getElementById('bcShowNum').checked;
+  const onlyUnprinted=document.getElementById('bcOnlyUnprinted').checked;
   const grid=document.getElementById('bcGrid'); grid.innerHTML='';
+  const info=document.getElementById('bcInfo'); info.innerHTML='';
   if(from>to){ grid.innerHTML='<div class="text-danger">ช่วงเลขไม่ถูกต้อง</div>'; return; }
-  for(let i=from;i<=to;i++){
-    const code=String(i).padStart(4,'0');
+
+  // นับสถานะในช่วง
+  let total=0, printedInRange=0;
+  for(let i=from;i<=to;i++){ total++; if(PRINTED.has(pad4(i))) printedInRange++; }
+  const unprinted=total-printedInRange;
+
+  // เลือกรหัสที่จะสร้าง
+  const codes=[];
+  for(let i=from;i<=to;i++){ const code=pad4(i); if(onlyUnprinted && PRINTED.has(code)) continue; codes.push(code); }
+  LAST_BC_CODES=codes.slice();
+
+  // แถบสรุป/เตือน
+  let infoHtml=`<div class="alert alert-light border py-2 mb-2 small">
+     ช่วง ${pad4(from)}–${pad4(to)} &middot; ทั้งหมด <b>${total}</b> ใบ &middot;
+     <span class="text-success">พิมพ์แล้ว ${printedInRange}</span> &middot;
+     <span class="text-primary">ยังไม่พิมพ์ ${unprinted}</span> &middot; กำลังแสดง <b>${codes.length}</b> ใบ</div>`;
+  if(!onlyUnprinted && printedInRange>0){
+    infoHtml+=`<div class="alert alert-warning py-2 mb-2 small"><i class="bi bi-exclamation-triangle-fill me-1"></i>
+      มี <b>${printedInRange}</b> ใบในช่วงนี้ที่เคยพิมพ์ไปแล้ว หากพิมพ์อีกจะได้บาร์โค้ดซ้ำ —
+      ติ๊ก “สร้างเฉพาะแฟ้มที่ยังไม่เคยพิมพ์” เพื่อข้ามใบที่พิมพ์แล้ว</div>`;
+  }
+  info.innerHTML=infoHtml;
+
+  if(!codes.length){ grid.innerHTML='<div class="text-muted p-2">ไม่มีแฟ้มที่ต้องสร้าง (ในช่วงนี้พิมพ์ครบแล้ว)</div>'; return; }
+
+  codes.forEach(code=>{
+    const isP=PRINTED.has(code);
     const col=document.createElement('div'); col.className='col-6 col-md-3 col-lg-2';
-    col.innerHTML=`<div class="bc-item"><svg id="bc-${code}"></svg>${showNum?`<div class="bc-code">${code}</div>`:''}</div>`;
+    col.innerHTML=`<div class="bc-item ${isP?'bc-printed':''}"><svg id="bc-${code}"></svg>${showNum?`<div class="bc-code">${code}</div>`:''}${isP?'<div class="small text-warning-emphasis d-print-none"><i class="bi bi-check2 me-1"></i>พิมพ์แล้ว</div>':''}</div>`;
     grid.appendChild(col);
     JsBarcode(`#bc-${code}`, code, {format:'CODE128', displayValue:false, width:2, height:55, margin:6});
-  }
+  });
+}
+async function markPrintedRange(printed){
+  if(!LAST_BC_CODES.length){ alert('กรุณากด “สร้างบาร์โค้ด” ก่อน แล้วจึงทำเครื่องหมาย'); return; }
+  const verb=printed?'ทำเครื่องหมายว่าพิมพ์แล้ว':'ล้างเครื่องหมายพิมพ์แล้ว';
+  if(!confirm(verb+' จำนวน '+LAST_BC_CODES.length+' แฟ้ม (ตามที่แสดงอยู่) ?')) return;
+  const info=document.getElementById('bcInfo');
+  try{
+    const d=await api('setPrinted',{codes:LAST_BC_CODES.join(','), printed:printed?'1':'0'});
+    if(!d.ok) throw new Error(d.error||'error');
+    LAST_BC_CODES.forEach(c=>{ if(printed) PRINTED.add(c); else PRINTED.delete(c); });
+    await renderBarcodes();
+    const t=document.createElement('div'); t.className='alert alert-success py-2 small mb-2';
+    t.innerHTML='<i class="bi bi-check-circle me-1"></i>'+esc(d.message);
+    info.prepend(t);
+  }catch(err){ toast(info,'danger',err.message); }
 }
 
 /* ========================= TRACK ========================= */
