@@ -223,9 +223,18 @@
     <div class="card">
       <div class="card-header"><i class="bi bi-pencil-square me-1"></i>ลงทะเบียน / กรอกข้อมูลแฟ้ม (ธุรการ 1)</div>
       <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label"><i class="bi bi-upc-scan me-1"></i>ยิงบาร์โค้ดแฟ้ม <span class="badge bg-brand" style="background:var(--brand)">แนะนำ</span></label>
+          <div class="row g-2">
+            <div class="col-md-5"><input id="regScanInput" class="form-control" style="font-size:1.25rem;letter-spacing:2px;font-weight:600;border:2px dashed var(--brand);border-radius:12px;text-align:center" placeholder="ยิงบาร์โค้ด…" autocomplete="off"></div>
+            <div class="col-md-7"><div id="regScanInfo"></div></div>
+          </div>
+          <div class="form-text">หยิบแฟ้มจริงมายิงบาร์โค้ด ระบบจะเลือกเลขแฟ้มให้อัตโนมัติและถูกต้อง — ไม่ต้องจำหรืออ่านเลขเอง</div>
+        </div>
+        <hr class="mt-0 mb-3">
         <div class="row g-3">
           <div class="col-md-3">
-            <label class="form-label">เลือกแฟ้ม</label>
+            <label class="form-label">เลือกแฟ้ม <span class="text-muted small">(หรือใช้ยิงบาร์โค้ดด้านบน)</span></label>
             <select id="regFolder" class="form-select"></select>
             <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="regShowAll" onchange="fillFolderSelect()">
               <label class="form-check-label small" for="regShowAll">แสดงแฟ้มทั้งหมด</label></div>
@@ -728,6 +737,8 @@ async function exportPDF(){
 /* ========================= REGISTER ========================= */
 async function loadRegister(){
   document.getElementById('regResult').innerHTML='';
+  document.getElementById('regScanInfo').innerHTML='';
+  document.getElementById('regScanInput').value='';
   document.getElementById('regOwner').value='';
   document.getElementById('regType').value='';
   document.getElementById('recordRows').innerHTML='';
@@ -735,8 +746,74 @@ async function loadRegister(){
   if(!CONFIG || !CONFIG.rong1) await loadConfig();
   renderTimeline();
   fillDeptSelect();
-  if(!ALL_FOLDERS.length){ try{ const d=await api('getFolders'); ALL_FOLDERS=d.folders||[]; }catch(e){} }
+  // โหลดสถานะแฟ้มสดเสมอ เพื่อให้ยิงบาร์โค้ดรู้ว่าแฟ้มว่าง/ถูกใช้
+  try{ const d=await api('getFolders'); if(d.ok) ALL_FOLDERS=d.folders||[]; }catch(e){}
   fillFolderSelect();
+  setTimeout(()=>document.getElementById('regScanInput').focus(),120);
+}
+/* helper: ตั้งค่า select โดยเพิ่ม option ถ้ายังไม่มี */
+function setSelectValue(sel, val){
+  if(val && ![...sel.options].some(o=>o.value===val)){ const o=document.createElement('option'); o.value=val; o.textContent=val; sel.appendChild(o); }
+  sel.value=val||'';
+}
+/* ยิงบาร์โค้ดในหน้าลงทะเบียน */
+const regScanInput=document.getElementById('regScanInput');
+regScanInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); regScan(regScanInput.value); } });
+async function regScan(code){
+  const raw=(code||'').trim();
+  regScanInput.value='';
+  if(!raw) return;
+  const fc=pad4(raw);
+  const info=document.getElementById('regScanInfo');
+  if(!ALL_FOLDERS.length){ try{ const d=await api('getFolders'); ALL_FOLDERS=d.folders||[]; }catch(e){} }
+  const f=ALL_FOLDERS.find(x=>pad4(x.folderCode)===fc);
+  if(!f){ beep(false); toast(info,'danger','ไม่พบแฟ้มรหัส '+fc+' ในระบบ (ยังไม่ได้สร้างแฟ้มนี้?)'); regScanInput.focus(); return; }
+  beep(true);
+  // ให้ดรอปดาวน์มีแฟ้มนี้ (แฟ้มที่ถูกใช้จะไม่อยู่ในรายการ "ว่าง")
+  if((f.status||'ว่าง')!=='ว่าง'){ document.getElementById('regShowAll').checked=true; fillFolderSelect(); }
+  setSelectValue(document.getElementById('regFolder'), fc);
+  showRegFolderStatus(fc);
+  regScanInput.focus();
+}
+/* แสดงสถานะแฟ้มที่เลือก (ว่าง/ถูกใช้) */
+function showRegFolderStatus(code){
+  const fc=pad4(code);
+  const f=ALL_FOLDERS.find(x=>pad4(x.folderCode)===fc);
+  const info=document.getElementById('regScanInfo');
+  if(!f){ info.innerHTML=''; return; }
+  if((f.status||'ว่าง')==='ว่าง'){
+    info.innerHTML=`<div class="alert alert-success py-2 mb-0"><i class="bi bi-check-circle me-1"></i>เลือกแฟ้ม <b>${fc}</b> แล้ว — ว่าง พร้อมลงทะเบียน</div>`;
+  }else{
+    info.innerHTML=`<div class="alert alert-warning py-2 mb-0">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i>แฟ้ม <b>${fc}</b> มีข้อมูลอยู่แล้ว (สถานะ: ${esc(f.status)})${f.owner?(' · เจ้าของ: '+esc(f.owner)):''}
+      <div class="mt-2 d-flex gap-2 flex-wrap">
+        <button class="btn btn-sm btn-brand" onclick="loadExistingFolder('${fc}')"><i class="bi bi-pencil me-1"></i>โหลดข้อมูลเดิมมาแก้ไข</button>
+        <span class="small text-muted align-self-center">หรือกรอกใหม่แล้วบันทึกเพื่อเขียนทับของเดิม</span>
+      </div></div>`;
+  }
+}
+/* โหลดข้อมูลแฟ้มเดิมมาใส่ฟอร์มเพื่อแก้ไข (กันข้อมูลเดิมหาย) */
+async function loadExistingFolder(code){
+  const fc=pad4(code);
+  const info=document.getElementById('regScanInfo');
+  info.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดข้อมูลเดิม…</div>';
+  try{
+    const d=await api('getFolder',{folderCode:fc});
+    if(!d.ok) throw new Error(d.error||'error');
+    const f=d.folder;
+    document.getElementById('regShowAll').checked=true; fillFolderSelect();
+    setSelectValue(document.getElementById('regFolder'), fc);
+    document.getElementById('regOwner').value=f.owner||'';
+    document.getElementById('regType').value=f.docType||'';
+    fillDeptSelect(); setSelectValue(document.getElementById('regDept'), f.department||'');
+    const tl=(f.timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
+    document.querySelectorAll('.tl').forEach(c=>{ c.checked=tl.indexOf(c.value)>=0; });
+    document.getElementById('recordRows').innerHTML='';
+    const recs=f.records||[];
+    if(recs.length){ recs.forEach(r=>{ const aunum=((r.docNumber||'').split('/')[1]||''); addRecordRow({aunum, subject:r.subject, docDate:r.docDate}); }); }
+    else { addRecordRow(); }
+    info.innerHTML=`<div class="alert alert-info py-2 mb-0"><i class="bi bi-info-circle me-1"></i>โหลดข้อมูลเดิมของแฟ้ม <b>${fc}</b> มาแล้ว — แก้ไขแล้วกด “บันทึกข้อมูลแฟ้ม” จะเขียนทับของเดิม</div>`;
+  }catch(err){ toast(info,'danger',err.message); }
 }
 /* รายการฝ่ายงานจาก CONFIG (แยกด้วยขึ้นบรรทัดหรือ ,) */
 function deptList(){
@@ -766,6 +843,7 @@ function fillFolderSelect(){
   sel.innerHTML = list.map(f=>`<option value="${pad4(f.folderCode)}">แฟ้ม ${pad4(f.folderCode)} — ${esc(f.status||'ว่าง')}</option>`).join('')
                   || '<option value="">— ไม่มีแฟ้มว่าง —</option>';
 }
+document.getElementById('regFolder').addEventListener('change', function(){ if(this.value) showRegFolderStatus(this.value); });
 function addRecordRow(data){
   data=data||{};
   const div=document.createElement('div');
@@ -804,7 +882,16 @@ async function saveRegister(){
     if(!d.ok) throw new Error(d.error||'error');
     el.innerHTML=`<div class="alert alert-success mb-0"><i class="bi bi-check-circle me-1"></i>${esc(d.message)}
       <div class="mt-2"><button class="btn btn-sm btn-outline-brand" onclick="gotoTrack('${pad4(folderCode)}')"><i class="bi bi-search me-1"></i>ดูแฟ้มนี้</button></div></div>`;
-    ALL_FOLDERS=[];
+    // เตรียมฟอร์มสำหรับแฟ้มถัดไป + โหลดสถานะใหม่ + โฟกัสช่องยิงบาร์โค้ด
+    document.getElementById('regScanInfo').innerHTML='';
+    document.getElementById('regOwner').value='';
+    document.getElementById('regDept').value='';
+    document.getElementById('regType').value='';
+    document.querySelectorAll('.tl').forEach(c=>c.checked=false);
+    document.getElementById('recordRows').innerHTML=''; addRecordRow();
+    try{ const g=await api('getFolders'); if(g.ok) ALL_FOLDERS=g.folders||[]; }catch(e){}
+    fillFolderSelect();
+    setTimeout(()=>document.getElementById('regScanInput').focus(),100);
   }catch(err){ toast(el,'danger',err.message); }
 }
 
