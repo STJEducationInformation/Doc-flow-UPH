@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบติดตามแฟ้มเสนอผู้บริหาร</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- JsBarcode: บาร์โค้ด 1 มิติ (Code 128) รองรับเครื่องสแกนเลเซอร์ Symbol -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<!-- SheetJS: ส่งออก Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+  :root{
+    --bg:#eef2f4; --surface:#ffffff; --ink:#132a2f; --muted:#647a80; --line:#e6ecee;
+    --brand:#0d9488; --brand-600:#0f766e; --brand-700:#115e56; --brand-soft:#d8f0ec;
+    --sidebar:#0e2a30; --sidebar-2:#123a41;
+    --shadow-sm:0 1px 2px rgba(16,36,42,.05); --shadow:0 10px 30px -14px rgba(16,36,42,.28);
+    --radius:16px;
+  }
+  *{ font-family:'Sarabun', system-ui, sans-serif; }
+  h1,h2,h3,h4,h5,h6,.font-display,.nav-link,.brand-name,.stat .num,.eyebrow{ font-family:'Anuphan','Sarabun',sans-serif; }
+  body{ background:var(--bg); color:var(--ink); }
+  .eyebrow{ text-transform:uppercase; letter-spacing:.12em; font-size:.68rem; font-weight:600; color:var(--muted); }
+
+  /* ---------- Layout ---------- */
+  .layout{ display:flex; min-height:100vh; }
+  .sidebar{ width:264px; flex-shrink:0; background:linear-gradient(180deg,var(--sidebar),var(--sidebar-2));
+    color:#cfe4e2; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; z-index:1050; }
+  .sidebar .brand{ padding:22px 20px 18px; display:flex; align-items:center; gap:12px; }
+  .sidebar .brand .logo{ width:44px; height:44px; border-radius:13px; background:linear-gradient(135deg,var(--brand),#0b6b62);
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.35rem; box-shadow:0 6px 16px -6px rgba(13,148,136,.7); }
+  .sidebar .brand-name{ color:#fff; font-weight:700; font-size:1.02rem; line-height:1.15; }
+  .sidebar .brand-sub{ color:#7fb2ad; font-size:.7rem; }
+  .sidebar nav{ padding:8px 12px; overflow-y:auto; flex:1; }
+  .sidebar .nav-link{ display:flex; align-items:center; gap:12px; color:#a9cec9; padding:11px 13px; border-radius:12px;
+    font-weight:500; font-size:.95rem; margin-bottom:3px; transition:.18s; cursor:pointer; border:1px solid transparent; }
+  .sidebar .nav-link i{ font-size:1.15rem; width:22px; text-align:center; }
+  .sidebar .nav-link:hover{ background:rgba(255,255,255,.06); color:#eafffb; }
+  .sidebar .nav-link.active{ background:rgba(13,148,136,.22); color:#fff; border-color:rgba(45,212,191,.35); }
+  .sidebar .nav-link.active i{ color:#5eead4; }
+  .sidebar .side-foot{ padding:14px 16px; border-top:1px solid rgba(255,255,255,.08); font-size:.8rem; }
+
+  .main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .topbar{ position:sticky; top:0; z-index:1040; background:rgba(255,255,255,.86); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line); padding:14px 26px; display:flex; align-items:center; gap:14px; }
+  .topbar .burger{ display:none; background:none; border:none; font-size:1.5rem; color:var(--ink); }
+  .topbar .pt-title{ font-weight:700; font-size:1.12rem; line-height:1.1; }
+  .topbar .pt-sub{ font-size:.76rem; color:var(--muted); }
+  .content{ padding:24px 26px 40px; max-width:none; width:100%; }
+
+  .sidebar-backdrop{ display:none; position:fixed; inset:0; background:rgba(6,20,23,.5); z-index:1045; }
+
+  /* ---------- Cards ---------- */
+  .card{ border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); background:var(--surface); }
+  .card-header{ background:transparent; border-bottom:1px solid var(--line); font-weight:600; padding:15px 18px;
+    border-radius:var(--radius) var(--radius) 0 0 !important; }
+  .card-body{ padding:18px; }
+
+  /* ---------- KPI stat cards ---------- */
+  .stat{ position:relative; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
+    box-shadow:var(--shadow-sm); padding:18px; overflow:hidden; transition:.2s; }
+  .stat:hover{ transform:translateY(-2px); box-shadow:var(--shadow); }
+  .stat .lbl{ font-size:.82rem; color:var(--muted); font-weight:500; }
+  .stat .num{ font-size:2.1rem; font-weight:700; line-height:1; margin-top:6px; color:var(--ink); }
+  .stat .chip{ position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center; font-size:1.2rem; }
+  .stat .bar{ position:absolute; left:0; top:0; bottom:0; width:4px; }
+  .stat.total .chip{ background:var(--brand-soft); color:var(--brand-700); } .stat.total .bar{ background:var(--brand); }
+  .stat.vang  .chip{ background:#eef1f3; color:#64748b; } .stat.vang .bar{ background:#94a3b8; }
+  .stat.using .chip{ background:#e0edff; color:#1d4ed8; } .stat.using .bar{ background:#3b82f6; }
+  .stat.done  .chip{ background:#dcfce7; color:#15803d; } .stat.done .bar{ background:#22c55e; }
+
+  /* ---------- Buttons ---------- */
+  .btn{ border-radius:10px; font-weight:600; }
+  .btn-brand{ background:var(--brand); border-color:var(--brand); color:#fff; box-shadow:0 6px 16px -8px rgba(13,148,136,.7); }
+  .btn-brand:hover{ background:var(--brand-600); border-color:var(--brand-600); color:#fff; transform:translateY(-1px); }
+  .btn-outline-brand{ border-color:var(--brand); color:var(--brand-600); }
+  .btn-outline-brand:hover{ background:var(--brand); color:#fff; }
+  .btn-sm{ border-radius:9px; }
+
+  /* ---------- Form ---------- */
+  .form-control, .form-select{ border-radius:10px; border-color:var(--line); }
+  .form-control:focus, .form-select:focus{ border-color:var(--brand); box-shadow:0 0 0 .2rem rgba(13,148,136,.18); }
+  .form-label{ font-weight:500; font-size:.9rem; }
+
+  /* ---------- Badges / status ---------- */
+  .badge-status{ font-weight:600; padding:.42em .7em; border-radius:8px; }
+  .st-ว่าง{ background:#eef1f3; color:#556; } .st-ใช้{ background:#e0edff; color:#1d4ed8; } .st-เสร็จ{ background:#dcfce7; color:#15803d; }
+
+  .table thead th{ font-family:'Anuphan','Sarabun',sans-serif; font-weight:600; color:var(--muted); font-size:.86rem;
+    text-transform:none; border-bottom:1px solid var(--line); }
+  .table td{ vertical-align:middle; }
+  .table-hover tbody tr:hover{ background:#f6fbfa; }
+
+  .scan-input{ font-size:1.7rem; text-align:center; font-weight:700; letter-spacing:3px; padding:.85rem; border:2px dashed var(--brand); border-radius:14px; }
+  .scan-input:focus{ border-style:solid; }
+  .fixed-prefix{ background:var(--brand-soft); color:var(--brand-700); font-weight:600; white-space:nowrap; border-color:var(--line); }
+
+  /* ---------- Stepper (pipeline) ---------- */
+  .stepper{ display:flex; flex-wrap:wrap; gap:.45rem; }
+  .step{ flex:1 1 92px; min-width:84px; text-align:center; padding:.6rem .35rem; border-radius:12px;
+    background:#f4f6f7; color:#94a3ac; font-size:.82rem; border:1px solid var(--line); transition:.2s; }
+  .step .bi{ display:block; font-size:1.15rem; margin-bottom:3px; }
+  .step.done{ background:#e7f8f4; color:var(--brand-700); border-color:#bfe9e1; font-weight:600; }
+  .step.next{ background:#fff6e6; color:#8a5a00; border:2px solid #f5b301; font-weight:700; box-shadow:0 6px 16px -8px rgba(245,179,1,.6); }
+
+  .bc-item{ border:1px dashed var(--line); border-radius:12px; padding:10px; text-align:center; background:#fff; }
+  .dwell-box{ border:1px solid var(--line); border-radius:12px; padding:12px 14px; background:#f7f9fa; height:100%; }
+  .dwell-box.dwell-now{ background:#fff6e6; border-color:#f5b301; box-shadow:0 6px 16px -10px rgba(245,179,1,.7); }
+  .dwell-box.dwell-now .fw-bold{ color:#8a5a00; }
+  .bc-item svg{ max-width:100%; } .bc-code{ font-size:.85rem; color:var(--muted); margin-top:3px; }
+
+  .scan-modal-overlay{ position:fixed; inset:0; background:rgba(8,24,27,.55); z-index:1090; display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(2px); }
+  .scan-modal-box{ background:#fff; border-radius:20px; max-width:480px; width:100%; padding:30px 26px; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,.35); animation:pop .18s ease; }
+  @keyframes pop{ from{transform:scale(.9); opacity:0} to{transform:scale(1); opacity:1} }
+
+  .page{ display:none; } .page.active{ display:block; animation:fade .28s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 991px){
+    .sidebar{ position:fixed; left:0; top:0; transform:translateX(-100%); transition:transform .25s ease; box-shadow:var(--shadow); }
+    .layout.sb-open .sidebar{ transform:translateX(0); }
+    .layout.sb-open .sidebar-backdrop{ display:block; }
+    .topbar .burger{ display:inline-block; }
+    .content{ padding:18px 16px 40px; }
+    .topbar{ padding:12px 16px; }
+  }
+
+  @media print{
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{ position:absolute; inset:0; margin:0; padding:10px; }
+    .bc-item{ border:none; page-break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout" id="layout">
+  <div class="sidebar-backdrop" id="sbBackdrop" onclick="toggleSidebar(false)"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo"><i class="bi bi-folder2-open"></i></div>
+      <div>
+        <div class="brand-name">ระบบติดตามแฟ้ม</div>
+        <div class="brand-sub">เสนอผู้บริหาร</div>
+      </div>
+    </div>
+    <nav>
+      <a class="nav-link active" data-page="dashboard" href="#"><i class="bi bi-grid-1x2-fill"></i>แดชบอร์ด</a>
+      <a class="nav-link" data-page="register" href="#"><i class="bi bi-pencil-square"></i>ลงทะเบียนแฟ้ม</a>
+      <a class="nav-link" data-page="scan" href="#"><i class="bi bi-upc-scan"></i>สแกนเข้า-ออก</a>
+      <a class="nav-link" data-page="barcode" href="#"><i class="bi bi-upc"></i>พิมพ์บาร์โค้ด</a>
+      <a class="nav-link" data-page="track" href="#"><i class="bi bi-geo-alt"></i>ติดตามแฟ้ม</a>
+      <a class="nav-link" data-page="settings" href="#"><i class="bi bi-gear"></i>ตั้งค่า</a>
+    </nav>
+    <div class="side-foot">
+      <span id="connBadge" class="badge bg-secondary"><i class="bi bi-plug"></i> ยังไม่เชื่อมต่อ</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="burger" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+      <div>
+        <div class="pt-title" id="pageTitle">แดชบอร์ด</div>
+        <div class="pt-sub" id="pageSub">ภาพรวมสถานะแฟ้มทั้งหมด</div>
+      </div>
+      <div class="ms-auto eyebrow d-none d-md-block" id="todayChip"></div>
+    </header>
+
+    <div class="content">
+      <div id="urlWarn" class="alert alert-warning d-none">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        ยังไม่ได้ตั้งค่า <b>WEBAPP_URL</b> — เปิดไฟล์ <code>index.html</code> แล้วใส่ URL ของ Web App (ลงท้าย <code>/exec</code>) ที่ได้จากการ Deploy Code.gs
+      </div>
+
+  <!-- ================= DASHBOARD ================= -->
+  <div class="page active" id="page-dashboard">
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3"><div class="stat total"><span class="bar"></span><span class="chip"><i class="bi bi-folder2"></i></span><div class="lbl">แฟ้มทั้งหมด</div><div class="num" id="stTotal">–</div></div></div>
+      <div class="col-6 col-lg-3"><div class="stat vang"><span class="bar"></span><span class="chip"><i class="bi bi-inbox"></i></span><div class="lbl">แฟ้มว่าง</div><div class="num" id="stVang">–</div></div></div>
+      <div class="col-6 col-lg-3"><div class="stat using"><span class="bar"></span><span class="chip"><i class="bi bi-arrow-repeat"></i></span><div class="lbl">กำลังใช้งาน</div><div class="num" id="stUsing">–</div></div></div>
+      <div class="col-6 col-lg-3"><div class="stat done"><span class="bar"></span><span class="chip"><i class="bi bi-check2-circle"></i></span><div class="lbl">เสร็จสิ้น</div><div class="num" id="stDone">–</div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex flex-wrap gap-2 align-items-center">
+        <span><i class="bi bi-table me-1"></i>รายการแฟ้ม</span>
+        <div class="ms-auto d-flex gap-2 flex-wrap">
+          <input id="dashSearch" class="form-control form-control-sm" style="width:150px" placeholder="ค้นหา รหัส/เจ้าของ">
+          <select id="dashDept" class="form-select form-select-sm" style="width:150px"><option value="">ทุกฝ่ายงาน</option></select>
+          <select id="dashFilter" class="form-select form-select-sm" style="width:130px">
+            <option value="">ทุกสถานะ</option><option>ว่าง</option><option>กำลังใช้งาน</option><option>เสร็จสิ้น</option>
+          </select>
+          <button class="btn btn-sm btn-success" onclick="exportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
+          <button class="btn btn-sm btn-danger" onclick="exportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
+          <button class="btn btn-sm btn-outline-brand" onclick="loadDashboard()"><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light"><tr>
+              <th>รหัสแฟ้ม</th><th>เจ้าของแฟ้ม</th><th>ประเภท</th><th>สถานะ</th><th>ตำแหน่งปัจจุบัน</th><th>ระยะเวลารอ</th><th>อัปเดตล่าสุด</th><th></th>
+            </tr></thead>
+            <tbody id="dashBody"><tr><td colspan="8" class="text-center text-muted py-4">กำลังโหลด…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= REGISTER ================= -->
+  <div class="page" id="page-register">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-pencil-square me-1"></i>ลงทะเบียน / กรอกข้อมูลแฟ้ม (ธุรการ 1)</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">เลือกแฟ้ม</label>
+            <select id="regFolder" class="form-select"></select>
+            <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="regShowAll" onchange="fillFolderSelect()">
+              <label class="form-check-label small" for="regShowAll">แสดงแฟ้มทั้งหมด</label></div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">เจ้าของแฟ้ม (ชื่อ-นามสกุล)</label>
+            <input id="regOwner" class="form-control" placeholder="เช่น นายสมชาย ใจดี">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">ฝ่ายงาน</label>
+            <select id="regDept" class="form-select"></select>
+            <div class="form-text">ตั้งค่ารายการฝ่ายงานได้ที่เมนู “ตั้งค่า”</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">ประเภท</label>
+            <select id="regType" class="form-select">
+              <option value="">— เลือกประเภท —</option><option>หนังสือส่ง</option><option>หนังสือรับ</option>
+            </select>
+          </div>
+        </div>
+
+        <hr class="my-4">
+        <div class="d-flex align-items-center mb-2">
+          <h6 class="mb-0"><i class="bi bi-list-ol me-1"></i>รายการเอกสารในแฟ้ม</h6>
+          <button class="btn btn-sm btn-outline-brand ms-auto" onclick="addRecordRow()"><i class="bi bi-plus-lg"></i> เพิ่มรายการ</button>
+        </div>
+        <div class="form-text mb-2">1 แฟ้มมีได้หลายเรื่อง/หลายเลข อว. — กดเพิ่มรายการได้ตามต้องการ</div>
+        <div id="recordRows"></div>
+
+        <hr class="my-4">
+        <h6><i class="bi bi-diagram-3 me-1"></i>เลือกไทม์ไลน์แฟ้ม (ผู้ที่ต้องเสนอ)</h6>
+        <div class="small text-muted mb-2">ทุกแฟ้มจะผ่าน “หัวหน้าสำนักงาน” อยู่แล้ว &middot; เลือกได้มากกว่า 1 &middot; แก้ไขชื่อได้ที่เมนู “ตั้งค่า”</div>
+        <div id="timelineBox"></div>
+
+        <div class="d-flex gap-2 mt-4">
+          <button class="btn btn-brand" onclick="saveRegister()"><i class="bi bi-save me-1"></i>บันทึกข้อมูลแฟ้ม</button>
+          <button class="btn btn-outline-secondary" onclick="loadRegister()"><i class="bi bi-eraser me-1"></i>ล้างฟอร์ม</button>
+        </div>
+        <div id="regResult" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCAN ================= -->
+  <div class="page" id="page-scan">
+    <div class="row g-3">
+      <div class="col-lg-5">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-upc-scan me-1"></i>สแกนเข้า-ออก</div>
+          <div class="card-body">
+            <label class="form-label">จุดสแกน (ธุรการ)</label>
+            <select id="scanStation" class="form-select mb-3"></select>
+            <label class="form-label">ทิศทาง</label>
+            <div class="btn-group w-100 mb-3" role="group">
+              <input type="radio" class="btn-check" name="dir" id="dirIn" value="เข้า" checked>
+              <label class="btn btn-outline-success" for="dirIn"><i class="bi bi-box-arrow-in-right me-1"></i>เข้า</label>
+              <input type="radio" class="btn-check" name="dir" id="dirOut" value="ออก">
+              <label class="btn btn-outline-danger" for="dirOut"><i class="bi bi-box-arrow-right me-1"></i>ออก</label>
+            </div>
+            <label class="form-label">ยิงบาร์โค้ดที่นี่</label>
+            <input id="scanInput" class="form-control scan-input" placeholder="รอสแกน…" autocomplete="off">
+            <div class="form-text">วางเคอร์เซอร์ในช่องนี้ค้างไว้ แล้วใช้เครื่องสแกนยิงบาร์โค้ดบนแฟ้มได้เลย</div>
+            <div id="scanResult" class="mt-3"></div>
+            <div id="scanEditWrap" class="mt-3" style="display:none">
+              <hr class="my-2">
+              <div class="fw-semibold mb-2"><i class="bi bi-pencil-square me-1"></i>สถานะการแก้ไขแฟ้มนี้ (ธุรการลงเอง)</div>
+              <div id="scanEditBox"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <div class="card">
+          <div class="card-header d-flex align-items-center">
+            <span><i class="bi bi-clock-history me-1"></i>บันทึกการสแกน (รอบนี้)</span>
+            <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="sessionLog=[];renderSessionLog()">ล้าง</button>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive" style="max-height:460px;overflow:auto">
+              <table class="table table-sm mb-0 align-middle">
+                <thead class="table-light"><tr><th>เวลา</th><th>รหัสแฟ้ม</th><th>จุด</th><th>ทิศทาง</th><th>ผล</th></tr></thead>
+                <tbody id="sessionBody"><tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีการสแกน</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= BARCODE ================= -->
+  <div class="page" id="page-barcode">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-upc me-1"></i>พิมพ์บาร์โค้ดติดแฟ้ม (Code 128)</div>
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-md-2"><label class="form-label">จากแฟ้มที่</label><input id="bcFrom" type="number" min="1" max="200" value="1" class="form-control"></div>
+          <div class="col-6 col-md-2"><label class="form-label">ถึงแฟ้มที่</label><input id="bcTo" type="number" min="1" max="200" value="20" class="form-control"></div>
+          <div class="col-12 col-md-4"><div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" id="bcShowNum">
+            <label class="form-check-label" for="bcShowNum">แสดงเลขกำกับใต้บาร์โค้ด (ค่าเริ่มต้น: ไม่แสดง)</label></div></div>
+          <div class="col-12 col-md-4 d-flex gap-2">
+            <button class="btn btn-brand w-100" onclick="renderBarcodes()"><i class="bi bi-upc me-1"></i>สร้างบาร์โค้ด</button>
+            <button class="btn btn-outline-brand w-100" onclick="window.print()"><i class="bi bi-printer me-1"></i>พิมพ์</button>
+          </div>
+        </div>
+        <div class="alert alert-info mt-3 py-2 small mb-0">
+          <i class="bi bi-info-circle me-1"></i>บาร์โค้ดเป็นแบบ <b>Code 128 (1 มิติ)</b> ไม่มีตัวหนังสือในแถบ รองรับเครื่องสแกนเลเซอร์ Symbol
+        </div>
+        <div id="printArea"><div id="bcGrid" class="row g-2 mt-2"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TRACK ================= -->
+  <div class="page" id="page-track">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-funnel me-1"></i>ค้นหา / กรองแฟ้ม</div>
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label">คำค้นหา (ผู้เสนอ / เลขที่ อว / ชื่อเรื่อง / รหัสแฟ้ม)</label>
+            <input id="trackInput" class="form-control" placeholder="เช่น 0001, 1234, สมชาย, ขออนุมัติ" autocomplete="off">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">ฝ่ายงาน</label>
+            <select id="trackDept" class="form-select"><option value="">ทุกฝ่ายงาน</option></select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">วันที่เสนอแฟ้ม</label>
+            <input type="date" id="trackDate" class="form-control">
+          </div>
+          <div class="col-md-2 d-flex gap-2">
+            <button class="btn btn-brand flex-fill" onclick="doTrack()"><i class="bi bi-search me-1"></i>ค้นหา</button>
+            <button class="btn btn-outline-secondary" onclick="clearTrack()" title="ล้าง"><i class="bi bi-x-lg"></i></button>
+          </div>
+        </div>
+        <div class="form-text mt-1">
+          พิมพ์เลขหลัง “/” เช่น <b>1234</b> เพื่อค้นเลขที่ อว &middot; พิมพ์คำในชื่อเรื่องเพื่อค้นหาแบบคีย์เวิร์ด &middot; หรือเลือกฝ่ายงาน/วันที่เพื่อกรองอย่างเดียวก็ได้
+        </div>
+      </div>
+    </div>
+    <div id="trackList"></div>
+    <div id="trackResult"></div>
+  </div>
+
+  <!-- ================= SETTINGS ================= -->
+  <div class="page" id="page-settings">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-people me-1"></i>ตั้งค่าชื่อ (แก้ไขได้เมื่อเปลี่ยนผู้บริหาร/ผู้ใช้งาน)</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="fw-semibold mb-2">รองผู้อำนวยการ (ไทม์ไลน์)</div>
+            <div class="mb-2"><label class="form-label small mb-1">รอง 1</label><input id="cfg_rong1" class="form-control"></div>
+            <div class="mb-2"><label class="form-label small mb-1">รอง 2</label><input id="cfg_rong2" class="form-control"></div>
+            <div class="mb-2"><label class="form-label small mb-1">รอง 3</label><input id="cfg_rong3" class="form-control"></div>
+            <div class="mb-2"><label class="form-label small mb-1">รอง 4</label><input id="cfg_rong4" class="form-control"></div>
+            <div class="mb-2"><label class="form-label small mb-1">รอง 5</label><input id="cfg_rong5" class="form-control"></div>
+            <div class="fw-semibold mb-2 mt-3">ผู้บริหารระดับสูง</div>
+            <div class="mb-2"><label class="form-label small mb-1">ผู้อำนวยการโรงพยาบาล</label><input id="cfg_dir" class="form-control"></div>
+            <div class="mb-2"><label class="form-label small mb-1">คณบดี</label><input id="cfg_dean" class="form-control"></div>
+          </div>
+          <div class="col-md-6">
+            <div class="fw-semibold mb-2">ชื่อจุดสแกน (ธุรการ)</div>
+            <div class="mb-2"><label class="form-label small mb-1">จุดที่ 1</label><input id="cfg_station1" class="form-control"></div>
+            <div class="mb-2"><label class="form-label small mb-1">จุดที่ 2</label><input id="cfg_station2" class="form-control"></div>
+            <div class="mb-2"><label class="form-label small mb-1">จุดที่ 3</label><input id="cfg_station3" class="form-control"></div>
+            <div class="mb-2"><label class="form-label small mb-1">จุดที่ 4 (จุดสุดท้าย = สแกนออกแล้วแฟ้มเสร็จสิ้น)</label><input id="cfg_station4" class="form-control"></div>
+            <div class="alert alert-light border small mt-3 mb-0">
+              <i class="bi bi-info-circle me-1"></i>ระบบอ้างอิงจุดสแกนด้วยลำดับ (1–4) การเปลี่ยนชื่อจะไม่กระทบข้อมูลเดิม จุดที่ 4 คือจุดสุดท้ายเสมอ
+            </div>
+          </div>
+        </div>
+        <hr class="my-4">
+        <div class="fw-semibold mb-2"><i class="bi bi-diagram-2 me-1"></i>รายการฝ่ายงาน</div>
+        <label class="form-label small mb-1">พิมพ์ฝ่ายงาน 1 บรรทัดต่อ 1 ฝ่าย (จะไปแสดงเป็นดรอปดาวน์ในหน้าลงทะเบียน)</label>
+        <textarea id="cfg_departments" class="form-control" rows="6" placeholder="งานแผน&#10;งานพัสดุ&#10;งานเวชระเบียน"></textarea>
+        <button class="btn btn-brand mt-3" onclick="saveConfigForm()"><i class="bi bi-save me-1"></i>บันทึกการตั้งค่าชื่อ</button>
+        <div id="cfgResult" class="mt-3"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-gear me-1"></i>การเชื่อมต่อ / ติดตั้งระบบ</div>
+      <div class="card-body">
+        <p class="mb-1">Web App URL ที่ใช้อยู่:</p>
+        <code id="urlShow" class="d-block bg-light p-2 rounded mb-3 text-break">–</code>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-outline-brand" onclick="testConnection()"><i class="bi bi-plug me-1"></i>ทดสอบการเชื่อมต่อ</button>
+          <button class="btn btn-brand" onclick="initSystem()"><i class="bi bi-database-add me-1"></i>ติดตั้งระบบ / สร้าง 200 แฟ้ม</button>
+        </div>
+        <div id="setResult" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+    </div><!-- /.content -->
+  </div><!-- /.main -->
+</div><!-- /.layout -->
+
+<script>
+/* =========================================================
+   ตั้งค่า: วาง URL ของ Web App (Code.gs) ที่ Deploy แล้ว ตรงนี้
+   ตัวอย่าง: https://script.google.com/macros/s/xxxxx/exec
+   ========================================================= */
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyKTb341vJ4N4Um2N-mOEbMJLcFMA7uLiBVNAFtgiqvJBWnSlrRwIPDQdldh66xbblVRQ/exec";
+
+/* ค่าเริ่มต้นของชื่อ (ตรงกับ Code.gs) ใช้แสดงผลก่อนโหลด Config */
+const DEFAULTS = {
+  rong1:'รอง 1', rong2:'รอง 2', rong3:'รอง 3', rong4:'รอง 4', rong5:'รอง 5',
+  dir:'ผู้อำนวยการโรงพยาบาล', dean:'คณบดี',
+  station1:'ธุรการ 1', station2:'ธุรการ 2', station3:'ธุรการ 3', station4:'ธุรการ 4',
+  departments:'งานแผน\nงานพัสดุ\nงานเวชระเบียน\nงานการเงิน\nงานธุรการ'
+};
+let CONFIG = Object.assign({}, DEFAULTS);
+let ALL_FOLDERS = [];
+let sessionLog = [];
+const TOTAL_FOLDERS = 200;
+
+/* ---------- ตัวเรียก API แบบ JSONP (ไม่ติด CORS บน GitHub Pages) ---------- */
+function api(action, params){
+  return new Promise((resolve, reject)=>{
+    if(!WEBAPP_URL || WEBAPP_URL.indexOf("PASTE_YOUR")===0){ reject(new Error("ยังไม่ได้ตั้งค่า WEBAPP_URL")); return; }
+    const cb = 'jsonp_' + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    const t = setTimeout(()=>{ cleanup(); reject(new Error("หมดเวลาเชื่อมต่อ")); }, 30000);
+    function cleanup(){ try{delete window[cb];}catch(e){} s.remove(); clearTimeout(t); }
+    window[cb] = (data)=>{ cleanup(); resolve(data); };
+    const q = new URLSearchParams(Object.assign({action, callback:cb}, params||{}));
+    s.src = WEBAPP_URL + '?' + q.toString();
+    s.onerror = ()=>{ cleanup(); reject(new Error("เชื่อมต่อไม่สำเร็จ")); };
+    document.body.appendChild(s);
+  });
+}
+
+/* ---------- ตัวช่วยทั่วไป ---------- */
+function pad4(c){ const n=parseInt(String(c).replace(/[^0-9]/g,''),10); return isNaN(n)?String(c):String(n).padStart(4,'0'); }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+function cfg(k){ return (CONFIG && CONFIG[k]!=null && CONFIG[k]!=='') ? CONFIG[k] : DEFAULTS[k]; }
+function stationName(key){ if(!key) return ''; const m={S1:1,S2:2,S3:3,S4:4}; return m[key]?cfg('station'+m[key]):key; }
+function dateStamp(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate()); }
+function thaiDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso); if(isNaN(d)) return iso;
+  const m=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return d.getDate()+' '+m[d.getMonth()]+' '+(d.getFullYear()+543);
+}
+function thaiDateTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso); if(isNaN(d)) return iso;
+  const p=n=>String(n).padStart(2,'0');
+  return thaiDate(iso)+' '+p(d.getHours())+':'+p(d.getMinutes());
+}
+/* จัดรูปแบบระยะเวลาเป็น วัน/ชม./นาที */
+function fmtDuration(ms){
+  if(ms==null || isNaN(ms) || ms<0) return '';
+  const totalMin=Math.floor(ms/60000);
+  if(totalMin<1) return 'น้อยกว่า 1 นาที';
+  const d=Math.floor(totalMin/1440), h=Math.floor((totalMin%1440)/60), m=totalMin%60;
+  const parts=[];
+  if(d) parts.push(d+' วัน');
+  if(h) parts.push(h+' ชม.');
+  if(m) parts.push(m+' นาที');
+  return parts.join(' ');
+}
+/* เซลล์ "เวลารอ" บนแดชบอร์ด = เวลาตั้งแต่สแกนล่าสุด ณ จุดปัจจุบัน */
+function waitCell(x){
+  const st=x.status||'ว่าง';
+  if(st==='ว่าง') return '<span class="text-muted">—</span>';
+  if(st==='เสร็จสิ้น') return '<span class="text-success small"><i class="bi bi-check2 me-1"></i>เสร็จสิ้น</span>';
+  const ref=x.lastScanAt||x.updatedAt;
+  if(!ref) return '<span class="text-muted">—</span>';
+  const ms=Date.now()-new Date(ref).getTime();
+  const days=ms/86400000;
+  const color = days>=3 ? '#c0392b' : (days>=1 ? '#b45309' : 'var(--ink)');
+  const label = (x.lastDirection==='เข้า') ? 'อยู่ที่จุดนี้' : 'รอส่งต่อ';
+  return `<span style="color:${color};font-weight:600"><i class="bi bi-hourglass-split me-1"></i>${esc(fmtDuration(ms))}</span>
+          <div class="small text-muted">${label}</div>`;
+}
+function statusBadge(st){ let c='st-ว่าง'; if(st==='กำลังใช้งาน')c='st-ใช้'; else if(st==='เสร็จสิ้น')c='st-เสร็จ'; return `<span class="badge badge-status ${c}">${esc(st||'ว่าง')}</span>`; }
+function toast(el,type,msg){ el.innerHTML=`<div class="alert alert-${type} py-2 mb-0"><i class="bi bi-${type==='success'?'check-circle':type==='danger'?'x-circle':'info-circle'} me-1"></i>${esc(msg)}</div>`; }
+function beep(ok){ try{const ctx=new (window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=ok?880:220;o.type='sine';g.gain.setValueAtTime(0.15,ctx.currentTime);o.start();o.stop(ctx.currentTime+(ok?0.12:0.28));}catch(e){} }
+function editBadge(f){ return (f && f.editStatus==='มีแก้ไข')
+  ? `<span class="badge bg-warning text-dark ms-1"><i class="bi bi-pencil-fill me-1"></i>มีแก้ไข${f.editStation?(' @'+esc(stationName(f.editStation))):''}</span>` : ''; }
+
+/* ---------- Popup เด้งเตือนผลการสแกน ---------- */
+function showScanModal(title, msg, isError){
+  document.getElementById('scanModalTitle').textContent=title;
+  document.getElementById('scanModalMsg').innerHTML=esc(msg).replace(/\n/g,'<br>');
+  document.getElementById('scanModalIcon').innerHTML = isError
+    ? '<i class="bi bi-exclamation-octagon-fill text-danger" style="font-size:3.2rem"></i>'
+    : '<i class="bi bi-check-circle-fill text-success" style="font-size:3.2rem"></i>';
+  document.getElementById('scanModal').style.display='flex';
+}
+function closeScanModal(){
+  document.getElementById('scanModal').style.display='none';
+  setTimeout(()=>{ const s=document.getElementById('scanInput'); if(s) s.focus(); }, 60);
+}
+document.addEventListener('keydown', e=>{
+  const m=document.getElementById('scanModal');
+  if(m && m.style.display!=='none' && (e.key==='Enter'||e.key==='Escape')){ e.preventDefault(); closeScanModal(); }
+});
+
+/* ---------- ฟอร์มทำเครื่องหมาย "มีการแก้ไข" (ใช้ร่วมกันหน้าสแกน+ติดตาม) ---------- */
+function editFormHTML(f, pfx, defStation){
+  const has=f.editStatus==='มีแก้ไข';
+  const st=f.editStation || defStation || 'S1';
+  const opts=['S1','S2','S3','S4'].map((k,i)=>`<option value="${k}" ${k===st?'selected':''}>${esc(cfg('station'+(i+1)))}</option>`).join('');
+  return `
+    <div class="form-check form-switch mb-2">
+      <input class="form-check-input" type="checkbox" id="${pfx}_editHas" ${has?'checked':''}
+        onchange="document.getElementById('${pfx}_editDetail').style.display=this.checked?'block':'none'">
+      <label class="form-check-label fw-semibold" for="${pfx}_editHas">แฟ้มนี้มีการแก้ไข</label>
+    </div>
+    <div id="${pfx}_editDetail" style="display:${has?'block':'none'}">
+      <label class="form-label small mb-1">แก้ไขที่จุด (ธุรการ)</label>
+      <select id="${pfx}_editStation" class="form-select form-select-sm mb-2">${opts}</select>
+      <label class="form-label small mb-1">รายละเอียดการแก้ไข</label>
+      <textarea id="${pfx}_editNote" class="form-control form-control-sm mb-2" rows="2" placeholder="เช่น แก้เลขที่หนังสือ / รอแก้เอกสารหน้า 2">${esc(f.editNote||'')}</textarea>
+    </div>
+    <button class="btn btn-sm btn-warning" onclick="saveEdit('${pad4(f.folderCode)}','${pfx}')"><i class="bi bi-save me-1"></i>บันทึกสถานะแก้ไข</button>
+    <div id="${pfx}_editResult" class="mt-2"></div>`;
+}
+async function saveEdit(code, pfx){
+  const has=document.getElementById(pfx+'_editHas').checked?'1':'0';
+  const station=has==='1'?document.getElementById(pfx+'_editStation').value:'';
+  const note=has==='1'?document.getElementById(pfx+'_editNote').value.trim():'';
+  const el=document.getElementById(pfx+'_editResult');
+  el.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
+  try{
+    const d=await api('setEdit',{folderCode:code, hasEdit:has, station, note});
+    if(!d.ok) throw new Error(d.error||'error');
+    toast(el,'success',d.message);
+    ALL_FOLDERS=[];
+    if(pfx==='track') openFolder(code);
+    else if(pfx==='scan' && d.folder){ document.getElementById('scanEditBox').innerHTML=editFormHTML(d.folder,'scan',document.getElementById('scanStation').value); }
+  }catch(err){ toast(el,'danger',err.message); }
+}
+
+/* ---------- โหลด Config ---------- */
+async function loadConfig(){ try{ const d=await api('getConfig'); if(d.ok) CONFIG=Object.assign({}, DEFAULTS, d.config); }catch(e){} }
+
+/* ---------- เมนู / สลับหน้า / Sidebar ---------- */
+const PAGE_META = {
+  dashboard: ['แดชบอร์ด', 'ภาพรวมสถานะแฟ้มทั้งหมด'],
+  register:  ['ลงทะเบียนแฟ้ม', 'ธุรการ 1 · กรอกข้อมูลและเลือกไทม์ไลน์'],
+  scan:      ['สแกนเข้า-ออก', 'ยิงบาร์โค้ดเพื่อบันทึกการเคลื่อนไหวของแฟ้ม'],
+  barcode:   ['พิมพ์บาร์โค้ด', 'สร้างบาร์โค้ด Code 128 สำหรับติดแฟ้ม'],
+  track:     ['ติดตามแฟ้ม', 'ค้นหาและดูความคืบหน้าของแฟ้ม'],
+  settings:  ['ตั้งค่า', 'ชื่อผู้บริหาร จุดสแกน และการเชื่อมต่อ']
+};
+function toggleSidebar(force){
+  const l=document.getElementById('layout');
+  const open = (force===undefined) ? !l.classList.contains('sb-open') : force;
+  l.classList.toggle('sb-open', open);
+}
+document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
+  a.addEventListener('click', e=>{
+    e.preventDefault();
+    document.querySelectorAll('.nav-link[data-page]').forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    const p=a.dataset.page;
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    document.getElementById('page-'+p).classList.add('active');
+    const meta=PAGE_META[p]||['',''];
+    document.getElementById('pageTitle').textContent=meta[0];
+    document.getElementById('pageSub').textContent=meta[1];
+    toggleSidebar(false);
+    if(p==='dashboard') loadDashboard();
+    if(p==='register') loadRegister();
+    if(p==='scan'){ fillStationSelect(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
+    if(p==='track'){ fillTrackDept(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
+    if(p==='settings') loadConfigForm();
+  });
+});
+
+/* ========================= DASHBOARD ========================= */
+function fillDashDept(){
+  const sel=document.getElementById('dashDept'); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">ทุกฝ่ายงาน</option>'+deptList().map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+async function loadDashboard(){
+  const body=document.getElementById('dashBody');
+  body.innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">กำลังโหลด…</td></tr>';
+  fillDashDept();
+  try{
+    const d = await api('dashboard');
+    if(!d.ok) throw new Error(d.error||'error');
+    ALL_FOLDERS = d.folders||[];
+    stTotal.textContent=d.total; stVang.textContent=d.available; stUsing.textContent=d.inUse; stDone.textContent=d.done;
+    renderDash();
+  }catch(err){ body.innerHTML=`<tr><td colspan="8" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+}
+function renderDash(){
+  const q=(document.getElementById('dashSearch').value||'').toLowerCase().trim();
+  const f=document.getElementById('dashFilter').value;
+  const dept=document.getElementById('dashDept').value;
+  const body=document.getElementById('dashBody');
+  let rows=ALL_FOLDERS.filter(x=>{
+    if(f && (x.status||'ว่าง')!==f) return false;
+    if(dept && (x.department||'')!==dept) return false;
+    if(q){ const s=(pad4(x.folderCode)+' '+(x.owner||'')+' '+(x.department||'')).toLowerCase(); if(s.indexOf(q)<0) return false; }
+    return true;
+  });
+  const cnt=document.getElementById('dashCount'); if(cnt) cnt.textContent=rows.length;
+  if(!rows.length){ body.innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>'; return; }
+  body.innerHTML=rows.map(x=>{
+    const pos = x.currentStation ? `${esc(stationName(x.currentStation))} <span class="text-muted small">(${esc(x.lastDirection||'')})</span>` : '<span class="text-muted">—</span>';
+    return `<tr>
+      <td><b>${pad4(x.folderCode)}</b></td>
+      <td>${esc(x.owner)||'<span class="text-muted">—</span>'}${x.department?`<div class="small text-muted">${esc(x.department)}</div>`:''}</td>
+      <td>${esc(x.docType)||'<span class="text-muted">—</span>'}</td>
+      <td>${statusBadge(x.status)}${editBadge(x)}</td>
+      <td>${pos}</td>
+      <td>${waitCell(x)}</td>
+      <td class="small text-muted">${thaiDateTime(x.updatedAt)}</td>
+      <td><button class="btn btn-sm btn-outline-brand" onclick="gotoTrack('${pad4(x.folderCode)}')"><i class="bi bi-search"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+document.getElementById('dashSearch').addEventListener('input', renderDash);
+document.getElementById('dashFilter').addEventListener('change', renderDash);
+document.getElementById('dashDept').addEventListener('change', renderDash);
+
+/* ========================= EXPORT (Excel / PDF) ========================= */
+async function collectExport(){
+  const d = await api('getExportData');
+  if(!d.ok) throw new Error(d.error||'error');
+  const filter = document.getElementById('dashFilter').value;
+  const dept = document.getElementById('dashDept').value;
+  let rows = d.rows||[];
+  if(filter) rows = rows.filter(r=> (r.status||'ว่าง')===filter);
+  if(dept) rows = rows.filter(r=> (r.department||'')===dept);
+  return rows;
+}
+async function exportExcel(){
+  try{
+    const rows = await collectExport();
+    if(!rows.length){ alert('ไม่มีข้อมูลสำหรับส่งออก'); return; }
+    const data = rows.map((r,i)=>({
+      'ลำดับ': i+1, 'รหัสแฟ้ม': pad4(r.folderCode), 'เลขที่หนังสือ': r.docNumber||'',
+      'ชื่อเรื่อง': r.subject||'', 'เจ้าของแฟ้ม': r.owner||'', 'ฝ่ายงาน': r.department||'', 'ประเภท': r.docType||'',
+      'วันที่': thaiDate(r.docDate), 'สถานะ': r.status||'ว่าง',
+      'ตำแหน่งปัจจุบัน': (stationName(r.currentStation)||'') + (r.lastDirection?(' ('+r.lastDirection+')'):''),
+      'การแก้ไข': r.editStatus==='มีแก้ไข' ? ('มีแก้ไข @'+(stationName(r.editStation)||'')+(r.editNote?(' — '+r.editNote):'')) : '',
+      'ผู้ที่ต้องเสนอ': r.timeline||''
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [{wch:6},{wch:10},{wch:20},{wch:42},{wch:22},{wch:16},{wch:12},{wch:16},{wch:12},{wch:24},{wch:28},{wch:30}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'รายงานแฟ้ม');
+    XLSX.writeFile(wb, 'รายงานติดตามแฟ้ม_'+dateStamp()+'.xlsx');
+  }catch(err){ alert('ส่งออก Excel ไม่สำเร็จ: '+err.message); }
+}
+async function exportPDF(){
+  try{
+    const rows = await collectExport();
+    if(!rows.length){ alert('ไม่มีข้อมูลสำหรับส่งออก'); return; }
+    const body = rows.map((r,i)=>`<tr>
+      <td class="c">${i+1}</td><td class="c">${pad4(r.folderCode)}</td><td>${esc(r.docNumber)}</td>
+      <td>${esc(r.subject)}</td><td>${esc(r.owner)}</td><td>${esc(r.department)}</td><td class="c">${esc(r.docType)}</td>
+      <td class="c">${thaiDate(r.docDate)}</td><td class="c">${esc(r.status)}</td>
+      <td>${esc(stationName(r.currentStation))}${r.lastDirection?(' ('+esc(r.lastDirection)+')'):''}</td>
+      <td>${r.editStatus==='มีแก้ไข'?('มีแก้ไข @'+esc(stationName(r.editStation))+(r.editNote?(' — '+esc(r.editNote)):'')):''}</td></tr>`).join('');
+    const win = window.open('', '_blank');
+    if(!win){ alert('เบราว์เซอร์บล็อกป็อปอัป กรุณาอนุญาตป็อปอัปเพื่อส่งออก PDF'); return; }
+    win.document.write(
+      '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>รายงานติดตามแฟ้ม</title>'+
+      '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">'+
+      '<style>*{font-family:Sarabun,sans-serif;}body{margin:22px;color:#222;}'+
+      'h2{text-align:center;margin:0 0 2px;}.sub{text-align:center;color:#666;font-size:12px;margin-bottom:12px;}'+
+      'table{width:100%;border-collapse:collapse;font-size:11.5px;}th,td{border:1px solid #999;padding:4px 6px;vertical-align:top;}'+
+      'th{background:#0d5c63;color:#fff;}td.c{text-align:center;}tr:nth-child(even) td{background:#f4f7f7;}'+
+      '@media print{.noprint{display:none;}}.noprint{text-align:center;margin:16px;}'+
+      'button{padding:8px 20px;font-size:14px;cursor:pointer;background:#0d5c63;color:#fff;border:none;border-radius:6px;}</style>'+
+      '</head><body>'+
+      '<h2>ระบบติดตามแฟ้มเสนอผู้บริหาร</h2>'+
+      '<div class="sub">รายงานการติดตามแฟ้ม &middot; พิมพ์เมื่อ '+esc(thaiDateTime(new Date().toISOString()))+' &middot; ทั้งหมด '+rows.length+' รายการ</div>'+
+      '<table><thead><tr><th>ลำดับ</th><th>รหัสแฟ้ม</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>เจ้าของแฟ้ม</th><th>ฝ่ายงาน</th><th>ประเภท</th><th>วันที่</th><th>สถานะ</th><th>ตำแหน่งปัจจุบัน</th><th>การแก้ไข</th></tr></thead>'+
+      '<tbody>'+body+'</tbody></table>'+
+      '<div class="noprint"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button></div>'+
+      '</body></html>'
+    );
+    win.document.close();
+    win.onload = ()=> setTimeout(()=>{ try{win.print();}catch(e){} }, 500);
+  }catch(err){ alert('ส่งออก PDF ไม่สำเร็จ: '+err.message); }
+}
+
+/* ========================= REGISTER ========================= */
+async function loadRegister(){
+  document.getElementById('regResult').innerHTML='';
+  document.getElementById('regOwner').value='';
+  document.getElementById('regType').value='';
+  document.getElementById('recordRows').innerHTML='';
+  addRecordRow();
+  if(!CONFIG || !CONFIG.rong1) await loadConfig();
+  renderTimeline();
+  fillDeptSelect();
+  if(!ALL_FOLDERS.length){ try{ const d=await api('getFolders'); ALL_FOLDERS=d.folders||[]; }catch(e){} }
+  fillFolderSelect();
+}
+/* รายการฝ่ายงานจาก CONFIG (แยกด้วยขึ้นบรรทัดหรือ ,) */
+function deptList(){
+  return (cfg('departments')||'').split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+}
+function fillDeptSelect(){
+  const sel=document.getElementById('regDept'); if(!sel) return;
+  const list=deptList();
+  sel.innerHTML='<option value="">— เลือกฝ่ายงาน —</option>'+list.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+}
+function renderTimeline(){
+  const box=document.getElementById('timelineBox');
+  const rongs=['rong1','rong2','rong3','rong4','rong5'].map(k=>({k, v:cfg(k)}));
+  const highs=[{k:'dir', v:cfg('dir')},{k:'dean', v:cfg('dean')}];
+  const mk=arr=>arr.map(o=>`<div class="form-check">
+     <input class="form-check-input tl" type="checkbox" value="${esc(o.v)}" id="tl_${o.k}">
+     <label class="form-check-label" for="tl_${o.k}">${esc(o.v)}</label></div>`).join('');
+  box.innerHTML=`<div class="row">
+    <div class="col-md-7"><div class="fw-semibold mb-1">รองผู้อำนวยการ</div><div class="d-flex flex-wrap gap-3">${mk(rongs)}</div></div>
+    <div class="col-md-5 mt-3 mt-md-0"><div class="fw-semibold mb-1">ผู้บริหารระดับสูง</div><div class="d-flex flex-wrap gap-3">${mk(highs)}</div></div>
+  </div>`;
+}
+function fillFolderSelect(){
+  const showAll=document.getElementById('regShowAll').checked;
+  const sel=document.getElementById('regFolder');
+  const list=ALL_FOLDERS.filter(f=> showAll ? true : (f.status||'ว่าง')==='ว่าง');
+  sel.innerHTML = list.map(f=>`<option value="${pad4(f.folderCode)}">แฟ้ม ${pad4(f.folderCode)} — ${esc(f.status||'ว่าง')}</option>`).join('')
+                  || '<option value="">— ไม่มีแฟ้มว่าง —</option>';
+}
+function addRecordRow(data){
+  data=data||{};
+  const div=document.createElement('div');
+  div.className='row g-2 align-items-end mb-2 record-row';
+  div.innerHTML=`
+    <div class="col-md-4"><label class="form-label small mb-1">เลขที่หนังสือ</label>
+      <div class="input-group"><span class="input-group-text fixed-prefix">อว 7332.02/</span>
+      <input class="form-control rec-aunum" maxlength="6" inputmode="numeric" placeholder="01234" value="${esc(data.aunum||'')}"></div></div>
+    <div class="col-md-4"><label class="form-label small mb-1">ชื่อเรื่อง</label>
+      <input class="form-control rec-subject" placeholder="กรอกชื่อเรื่องเอกสาร" value="${esc(data.subject||'')}"></div>
+    <div class="col-md-3"><label class="form-label small mb-1">วันที่</label>
+      <input type="date" class="form-control rec-date" value="${esc(data.docDate||'')}"></div>
+    <div class="col-md-1 text-end">
+      <button class="btn btn-outline-danger" onclick="this.closest('.record-row').remove()"><i class="bi bi-trash"></i></button></div>`;
+  document.getElementById('recordRows').appendChild(div);
+}
+async function saveRegister(){
+  const el=document.getElementById('regResult');
+  const folderCode=document.getElementById('regFolder').value;
+  if(!folderCode){ toast(el,'danger','กรุณาเลือกแฟ้ม'); return; }
+  const owner=document.getElementById('regOwner').value.trim();
+  const department=document.getElementById('regDept').value;
+  const docType=document.getElementById('regType').value;
+  const timeline=[...document.querySelectorAll('.tl:checked')].map(c=>c.value).join(', ');
+  const records=[...document.querySelectorAll('.record-row')].map(r=>({
+    aunum:r.querySelector('.rec-aunum').value.trim(),
+    subject:r.querySelector('.rec-subject').value.trim(),
+    docDate:r.querySelector('.rec-date').value
+  })).filter(r=>r.aunum||r.subject||r.docDate);
+  if(!owner){ toast(el,'danger','กรุณากรอกเจ้าของแฟ้ม'); return; }
+  if(!department){ toast(el,'danger','กรุณาเลือกฝ่ายงาน'); return; }
+  if(!records.length){ toast(el,'danger','กรุณาเพิ่มอย่างน้อย 1 รายการเอกสาร'); return; }
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
+  try{
+    const d=await api('registerFolder',{folderCode, owner, department, docType, timeline, records:JSON.stringify(records)});
+    if(!d.ok) throw new Error(d.error||'error');
+    el.innerHTML=`<div class="alert alert-success mb-0"><i class="bi bi-check-circle me-1"></i>${esc(d.message)}
+      <div class="mt-2"><button class="btn btn-sm btn-outline-brand" onclick="gotoTrack('${pad4(folderCode)}')"><i class="bi bi-search me-1"></i>ดูแฟ้มนี้</button></div></div>`;
+    ALL_FOLDERS=[];
+  }catch(err){ toast(el,'danger',err.message); }
+}
+
+/* ========================= SCAN ========================= */
+function fillStationSelect(){
+  const sel=document.getElementById('scanStation');
+  const cur=sel.value;
+  sel.innerHTML=['S1','S2','S3','S4'].map((k,i)=>`<option value="${k}">${esc(cfg('station'+(i+1)))}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+const scanInput=document.getElementById('scanInput');
+scanInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doScan(scanInput.value); } });
+async function doScan(code){
+  const raw=(code||'').trim();
+  scanInput.value='';
+  if(!raw) return;
+  const station=document.getElementById('scanStation').value;   // คีย์ S1-S4
+  const direction=document.querySelector('input[name="dir"]:checked').value;
+  const folderCode=pad4(raw);
+  const el=document.getElementById('scanResult');
+  let d;
+  try{ d=await api('scan',{folderCode, station, direction}); }
+  catch(err){
+    beep(false);
+    showScanModal('เชื่อมต่อไม่สำเร็จ', err.message, true);
+    toast(el,'danger',err.message);
+    document.getElementById('scanEditWrap').style.display='none';
+    sessionLog.unshift({time:new Date(), folderCode, station, direction, ok:false, msg:err.message});
+    renderSessionLog(); return;
+  }
+  if(!d.ok){
+    beep(false);
+    const firstLine=(d.error||'เกิดข้อผิดพลาด').split('\n')[0];
+    showScanModal('สแกนไม่สำเร็จ', d.error||'เกิดข้อผิดพลาด', true);
+    toast(el,'danger',firstLine);
+    document.getElementById('scanEditWrap').style.display='none';
+    sessionLog.unshift({time:new Date(), folderCode, station, direction, ok:false, msg:firstLine});
+    renderSessionLog(); return;
+  }
+  // สแกนสำเร็จ
+  beep(true);
+  const f=d.folder;
+  el.innerHTML=`<div class="alert alert-success mb-0">
+    <div class="fw-bold"><i class="bi bi-check-circle me-1"></i>สแกนสำเร็จ — แฟ้ม ${pad4(f.folderCode)} ${editBadge(f)}</div>
+    <div class="small">เจ้าของ: ${esc(f.owner)||'—'} &middot; สถานะ: ${esc(f.status)} &middot; ${esc(stationName(station))} (${esc(direction)})</div>
+    ${d.nextHint?`<div class="small mt-1 text-primary"><i class="bi bi-arrow-right-circle me-1"></i>${esc(d.nextHint)}</div>`:''}</div>`;
+  document.getElementById('scanEditBox').innerHTML=editFormHTML(f,'scan',station);
+  document.getElementById('scanEditWrap').style.display='block';
+  sessionLog.unshift({time:new Date(), folderCode:pad4(f.folderCode), station, direction, ok:true, msg:'สำเร็จ'});
+  renderSessionLog(); scanInput.focus();
+}
+function renderSessionLog(){
+  const b=document.getElementById('sessionBody');
+  if(!sessionLog.length){ b.innerHTML='<tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีการสแกน</td></tr>'; return; }
+  const p=n=>String(n).padStart(2,'0');
+  b.innerHTML=sessionLog.slice(0,80).map(x=>{
+    const t=x.time; const tt=`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`;
+    const dir = x.direction==='เข้า'?'<span class="text-success fw-bold">เข้า</span>':'<span class="text-danger fw-bold">ออก</span>';
+    const res = x.ok?'<span class="badge bg-success">OK</span>':`<span class="badge bg-danger">${esc(x.msg)}</span>`;
+    return `<tr><td class="small">${tt}</td><td><b>${esc(x.folderCode)}</b></td><td class="small">${esc(stationName(x.station))}</td><td>${dir}</td><td>${res}</td></tr>`;
+  }).join('');
+}
+
+/* ========================= BARCODE ========================= */
+function renderBarcodes(){
+  const from=Math.max(1, parseInt(document.getElementById('bcFrom').value)||1);
+  const to=Math.min(200, parseInt(document.getElementById('bcTo').value)||from);
+  const showNum=document.getElementById('bcShowNum').checked;
+  const grid=document.getElementById('bcGrid'); grid.innerHTML='';
+  if(from>to){ grid.innerHTML='<div class="text-danger">ช่วงเลขไม่ถูกต้อง</div>'; return; }
+  for(let i=from;i<=to;i++){
+    const code=String(i).padStart(4,'0');
+    const col=document.createElement('div'); col.className='col-6 col-md-3 col-lg-2';
+    col.innerHTML=`<div class="bc-item"><svg id="bc-${code}"></svg>${showNum?`<div class="bc-code">${code}</div>`:''}</div>`;
+    grid.appendChild(col);
+    JsBarcode(`#bc-${code}`, code, {format:'CODE128', displayValue:false, width:2, height:55, margin:6});
+  }
+}
+
+/* ========================= TRACK ========================= */
+document.getElementById('trackInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doTrack(); } });
+function fillTrackDept(){
+  const sel=document.getElementById('trackDept'); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">ทุกฝ่ายงาน</option>'+deptList().map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+function clearTrack(){
+  document.getElementById('trackInput').value='';
+  document.getElementById('trackDept').value='';
+  document.getElementById('trackDate').value='';
+  document.getElementById('trackList').innerHTML='';
+  document.getElementById('trackResult').innerHTML='';
+  document.getElementById('trackInput').focus();
+}
+function gotoTrack(code){
+  document.querySelector('.nav-link[data-page="track"]').click();
+  document.getElementById('trackInput').value=code;
+  document.getElementById('trackDept').value='';
+  document.getElementById('trackDate').value='';
+  document.getElementById('trackList').innerHTML='';
+  openFolder(pad4(code));
+}
+/* เปิดรายละเอียดแฟ้มเดียว */
+async function openFolder(code){
+  const el=document.getElementById('trackResult');
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดแฟ้ม…</div>';
+  try{
+    const d=await api('getFolder',{folderCode:code});
+    if(!d.ok) throw new Error(d.error||'error');
+    renderTrack(d.folder);
+    el.scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(err){ toast(el,'danger',err.message); }
+}
+/* ค้นหา/กรองหลายเงื่อนไข */
+async function doTrack(){
+  const kw=(document.getElementById('trackInput').value||'').trim();
+  const dept=document.getElementById('trackDept').value;
+  const date=document.getElementById('trackDate').value;
+  const listEl=document.getElementById('trackList');
+  const resEl=document.getElementById('trackResult');
+  resEl.innerHTML='';
+
+  // ทางลัด: รหัสแฟ้มล้วน (1–200) และไม่ได้กรองอย่างอื่น -> เปิดแฟ้มนั้นเลย (รองรับการยิงบาร์โค้ด)
+  if(!dept && !date && /^\d{1,4}$/.test(kw)){
+    const n=parseInt(kw,10);
+    if(n>=1 && n<=TOTAL_FOLDERS){ listEl.innerHTML=''; return openFolder(pad4(kw)); }
+  }
+  if(!kw && !dept && !date){ listEl.innerHTML=''; return; }
+
+  listEl.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังค้นหา…</div>';
+  let rows;
+  try{ const d=await api('getExportData'); if(!d.ok) throw new Error(d.error||'error'); rows=d.rows||[]; }
+  catch(err){ toast(listEl,'danger',err.message); return; }
+
+  const q=kw.toLowerCase();
+  const qDigits=kw.replace(/[^0-9]/g,'');
+  const matched=rows.filter(r=>{
+    if(dept && (r.department||'')!==dept) return false;
+    if(date && (r.docDate||'')!==date) return false;
+    if(!q) return true;
+    const auAfter=((r.docNumber||'').split('/')[1]||'');
+    const hay=[pad4(r.folderCode), r.owner, r.department, r.docNumber, auAfter, r.subject, r.docDate, thaiDate(r.docDate)]
+      .map(x=>(x||'').toString().toLowerCase()).join(' | ');
+    if(hay.indexOf(q)>=0) return true;
+    if(qDigits && ((r.docNumber||'').replace(/[^0-9]/g,'').indexOf(qDigits)>=0)) return true;
+    return false;
+  });
+
+  // จัดกลุ่มตามแฟ้ม
+  const byFolder={};
+  matched.forEach(r=>{
+    const c=pad4(r.folderCode);
+    if(!byFolder[c]) byFolder[c]={folder:r, recs:[]};
+    if(r.docNumber||r.subject) byFolder[c].recs.push(r);
+  });
+  const codes=Object.keys(byFolder).sort();
+
+  if(codes.length===0){
+    listEl.innerHTML='<div class="card"><div class="card-body text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>ไม่พบแฟ้มที่ตรงกับเงื่อนไข</div></div>';
+    return;
+  }
+  if(codes.length===1){ listEl.innerHTML=''; return openFolder(codes[0]); }
+
+  const rowsHtml=codes.map(c=>{
+    const g=byFolder[c]; const f=g.folder;
+    const docs=g.recs.length ? g.recs.map(r=>`${esc(r.docNumber||'')}${r.subject?(' <span class="text-muted">· '+esc(r.subject)+'</span>'):''}`).join('<br>') : '<span class="text-muted">—</span>';
+    return `<tr style="cursor:pointer" onclick="openFolder('${c}')">
+      <td><b>${c}</b></td>
+      <td>${esc(f.owner)||'—'}</td>
+      <td>${esc(f.department)||'—'}</td>
+      <td class="small">${docs}</td>
+      <td>${statusBadge(f.status)}${editBadge(f)}</td>
+      <td class="text-end"><button class="btn btn-sm btn-outline-brand" onclick="event.stopPropagation();openFolder('${c}')"><i class="bi bi-eye me-1"></i>ดู</button></td>
+    </tr>`;
+  }).join('');
+  listEl.innerHTML=`<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-list-ul me-1"></i>ผลการค้นหา — พบ ${codes.length} แฟ้ม</div>
+    <div class="card-body p-0"><div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>รหัสแฟ้ม</th><th>ผู้เสนอ (เจ้าของ)</th><th>ฝ่ายงาน</th><th>เอกสารที่ตรงเงื่อนไข</th><th>สถานะ</th><th></th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table></div></div></div>`;
+}
+function renderTrack(f){
+  const keys=['S1','S2','S3','S4']; const dirs=['เข้า','ออก'];
+  const done={}; (f.logs||[]).forEach(l=>{ done[l.station+'|'+l.direction]=l.timestamp; });
+  // หาขั้นถัดไปที่ต้องสแกน (ขั้นแรกที่ยังไม่ done ตามลำดับ)
+  const seqKeys=[]; keys.forEach(k=>{ seqKeys.push(k+'|เข้า'); seqKeys.push(k+'|ออก'); });
+  let nextIdx=0; while(nextIdx<seqKeys.length && done[seqKeys[nextIdx]]) nextIdx++;
+  let steps=''; let idx=0;
+  keys.forEach(k=>{ dirs.forEach(dir=>{
+    const isDone=!!done[k+'|'+dir];
+    const isNext=(idx===nextIdx);
+    steps+=`<div class="step ${isDone?'done':''} ${isNext?'next':''}"><i class="bi ${dir==='เข้า'?'bi-box-arrow-in-right':'bi-box-arrow-right'}"></i>
+      ${esc(stationName(k))}<br><span class="small">${dir}${isDone?' ✓':(isNext?' ⬅ ถัดไป':'')}</span></div>`;
+    idx++;
+  });});
+  const recs=(f.records||[]);
+  const recRows = recs.length ? recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.docNumber)||'—'}</td><td>${esc(r.subject)||'—'}</td><td>${thaiDate(r.docDate)}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="text-center text-muted">ไม่มีรายการเอกสาร</td></tr>';
+  const tl=(f.timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const tlBadges = tl.length ? tl.map(t=>`<span class="badge bg-secondary me-1 mb-1">${esc(t)}</span>`).join('') : '<span class="text-muted">— ยังไม่ระบุ —</span>';
+  const logRows=(f.logs||[]).length ? (f.logs||[]).map(l=>{
+    const dir=l.direction==='เข้า'?'<span class="text-success fw-bold">เข้า</span>':'<span class="text-danger fw-bold">ออก</span>';
+    return `<tr><td class="small">${thaiDateTime(l.timestamp)}</td><td>${esc(stationName(l.station))}</td><td>${dir}</td></tr>`;
+  }).join('') : '<tr><td colspan="3" class="text-center text-muted">ยังไม่มีประวัติการสแกน</td></tr>';
+  const editLogRows=(f.editLogs||[]).length ? (f.editLogs||[]).map(l=>
+    `<tr><td class="small">${thaiDateTime(l.timestamp)}</td><td>${esc(stationName(l.station))||'—'}</td><td>${esc(l.action)}</td><td>${esc(l.note)||'—'}</td></tr>`
+  ).join('') : '<tr><td colspan="4" class="text-center text-muted">ยังไม่มีประวัติการแก้ไข</td></tr>';
+  const hasEdit=f.editStatus==='มีแก้ไข';
+  // ---- คำนวณระยะเวลาที่แต่ละจุด (dwell) จากประวัติสแกน ----
+  const dw={}; keys.forEach(k=>dw[k]={enter:null,leave:null});
+  (f.logs||[]).forEach(l=>{
+    if(!dw[l.station]) return;
+    const t=new Date(l.timestamp).getTime();
+    if(l.direction==='เข้า'){ if(dw[l.station].enter==null||t<dw[l.station].enter) dw[l.station].enter=t; }
+    else { if(dw[l.station].leave==null||t>dw[l.station].leave) dw[l.station].leave=t; }
+  });
+  const nowMs=Date.now(); let firstEnter=null, lastLeave=null;
+  const dwellCards=keys.map(k=>{
+    const e=dw[k].enter, lv=dw[k].leave;
+    if(e!=null && (firstEnter==null||e<firstEnter)) firstEnter=e;
+    if(lv!=null && (lastLeave==null||lv>lastLeave)) lastLeave=lv;
+    let val, sub, cls='';
+    if(e==null){ val='—'; sub='ยังไม่ถึง'; }
+    else if(lv==null){ val=fmtDuration(nowMs-e); sub='อยู่ที่นี่ · กำลังนับ'; cls='dwell-now'; }
+    else { val=fmtDuration(lv-e); sub='ผ่านแล้ว'; }
+    return `<div class="col-6 col-md-3"><div class="dwell-box ${cls}">
+      <div class="small text-muted">${esc(stationName(k))}</div>
+      <div class="fw-bold">${esc(val)}</div>
+      <div class="small text-muted">${sub}</div></div></div>`;
+  }).join('');
+  let totalTxt='—';
+  if(firstEnter!=null){
+    const endMs=(f.status==='เสร็จสิ้น' && lastLeave!=null) ? lastLeave : nowMs;
+    totalTxt=fmtDuration(endMs-firstEnter) || 'น้อยกว่า 1 นาที';
+  }
+  const editBanner=hasEdit ? `<div class="alert alert-warning py-2 mb-3">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i><b>แฟ้มนี้มีการแก้ไข</b> ที่ ${esc(stationName(f.editStation))}
+      ${f.editNote?(' &middot; '+esc(f.editNote)):''} <span class="text-muted small">(${thaiDateTime(f.editAt)})</span></div>` : '';
+
+  document.getElementById('trackResult').innerHTML=`
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-folder2 me-1"></i>แฟ้ม ${pad4(f.folderCode)}</span> ${statusBadge(f.status)} ${editBadge(f)}
+        <button class="btn btn-sm btn-outline-danger ms-auto" onclick="resetFolder('${pad4(f.folderCode)}')"><i class="bi bi-arrow-counterclockwise me-1"></i>คืนแฟ้ม (ทำเป็นว่าง)</button>
+      </div>
+      <div class="card-body">
+        ${editBanner}
+        <div class="row g-2 mb-3">
+          <div class="col-md-3"><span class="text-muted small">เจ้าของแฟ้ม</span><div class="fw-semibold">${esc(f.owner)||'—'}</div></div>
+          <div class="col-md-3"><span class="text-muted small">ฝ่ายงาน</span><div class="fw-semibold">${esc(f.department)||'—'}</div></div>
+          <div class="col-md-2"><span class="text-muted small">ประเภท</span><div class="fw-semibold">${esc(f.docType)||'—'}</div></div>
+          <div class="col-md-4"><span class="text-muted small">ตำแหน่งปัจจุบัน</span><div class="fw-semibold">${esc(stationName(f.currentStation))||'—'} ${f.lastDirection?('('+esc(f.lastDirection)+')'):''}</div></div>
+        </div>
+        <div class="mb-2"><span class="text-muted small">ผู้ที่ต้องเสนอ (ไทม์ไลน์):</span><div class="mt-1">${tlBadges}</div></div>
+        <div class="mb-1 text-muted small">ความคืบหน้า (ต้องผ่านทุกจุด ${esc(cfg('station1'))} → ${esc(cfg('station4'))})</div>
+        <div class="stepper mb-1">${steps}</div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-stopwatch me-1"></i>ระยะเวลาที่แต่ละจุด (ธุรการ)</span>
+        <span class="ms-auto small">รวมเวลาในระบบ: <b>${esc(totalTxt)}</b>
+        ${(f.status!=='เสร็จสิ้น' && firstEnter!=null)?'<span class="badge bg-warning text-dark ms-1">กำลังดำเนินการ</span>':''}</span>
+      </div>
+      <div class="card-body">
+        <div class="row g-2">${dwellCards}</div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-pencil-square me-1"></i>การแก้ไขแฟ้ม (ธุรการกำหนดเอง)</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-5">${editFormHTML(f,'track', f.currentStation||'S1')}</div>
+          <div class="col-md-7">
+            <div class="text-muted small mb-1">ประวัติการแก้ไข</div>
+            <div class="table-responsive" style="max-height:220px;overflow:auto">
+              <table class="table table-sm mb-0"><thead class="table-light"><tr><th>เวลา</th><th>จุด</th><th>การกระทำ</th><th>รายละเอียด</th></tr></thead>
+              <tbody>${editLogRows}</tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-list-ol me-1"></i>รายการเอกสารในแฟ้ม</div>
+        <div class="card-body p-0"><div class="table-responsive">
+          <table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>วันที่</th></tr></thead>
+          <tbody>${recRows}</tbody></table></div></div></div></div>
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-clock-history me-1"></i>ประวัติการสแกน</div>
+        <div class="card-body p-0"><div class="table-responsive" style="max-height:320px;overflow:auto">
+          <table class="table table-sm mb-0"><thead class="table-light"><tr><th>เวลา</th><th>จุด</th><th>ทิศทาง</th></tr></thead>
+          <tbody>${logRows}</tbody></table></div></div></div></div>
+    </div>`;
+}
+async function resetFolder(code){
+  if(!confirm('ยืนยันคืนแฟ้ม '+code+' ให้เป็นสถานะว่าง? (ข้อมูลรายการเอกสารในแฟ้มจะถูกล้าง)')) return;
+  try{ const d=await api('resetFolder',{folderCode:code}); if(!d.ok) throw new Error(d.error||'error'); ALL_FOLDERS=[]; openFolder(pad4(code)); }
+  catch(err){ alert(err.message); }
+}
+
+/* ========================= SETTINGS ========================= */
+function loadConfigForm(){
+  ['rong1','rong2','rong3','rong4','rong5','dir','dean','station1','station2','station3','station4'].forEach(k=>{
+    const el=document.getElementById('cfg_'+k); if(el) el.value=cfg(k);
+  });
+  const dep=document.getElementById('cfg_departments'); if(dep) dep.value=(cfg('departments')||'');
+}
+async function saveConfigForm(){
+  const el=document.getElementById('cfgResult');
+  const params={};
+  ['rong1','rong2','rong3','rong4','rong5','dir','dean','station1','station2','station3','station4'].forEach(k=>{
+    params[k]=document.getElementById('cfg_'+k).value.trim();
+  });
+  // ฝ่ายงาน: เก็บ 1 บรรทัด/1 ฝ่าย (ตัดบรรทัดว่าง)
+  params.departments=(document.getElementById('cfg_departments').value||'').split(/\n/).map(s=>s.trim()).filter(Boolean).join('\n');
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
+  try{
+    const d=await api('saveConfig', params);
+    if(!d.ok) throw new Error(d.error||'error');
+    CONFIG=Object.assign({}, DEFAULTS, d.config);
+    fillStationSelect();
+    toast(el,'success',d.message);
+  }catch(err){ toast(el,'danger',err.message); }
+}
+async function testConnection(){
+  const el=document.getElementById('setResult');
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังทดสอบ…</div>';
+  try{ const d=await api('ping'); toast(el,'success','เชื่อมต่อสำเร็จ ✓ ('+esc(d.message)+')'); setConn(true); }
+  catch(err){ toast(el,'danger','เชื่อมต่อไม่สำเร็จ: '+err.message); setConn(false); }
+}
+async function initSystem(){
+  const el=document.getElementById('setResult');
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังติดตั้ง…</div>';
+  try{ const d=await api('init'); if(!d.ok) throw new Error(d.error||'error'); toast(el,'success',d.message); ALL_FOLDERS=[]; await loadConfig(); }
+  catch(err){ toast(el,'danger',err.message); }
+}
+function setConn(ok){
+  const b=document.getElementById('connBadge');
+  b.className='badge '+(ok?'bg-success':'bg-secondary');
+  b.innerHTML=ok?'<i class="bi bi-plug-fill me-1"></i>เชื่อมต่อแล้ว':'<i class="bi bi-plug me-1"></i>ยังไม่เชื่อมต่อ';
+}
+
+/* ========================= เริ่มต้น ========================= */
+(async function init(){
+  document.getElementById('urlShow').textContent = WEBAPP_URL;
+  try{ document.getElementById('todayChip').textContent = 'วันนี้ · '+thaiDate(new Date().toISOString()); }catch(e){}
+  if(!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_YOUR')===0){
+    document.getElementById('urlWarn').classList.remove('d-none');
+    return;
+  }
+  await loadConfig();
+  fillStationSelect();
+  testConnection();
+  loadDashboard();
+})();
+</script>
+
+<!-- Popup เด้งเตือนผลการสแกน -->
+<div id="scanModal" class="scan-modal-overlay" style="display:none">
+  <div class="scan-modal-box">
+    <div id="scanModalIcon" class="mb-2"></div>
+    <div id="scanModalTitle" class="fw-bold fs-4"></div>
+    <div id="scanModalMsg" class="mt-2 fs-6"></div>
+    <button class="btn btn-brand mt-3 px-4" onclick="closeScanModal()">ตกลง (Enter)</button>
+  </div>
+</div>
+</body>
+</html>
