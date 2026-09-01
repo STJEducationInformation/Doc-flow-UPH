@@ -32,8 +32,9 @@
   .sidebar{ width:264px; flex-shrink:0; background:linear-gradient(180deg,var(--sidebar),var(--sidebar-2));
     color:#cfe4e2; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; z-index:1050; }
   .sidebar .brand{ padding:22px 20px 18px; display:flex; align-items:center; gap:12px; }
-  .sidebar .brand .logo{ width:44px; height:44px; border-radius:13px; background:linear-gradient(135deg,var(--brand),#0b6b62);
-    display:flex; align-items:center; justify-content:center; color:#fff; font-size:1.35rem; box-shadow:0 6px 16px -6px rgba(13,148,136,.7); }
+  .sidebar .brand .logo{ width:46px; height:46px; border-radius:12px; background:#fff; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px -4px rgba(0,0,0,.4); }
+  .sidebar .brand .logo img{ width:100%; height:100%; object-fit:contain; padding:3px; }
   .sidebar .brand-name{ color:#fff; font-weight:700; font-size:1.02rem; line-height:1.15; }
   .sidebar .brand-sub{ color:#7fb2ad; font-size:.7rem; }
   .sidebar nav{ padding:8px 12px; overflow-y:auto; flex:1; }
@@ -114,6 +115,24 @@
   .dwell-box{ border:1px solid var(--line); border-radius:12px; padding:12px 14px; background:#f7f9fa; height:100%; }
   .dwell-box.dwell-now{ background:#fff6e6; border-color:#f5b301; box-shadow:0 6px 16px -10px rgba(245,179,1,.7); }
   .dwell-box.dwell-now .fw-bold{ color:#8a5a00; }
+  /* ไทม์ไลน์ประวัติแนวนอน */
+  .hist-tl{ display:flex; align-items:flex-start; flex-wrap:wrap; }
+  .hist-tl-node{ text-align:center; min-width:88px; flex:0 0 auto; }
+  .hist-tl-dot{ width:16px;height:16px;border-radius:50%;background:#cbd5dc;margin:4px auto 4px;border:3px solid #eef2f4; }
+  .hist-tl-node.active .hist-tl-dot{ background:#f5b301; }
+  .hist-tl-node.done .hist-tl-dot{ background:var(--brand); }
+  .hist-tl-name{ font-weight:600; font-size:.8rem; }
+  .hist-tl-times{ color:var(--muted); line-height:1.25; font-size:.72rem; }
+  .hist-tl-line{ flex:1 1 18px; height:3px; background:#e2e8ec; margin-top:11px; min-width:12px; }
+  .hist-tl-line.done{ background:var(--brand); }
+  .hist-tl-node.label .hist-tl-dot{ background:#fff; border:3px solid #cbd5dc; }
+  .hist-tl-node.label.active .hist-tl-dot{ background:#fff7e6; border-color:#f5b301; }
+  .hist-tl-node.label.done .hist-tl-dot{ background:#e7f8f4; border-color:var(--brand); }
+  .hist-tl-node.label .hist-tl-name{ font-weight:500; color:#475569; }
+  .hist-caret{ transition:transform .18s; color:var(--muted); }
+  .hist-item.open .hist-caret{ transform:rotate(90deg); }
+  .hist-head:hover{ background:#f6fbfa; }
+  .hist-entry:hover{ background:#f6fbfa; }
   .bc-item svg{ max-width:100%; } .bc-code{ font-size:.85rem; color:var(--muted); margin-top:3px; }
 
   .scan-modal-overlay{ position:fixed; inset:0; background:rgba(8,24,27,.55); z-index:1090; display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(2px); }
@@ -148,14 +167,15 @@
 
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <div class="logo"><i class="bi bi-folder2-open"></i></div>
+      <div class="logo"><img src="data:image/png;base64,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" alt="UP Hospital"></div>
       <div>
         <div class="brand-name">ระบบติดตามแฟ้ม</div>
         <div class="brand-sub">เสนอผู้บริหาร</div>
       </div>
     </div>
     <nav>
-      <a class="nav-link active" data-page="dashboard" href="#"><i class="bi bi-grid-1x2-fill"></i>แดชบอร์ด</a>
+      <a class="nav-link active" data-page="dashboard" href="#"><i class="bi bi-grid-1x2-fill"></i>แดชบอร์ดแฟ้ม</a>
+      <a class="nav-link" data-page="report" href="#"><i class="bi bi-bar-chart-line-fill"></i>แดชบอร์ดรายงาน</a>
       <a class="nav-link" data-page="register" href="#"><i class="bi bi-pencil-square"></i>ลงทะเบียนแฟ้ม</a>
       <a class="nav-link" data-page="scan" href="#"><i class="bi bi-upc-scan"></i>สแกนเข้า-ออก</a>
       <a class="nav-link" data-page="barcode" href="#"><i class="bi bi-upc"></i>พิมพ์บาร์โค้ด</a>
@@ -171,7 +191,7 @@
     <header class="topbar">
       <button class="burger" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
       <div>
-        <div class="pt-title" id="pageTitle">แดชบอร์ด</div>
+        <div class="pt-title" id="pageTitle">แดชบอร์ดแฟ้ม</div>
         <div class="pt-sub" id="pageSub">ภาพรวมสถานะแฟ้มทั้งหมด</div>
       </div>
       <div class="ms-auto eyebrow d-none d-md-block" id="todayChip"></div>
@@ -218,6 +238,73 @@
     </div>
   </div>
 
+  <!-- ================= REPORT ================= -->
+  <div class="page" id="page-report">
+    <div class="card mb-3">
+      <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+        <span class="fw-semibold"><i class="bi bi-funnel me-1"></i>ช่วงเวลารายงาน</span>
+        <select id="repPeriod" class="form-select form-select-sm" style="width:170px" onchange="loadReport()">
+          <option value="today">วันนี้</option>
+          <option value="week">7 วัน</option>
+          <option value="month">1 เดือน</option>
+          <option value="quarter">ไตรมาส (3 เดือน)</option>
+          <option value="half">6 เดือน</option>
+          <option value="year">1 ปี</option>
+          <option value="all" selected>ทั้งหมด</option>
+        </select>
+        <button class="btn btn-sm btn-outline-brand" onclick="loadReport()"><i class="bi bi-arrow-clockwise me-1"></i>รีเฟรช</button>
+        <div class="ms-auto d-flex gap-2">
+          <button class="btn btn-sm btn-success" onclick="exportReportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</button>
+          <button class="btn btn-sm btn-danger" onclick="exportReportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-1">
+      <div class="col-6 col-lg-3"><div class="stat total"><span class="bar"></span><span class="chip"><i class="bi bi-folder2"></i></span><div class="lbl">แฟ้มในช่วงนี้</div><div class="num" id="repFolders">–</div></div></div>
+      <div class="col-6 col-lg-3"><div class="stat using"><span class="bar"></span><span class="chip"><i class="bi bi-files"></i></span><div class="lbl">จำนวนเรื่อง (เอกสาร)</div><div class="num" id="repRecords">–</div></div></div>
+      <div class="col-6 col-lg-3"><div class="stat done"><span class="bar"></span><span class="chip"><i class="bi bi-check2-circle"></i></span><div class="lbl">เดินครบกระบวนการ</div><div class="num" id="repDone">–</div></div></div>
+      <div class="col-6 col-lg-3"><div class="stat vang"><span class="bar"></span><span class="chip"><i class="bi bi-hourglass-split"></i></span><div class="lbl">เวลาเฉลี่ยต่อแฟ้ม</div><div class="num" id="repAvg" style="font-size:1.2rem">–</div></div></div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-diagram-3 me-1"></i>ฝ่ายงานที่เสนอแฟ้ม (จำนวนแฟ้ม / จำนวนเรื่อง)</div>
+        <div class="card-body p-0"><div class="table-responsive" style="max-height:340px;overflow:auto">
+          <table class="table table-sm mb-0 align-middle"><thead class="table-light"><tr><th>ฝ่ายงาน</th><th class="text-end">แฟ้ม</th><th class="text-end">เรื่อง</th><th style="width:35%">สัดส่วนแฟ้ม</th></tr></thead>
+          <tbody id="repDeptBody"><tr><td colspan="4" class="text-center text-muted py-4">—</td></tr></tbody></table>
+        </div></div></div></div>
+
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-stopwatch me-1"></i>เวลาเฉลี่ยที่แต่ละจุดสแกน (จุดที่ใช้เวลามากสุดจะเน้นสี)</div>
+        <div class="card-body"><div id="repStation"><div class="text-muted text-center py-4">—</div></div></div>
+      </div></div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-arrow-down-circle text-danger me-1"></i>10 อันดับแฟ้มที่ใช้เวลานานที่สุด</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>รหัสแฟ้ม</th><th>ผู้เสนอ</th><th>ฝ่ายงาน</th><th class="text-end">เวลา</th></tr></thead><tbody id="repSlowBody"><tr><td colspan="5" class="text-center text-muted py-4">—</td></tr></tbody></table></div></div></div></div>
+
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-arrow-up-circle text-success me-1"></i>10 อันดับแฟ้มที่ใช้เวลาน้อยที่สุด</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>รหัสแฟ้ม</th><th>ผู้เสนอ</th><th>ฝ่ายงาน</th><th class="text-end">เวลา</th></tr></thead><tbody id="repFastBody"><tr><td colspan="5" class="text-center text-muted py-4">—</td></tr></tbody></table></div></div></div></div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header d-flex align-items-center">
+        <span><i class="bi bi-list-ul me-1"></i>รายการทั้งหมด <span id="repRowCount" class="badge bg-secondary ms-1">0</span></span>
+        <input id="repSearch" class="form-control form-control-sm ms-auto" style="width:220px" placeholder="ค้นหาในรายการ" oninput="renderRepRows()">
+      </div>
+      <div class="card-body p-0"><div class="table-responsive" style="max-height:460px;overflow:auto">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th>รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ชื่อผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th>ประเภท</th><th>วันที่</th><th>สถานะ</th></tr></thead>
+          <tbody id="repRowsBody"><tr><td colspan="8" class="text-center text-muted py-4">— เลือกช่วงเวลาแล้วกดรีเฟรช —</td></tr></tbody>
+        </table>
+      </div></div>
+    </div>
+  </div>
+
   <!-- ================= REGISTER ================= -->
   <div class="page" id="page-register">
     <div class="card">
@@ -233,26 +320,20 @@
         </div>
         <hr class="mt-0 mb-3">
         <div class="row g-3">
-          <div class="col-md-3">
+          <div class="col-md-4">
             <label class="form-label">เลือกแฟ้ม <span class="text-muted small">(หรือใช้ยิงบาร์โค้ดด้านบน)</span></label>
             <select id="regFolder" class="form-select"></select>
             <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="regShowAll" onchange="fillFolderSelect()">
               <label class="form-check-label small" for="regShowAll">แสดงแฟ้มทั้งหมด</label></div>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <label class="form-label">เจ้าของแฟ้ม (ชื่อ-นามสกุล)</label>
             <input id="regOwner" class="form-control" placeholder="เช่น นายสมชาย ใจดี">
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <label class="form-label">ฝ่ายงาน</label>
             <select id="regDept" class="form-select"></select>
-            <div class="form-text">ตั้งค่ารายการฝ่ายงานได้ที่เมนู “ตั้งค่า”</div>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">ประเภท</label>
-            <select id="regType" class="form-select">
-              <option value="">— เลือกประเภท —</option><option>หนังสือส่ง</option><option>หนังสือรับ</option>
-            </select>
+            <div class="form-text">ประเภทหนังสือย้ายไปเลือกในแต่ละรายการด้านล่าง (ตามเลข อว.) &middot; ตั้งค่าฝ่ายงานที่เมนู “ตั้งค่า”</div>
           </div>
         </div>
 
@@ -286,12 +367,23 @@
           <div class="card-header"><i class="bi bi-upc-scan me-1"></i>สแกนเข้า-ออก</div>
           <div class="card-body">
             <label class="form-label">จุดสแกน (ธุรการ)</label>
-            <select id="scanStation" class="form-select mb-3"></select>
+            <select id="scanStation" class="form-select mb-3" onchange="loadQueue()"></select>
             <label class="form-label">ยิงบาร์โค้ดที่นี่</label>
             <input id="scanInput" class="form-control scan-input" placeholder="รอสแกน…" autocomplete="off">
             <div class="form-text">ยิงบาร์โค้ดแฟ้มได้เลย ระบบจะรู้เองว่าเป็นการ <b>เข้า</b> หรือ <b>ออก</b> โดยไม่ต้องเลือกทิศทาง</div>
             <div id="scanResult" class="mt-3"></div>
           </div>
+        </div>
+        <div class="card mt-3">
+          <div class="card-header d-flex align-items-center py-2">
+            <span><i class="bi bi-inboxes text-primary me-1"></i>คิวรอสแกนเข้า <span id="queueStname" class="text-muted small"></span> <span id="queueCount" class="badge bg-primary ms-1">0</span></span>
+            <button class="btn btn-sm btn-outline-brand ms-auto" onclick="loadQueue()"><i class="bi bi-arrow-clockwise"></i></button>
+          </div>
+          <div class="card-body p-0"><div class="table-responsive" style="max-height:280px;overflow:auto">
+            <table class="table table-sm mb-0 align-middle">
+              <thead class="table-light"><tr><th>แฟ้ม</th><th>เลขที่ อว · ชื่อเรื่อง</th></tr></thead>
+              <tbody id="queueBody"><tr><td colspan="2" class="text-center text-muted py-3">—</td></tr></tbody>
+            </table></div></div>
         </div>
       </div>
       <div class="col-lg-8">
@@ -324,6 +416,18 @@
         </div>
         <div class="form-text mt-1"><i class="bi bi-hand-index me-1"></i>คลิกที่แฟ้มในตารางเพื่อบันทึก “สถานะการแก้ไขแฟ้ม”</div>
       </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header d-flex align-items-center">
+        <span><i class="bi bi-check2-circle text-success me-1"></i>แฟ้มที่ดำเนินการเสร็จสิ้นวันนี้ <span id="doneTodayCount" class="badge bg-success ms-1">0</span></span>
+        <button class="btn btn-sm btn-outline-brand ms-auto" onclick="loadDoneToday()"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
+      <div class="card-body p-0"><div class="table-responsive" style="max-height:300px;overflow:auto">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th>เวลาเสร็จ</th><th>รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ชื่อผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th>วันที่</th></tr></thead>
+          <tbody id="doneTodayBody"><tr><td colspan="7" class="text-center text-muted py-3">ยังไม่มีแฟ้มที่เสร็จวันนี้</td></tr></tbody>
+        </table></div></div>
     </div>
 
     <div id="scanEditWrap" class="mt-3" style="display:none">
@@ -399,6 +503,33 @@
     </div>
     <div id="trackList"></div>
     <div id="trackResult"></div>
+
+    <div class="card mt-3">
+      <div class="card-header d-flex flex-wrap gap-2 align-items-center">
+        <span><i class="bi bi-clock-history me-1"></i>ประวัติแฟ้มทั้งหมด <span id="histTotal" class="badge bg-secondary ms-1">0</span></span>
+        <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+          <label class="small text-muted mb-0">ช่วงเวลา</label>
+          <select id="histPeriod" class="form-select form-select-sm" style="width:130px" onchange="loadHistory()">
+            <option value="today">วันนี้</option>
+            <option value="week">7 วัน</option>
+            <option value="month">1 เดือน</option>
+            <option value="quarter">ไตรมาส (3 เดือน)</option>
+            <option value="half">6 เดือน</option>
+            <option value="year">1 ปี</option>
+            <option value="all" selected>ทั้งหมด</option>
+          </select>
+          <label class="small text-muted mb-0">แสดง</label>
+          <select id="histLimit" class="form-select form-select-sm" style="width:110px" onchange="loadHistory()">
+            <option value="50">50 แถว</option>
+            <option value="100" selected>100 แถว</option>
+            <option value="200">200 แถว</option>
+            <option value="all">ทั้งหมด</option>
+          </select>
+          <button class="btn btn-sm btn-outline-brand" onclick="loadHistory()"><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
+      </div>
+      <div class="card-body p-0"><div id="histBody"><div class="text-muted text-center py-4">— กดโหลดหรือเลือกช่วงเวลา —</div></div></div>
+    </div>
   </div>
 
   <!-- ================= SETTINGS ================= -->
@@ -594,6 +725,7 @@ document.addEventListener('keydown', e=>{
 function editFormHTML(f, pfx, defStation){
   const has=f.editStatus==='มีแก้ไข';
   const st=f.editStation || defStation || 'S1';
+  const rm=f.editReturn || 'same';
   const opts=['S1','S2','S3','S4'].map((k,i)=>`<option value="${k}" ${k===st?'selected':''}>${esc(cfg('station'+(i+1)))}</option>`).join('');
   return `
     <div class="form-check form-switch mb-2">
@@ -606,6 +738,13 @@ function editFormHTML(f, pfx, defStation){
       <select id="${pfx}_editStation" class="form-select form-select-sm mb-2">${opts}</select>
       <label class="form-label small mb-1">รายละเอียดการแก้ไข</label>
       <textarea id="${pfx}_editNote" class="form-control form-control-sm mb-2" rows="2" placeholder="เช่น แก้เลขที่หนังสือ / รอแก้เอกสารหน้า 2">${esc(f.editNote||'')}</textarea>
+      <label class="form-label small mb-1">เมื่อผู้เสนอแก้เสร็จ ให้เอาแฟ้มกลับมา:</label>
+      <div class="mb-2">
+        <div class="form-check"><input class="form-check-input" type="radio" name="${pfx}_editRet" id="${pfx}_ret_same" value="same" ${rm!=='restart'?'checked':''}>
+          <label class="form-check-label small" for="${pfx}_ret_same">คืนที่จุดเดิม (สแกน “เข้า” จุดที่แก้ไขใหม่)</label></div>
+        <div class="form-check"><input class="form-check-input" type="radio" name="${pfx}_editRet" id="${pfx}_ret_restart" value="restart" ${rm==='restart'?'checked':''}>
+          <label class="form-check-label small" for="${pfx}_ret_restart">เริ่มที่ธุรการ 1 ใหม่ (รีเซ็ตเส้นทางเดินใหม่)</label></div>
+      </div>
     </div>
     <button class="btn btn-sm btn-warning" onclick="saveEdit('${pad4(f.folderCode)}','${pfx}')"><i class="bi bi-save me-1"></i>บันทึกสถานะแก้ไข</button>
     <div id="${pfx}_editResult" class="mt-2"></div>`;
@@ -614,15 +753,17 @@ async function saveEdit(code, pfx){
   const has=document.getElementById(pfx+'_editHas').checked?'1':'0';
   const station=has==='1'?document.getElementById(pfx+'_editStation').value:'';
   const note=has==='1'?document.getElementById(pfx+'_editNote').value.trim():'';
+  const retEl=document.querySelector(`input[name="${pfx}_editRet"]:checked`);
+  const returnMode=has==='1'&&retEl?retEl.value:'same';
   const el=document.getElementById(pfx+'_editResult');
   el.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
   try{
-    const d=await api('setEdit',{folderCode:code, hasEdit:has, station, note});
+    const d=await api('setEdit',{folderCode:code, hasEdit:has, station, note, returnMode});
     if(!d.ok) throw new Error(d.error||'error');
     toast(el,'success',d.message);
     ALL_FOLDERS=[];
     if(pfx==='track') openFolder(code);
-    else if(pfx==='scan' && d.folder){ document.getElementById('scanEditBox').innerHTML=editFormHTML(d.folder,'scan',document.getElementById('scanStation').value); }
+    else if(pfx==='scan' && d.folder){ document.getElementById('scanEditBox').innerHTML=editFormHTML(d.folder,'scan',document.getElementById('scanStation').value); loadQueue(); }
   }catch(err){ toast(el,'danger',err.message); }
 }
 
@@ -631,7 +772,8 @@ async function loadConfig(){ try{ const d=await api('getConfig'); if(d.ok) CONFI
 
 /* ---------- เมนู / สลับหน้า / Sidebar ---------- */
 const PAGE_META = {
-  dashboard: ['แดชบอร์ด', 'ภาพรวมสถานะแฟ้มทั้งหมด'],
+  dashboard: ['แดชบอร์ดแฟ้ม', 'ภาพรวมสถานะแฟ้มทั้งหมด'],
+  report:    ['แดชบอร์ดรายงาน', 'สรุปสถิติและรายงานการเดินแฟ้ม'],
   register:  ['ลงทะเบียนแฟ้ม', 'ธุรการ 1 · กรอกข้อมูลและเลือกไทม์ไลน์'],
   scan:      ['สแกนเข้า-ออก', 'ยิงบาร์โค้ดเพื่อบันทึกการเคลื่อนไหวของแฟ้ม'],
   barcode:   ['พิมพ์บาร์โค้ด', 'สร้างบาร์โค้ด Code 128 สำหรับติดแฟ้ม'],
@@ -656,10 +798,11 @@ document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
     document.getElementById('pageSub').textContent=meta[1];
     toggleSidebar(false);
     if(p==='dashboard') loadDashboard();
+    if(p==='report') loadReport();
     if(p==='register') loadRegister();
-    if(p==='scan'){ fillStationSelect(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
+    if(p==='scan'){ fillStationSelect(); loadQueue(); loadDoneToday(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
     if(p==='barcode'){ PRINTED_LOADED=false; loadPrinted(); }
-    if(p==='track'){ fillTrackDept(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
+    if(p==='track'){ fillTrackDept(); loadHistory(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
     if(p==='settings') loadConfigForm();
   });
 });
@@ -674,14 +817,171 @@ function fillDashDept(){
 async function loadDashboard(){
   const body=document.getElementById('dashBody');
   body.innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">กำลังโหลด…</td></tr>';
-  fillDashDept();
   try{
     const d = await api('dashboard');
     if(!d.ok) throw new Error(d.error||'error');
-    ALL_FOLDERS = d.folders||[];
-    stTotal.textContent=d.total; stVang.textContent=d.available; stUsing.textContent=d.inUse; stDone.textContent=d.done;
-    renderDash();
+    applyDashboard(d);
   }catch(err){ body.innerHTML=`<tr><td colspan="8" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+}
+function applyDashboard(d){
+  fillDashDept();
+  ALL_FOLDERS = d.folders||[];
+  stTotal.textContent=d.total; stVang.textContent=d.available; stUsing.textContent=d.inUse; stDone.textContent=d.done;
+  renderDash();
+}
+
+/* ========================= แดชบอร์ดรายงาน ========================= */
+let REPORT_DATA = null;
+async function loadReport(){
+  const period=document.getElementById('repPeriod').value;
+  document.getElementById('repRowsBody').innerHTML='<tr><td colspan="8" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดรายงาน…</td></tr>';
+  try{
+    const d=await api('getReport',{period});
+    if(!d.ok) throw new Error(d.error||'error');
+    REPORT_DATA=d;
+    // การ์ดสรุป
+    document.getElementById('repFolders').textContent=d.totalFolders;
+    document.getElementById('repRecords').textContent=d.totalRecords;
+    document.getElementById('repDone').textContent=d.completedCount;
+    document.getElementById('repAvg').textContent=d.overallAvgMs?fmtDuration(d.overallAvgMs):'—';
+    // ฝ่ายงาน
+    const maxF=Math.max(1, ...d.byDepartment.map(x=>x.folders));
+    document.getElementById('repDeptBody').innerHTML = d.byDepartment.length ? d.byDepartment.map(x=>`
+      <tr><td>${esc(x.department)}</td><td class="text-end"><b>${x.folders}</b></td><td class="text-end">${x.records}</td>
+      <td><div class="progress" style="height:8px"><div class="progress-bar" style="width:${Math.round(x.folders/maxF*100)}%;background:var(--brand)"></div></div></td></tr>`).join('')
+      : '<tr><td colspan="4" class="text-center text-muted py-4">ไม่มีข้อมูล</td></tr>';
+    // เวลาเฉลี่ยแต่ละจุด
+    const slowKey = d.slowestStation ? d.slowestStation.station : '';
+    const maxAvg = Math.max(1, ...d.stationStats.map(s=>s.avgMs));
+    document.getElementById('repStation').innerHTML = d.stationStats.map(s=>{
+      const isSlow=s.station===slowKey && s.avgMs>0;
+      const pct=Math.round(s.avgMs/maxAvg*100);
+      return `<div class="mb-2">
+        <div class="d-flex justify-content-between"><span class="fw-semibold">${esc(s.name)} ${isSlow?'<span class="badge bg-danger ms-1">ใช้เวลามากสุด</span>':''}</span>
+        <span class="small ${isSlow?'text-danger fw-bold':'text-muted'}">${s.avgMs?fmtDuration(s.avgMs):'—'} <span class="text-muted">(${s.count} แฟ้ม)</span></span></div>
+        <div class="progress" style="height:9px"><div class="progress-bar" style="width:${pct}%;background:${isSlow?'#c0392b':'var(--brand)'}"></div></div>
+      </div>`;
+    }).join('');
+    // top10
+    const rankRows=(arr)=> arr.length ? arr.map((t,i)=>`<tr><td>${i+1}</td><td><b>${esc(t.folderCode)}</b></td><td>${esc(t.owner)||'—'}</td><td>${esc(t.department)||'—'}</td><td class="text-end">${fmtDuration(t.totalMs)||'—'}</td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีแฟ้มที่เดินครบ</td></tr>';
+    document.getElementById('repSlowBody').innerHTML=rankRows(d.top10Slow);
+    document.getElementById('repFastBody').innerHTML=rankRows(d.top10Fast);
+    // รายการทั้งหมด
+    renderRepRows();
+  }catch(err){ document.getElementById('repRowsBody').innerHTML=`<tr><td colspan="8" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+}
+function renderRepRows(){
+  if(!REPORT_DATA) return;
+  const q=(document.getElementById('repSearch').value||'').toLowerCase().trim();
+  let rows=REPORT_DATA.rows||[];
+  if(q) rows=rows.filter(r=>[r.folderCode,r.docNumber,r.owner,r.subject,r.department,r.docType].map(x=>(x||'').toString().toLowerCase()).join(' | ').indexOf(q)>=0);
+  document.getElementById('repRowCount').textContent=rows.length;
+  const body=document.getElementById('repRowsBody');
+  if(!rows.length){ body.innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>'; return; }
+  body.innerHTML=rows.slice(0,1000).map(r=>`<tr>
+    <td><b>${pad4(r.folderCode)}</b></td><td class="small">${esc(r.docNumber)||'—'}</td><td>${esc(r.owner)||'—'}</td>
+    <td class="small">${esc(r.subject)||'—'}</td><td>${esc(r.department)||'—'}</td><td class="small">${esc(r.docType)||'—'}</td>
+    <td class="small">${thaiDate(r.docDate)||'—'}</td><td>${statusBadge(r.status)}</td></tr>`).join('');
+}
+async function exportReportExcel(){
+  if(!REPORT_DATA){ await loadReport(); }
+  const rows=REPORT_DATA.rows||[];
+  if(!rows.length){ alert('ไม่มีข้อมูลให้ส่งออก'); return; }
+  const data=rows.map((r,i)=>({
+    'ลำดับ':i+1,'รหัสแฟ้ม':pad4(r.folderCode),'เลขที่ อว':r.docNumber||'','ชื่อผู้เสนอ':r.owner||'',
+    'ชื่อเรื่อง':r.subject||'','ฝ่ายงาน':r.department||'','ประเภท':r.docType||'','วันที่':thaiDate(r.docDate),'สถานะ':r.status||''
+  }));
+  const ws=XLSX.utils.json_to_sheet(data);
+  ws['!cols']=[{wch:6},{wch:10},{wch:18},{wch:22},{wch:40},{wch:16},{wch:20},{wch:14},{wch:12}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'รายงาน');
+  XLSX.writeFile(wb,'รายงานแฟ้ม_'+dateStamp()+'.xlsx');
+}
+function exportReportPDF(){
+  if(!REPORT_DATA){ alert('กรุณากดรีเฟรชรายงานก่อน'); return; }
+  const R=REPORT_DATA;
+  const rows=R.rows||[];
+  const periodSel=document.getElementById('repPeriod');
+  const periodLabel=periodSel.options[periodSel.selectedIndex].text;
+  let logoUri=''; try{ logoUri=document.querySelector('.sidebar .logo img').src; }catch(e){}
+
+  const body=rows.map((r,i)=>`<tr><td class="c">${i+1}</td><td class="c">${pad4(r.folderCode)}</td><td>${esc(r.docNumber)||'-'}</td><td>${esc(r.owner)||'-'}</td><td>${esc(r.subject)||'-'}</td><td>${esc(r.department)||'-'}</td><td class="c">${esc(r.docType)||'-'}</td><td class="c">${thaiDate(r.docDate)||'-'}</td><td class="c">${esc(r.status)}</td></tr>`).join('');
+  const dep=(R.byDepartment||[]).map(x=>`<tr><td>${esc(x.department)}</td><td class="c">${x.folders}</td><td class="c">${x.records}</td></tr>`).join('') || '<tr><td colspan="3" class="c muted">ไม่มีข้อมูล</td></tr>';
+  const slowKey=R.slowestStation?R.slowestStation.station:'';
+  const st=(R.stationStats||[]).map(s=>{const hot=s.station===slowKey&&s.avgMs>0;return `<tr${hot?' class="hot"':''}><td>${esc(s.name)}${hot?' <b>(ใช้เวลามากสุด)</b>':''}</td><td class="c">${s.avgMs?fmtDuration(s.avgMs):'—'}</td><td class="c">${s.count}</td></tr>`;}).join('');
+  const rank=(arr)=> (arr&&arr.length)?arr.map((t,i)=>`<tr><td class="c">${i+1}</td><td class="c">${esc(t.folderCode)}</td><td>${esc(t.owner)||'-'}</td><td>${esc(t.department)||'-'}</td><td class="c">${fmtDuration(t.totalMs)||'—'}</td></tr>`).join('') : '<tr><td colspan="5" class="c muted">ยังไม่มีแฟ้มที่เดินครบ</td></tr>';
+
+  const html=`<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>รายงานระบบติดตามแฟ้มเสนอผู้บริหาร</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{ --pp:#5f2a83; --pp2:#7a3ba3; --ppsoft:#f1eaf8; --gold:#c19a3e; --green:#1e7145; --ink:#222; --muted:#777; --line:#e2dcec; }
+    *{ font-family:'Sarabun',sans-serif; box-sizing:border-box; }
+    body{ color:var(--ink); margin:0; padding:26px 30px; }
+    .header{ display:flex; align-items:center; gap:16px; }
+    .header .logo{ width:70px; height:70px; object-fit:contain; }
+    .org{ font-size:12.5px; color:var(--green); font-weight:600; letter-spacing:.2px; }
+    .title{ font-size:23px; font-weight:700; color:var(--pp); line-height:1.15; }
+    .meta{ font-size:11.5px; color:var(--muted); margin-top:3px; }
+    .rule{ height:3px; background:linear-gradient(90deg,var(--pp) 0%,var(--pp2) 55%,var(--gold) 100%); margin:12px 0 6px; border-radius:2px; }
+    .cards{ display:flex; gap:12px; margin:16px 0 4px; }
+    .cardx{ flex:1; border:1px solid var(--line); border-top:3px solid var(--pp); border-radius:9px; padding:11px 14px; background:#fff; }
+    .cardx .l{ font-size:11px; color:var(--muted); } .cardx .v{ font-size:21px; font-weight:700; color:var(--pp); margin-top:2px; }
+    .sec{ color:var(--pp); font-size:15px; font-weight:700; margin:22px 0 9px; padding-bottom:5px; border-bottom:2px solid var(--gold); }
+    table{ border-collapse:collapse; width:100%; font-size:12px; margin-bottom:6px; }
+    thead th{ background:var(--pp); color:#fff; font-weight:600; padding:7px 8px; text-align:left; border:1px solid var(--pp); }
+    tbody td{ padding:5px 8px; border:1px solid var(--line); vertical-align:top; }
+    tbody tr:nth-child(even){ background:var(--ppsoft); }
+    tr.hot td{ background:#fbeaea; }
+    .c{ text-align:center; } .muted{ color:var(--muted); }
+    .foot{ margin-top:22px; padding-top:8px; border-top:1px solid var(--line); font-size:10.5px; color:var(--muted); display:flex; justify-content:space-between; }
+    .cols{ display:flex; gap:18px; } .cols>div{ flex:1; }
+    @page{ margin:14mm 12mm; }
+    @media print{ body{ padding:0; } thead{ display:table-header-group; } tr{ page-break-inside:avoid; } }
+  </style></head><body>
+    <div class="header">
+      ${logoUri?`<img class="logo" src="${logoUri}" alt="logo">`:''}
+      <div>
+        <div class="org">โรงพยาบาลมหาวิทยาลัยพะเยา &middot; University of Phayao Hospital</div>
+        <div class="title">รายงานระบบติดตามแฟ้มเสนอผู้บริหาร</div>
+        <div class="meta">ช่วงเวลา: <b>${esc(periodLabel)}</b> &nbsp;|&nbsp; ออกรายงานเมื่อ ${thaiDateTime(new Date().toISOString())} น.</div>
+      </div>
+    </div>
+    <div class="rule"></div>
+
+    <div class="cards">
+      <div class="cardx"><div class="l">แฟ้มในช่วงนี้</div><div class="v">${R.totalFolders}</div></div>
+      <div class="cardx"><div class="l">จำนวนเรื่อง (เอกสาร)</div><div class="v">${R.totalRecords}</div></div>
+      <div class="cardx"><div class="l">เดินครบกระบวนการ</div><div class="v">${R.completedCount}</div></div>
+      <div class="cardx"><div class="l">เวลาเฉลี่ยต่อแฟ้ม</div><div class="v" style="font-size:15px">${R.overallAvgMs?fmtDuration(R.overallAvgMs):'—'}</div></div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <div class="sec">ฝ่ายงานที่เสนอแฟ้ม</div>
+        <table><thead><tr><th>ฝ่ายงาน</th><th class="c">แฟ้ม</th><th class="c">เรื่อง</th></tr></thead><tbody>${dep}</tbody></table>
+      </div>
+      <div>
+        <div class="sec">เวลาเฉลี่ยที่แต่ละจุดสแกน</div>
+        <table><thead><tr><th>จุดสแกน</th><th class="c">เวลาเฉลี่ย</th><th class="c">จำนวนแฟ้ม</th></tr></thead><tbody>${st}</tbody></table>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <div class="sec">10 อันดับแฟ้มที่ใช้เวลานานที่สุด</div>
+        <table><thead><tr><th class="c">#</th><th class="c">รหัสแฟ้ม</th><th>ผู้เสนอ</th><th>ฝ่ายงาน</th><th class="c">เวลา</th></tr></thead><tbody>${rank(R.top10Slow)}</tbody></table>
+      </div>
+      <div>
+        <div class="sec">10 อันดับแฟ้มที่ใช้เวลาน้อยที่สุด</div>
+        <table><thead><tr><th class="c">#</th><th class="c">รหัสแฟ้ม</th><th>ผู้เสนอ</th><th>ฝ่ายงาน</th><th class="c">เวลา</th></tr></thead><tbody>${rank(R.top10Fast)}</tbody></table>
+      </div>
+    </div>
+
+    <div class="sec">รายการทั้งหมด (${rows.length} รายการ)</div>
+    <table><thead><tr><th class="c">ลำดับ</th><th class="c">รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th class="c">ประเภท</th><th class="c">วันที่</th><th class="c">สถานะ</th></tr></thead><tbody>${body}</tbody></table>
+
+    <div class="foot"><span>ระบบติดตามแฟ้มเสนอผู้บริหาร — โรงพยาบาลมหาวิทยาลัยพะเยา</span><span>เอกสารสร้างอัตโนมัติจากระบบ</span></div>
+  </body></html>`;
+  const w=window.open('','_blank'); w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(),600);
 }
 function renderDash(){
   const q=(document.getElementById('dashSearch').value||'').toLowerCase().trim();
@@ -784,7 +1084,6 @@ async function loadRegister(){
   document.getElementById('regScanInfo').innerHTML='';
   document.getElementById('regScanInput').value='';
   document.getElementById('regOwner').value='';
-  document.getElementById('regType').value='';
   document.getElementById('recordRows').innerHTML='';
   addRecordRow();
   if(!CONFIG || !CONFIG.rong1) await loadConfig();
@@ -850,13 +1149,12 @@ async function loadExistingFolder(code){
     document.getElementById('regShowAll').checked=true; fillFolderSelect();
     setSelectValue(document.getElementById('regFolder'), fc);
     document.getElementById('regOwner').value=f.owner||'';
-    document.getElementById('regType').value=f.docType||'';
     fillDeptSelect(); setSelectValue(document.getElementById('regDept'), f.department||'');
     const tl=(f.timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
     document.querySelectorAll('.tl').forEach(c=>{ c.checked=tl.indexOf(c.value)>=0; });
     document.getElementById('recordRows').innerHTML='';
     const recs=f.records||[];
-    if(recs.length){ recs.forEach(r=>{ const aunum=((r.docNumber||'').split('/')[1]||''); addRecordRow({aunum, subject:r.subject, docDate:r.docDate}); }); }
+    if(recs.length){ recs.forEach(r=>{ const aunum=((r.docNumber||'').split('/')[1]||''); addRecordRow({aunum, subject:r.subject, docDate:r.docDate, docType:r.docType}); }); }
     else { addRecordRow(); }
     info.innerHTML=`<div class="alert alert-info py-2 mb-0"><i class="bi bi-info-circle me-1"></i>โหลดข้อมูลเดิมของแฟ้ม <b>${fc}</b> มาแล้ว — แก้ไขแล้วกด “บันทึกข้อมูลแฟ้ม” จะเขียนทับของเดิม</div>`;
   }catch(err){ toast(info,'danger',err.message); }
@@ -892,16 +1190,24 @@ function fillFolderSelect(){
 document.getElementById('regFolder').addEventListener('change', function(){ if(this.value) showRegFolderStatus(this.value); });
 function addRecordRow(data){
   data=data||{};
+  const dt=esc(data.docType||'');
+  const opt=(v)=>`<option value="${esc(v)}" ${dt===v?'selected':''}>${esc(v)}</option>`;
   const div=document.createElement('div');
   div.className='row g-2 align-items-end mb-2 record-row';
   div.innerHTML=`
-    <div class="col-md-4"><label class="form-label small mb-1">เลขที่หนังสือ</label>
+    <div class="col-md-3"><label class="form-label small mb-1">เลขที่หนังสือ</label>
       <div class="input-group"><span class="input-group-text fixed-prefix">อว 7332.02/</span>
       <input class="form-control rec-aunum" maxlength="6" inputmode="numeric" placeholder="01234" value="${esc(data.aunum||'')}"></div></div>
-    <div class="col-md-4"><label class="form-label small mb-1">ชื่อเรื่อง</label>
+    <div class="col-md-3"><label class="form-label small mb-1">ชื่อเรื่อง</label>
       <input class="form-control rec-subject" placeholder="กรอกชื่อเรื่องเอกสาร" value="${esc(data.subject||'')}"></div>
-    <div class="col-md-3"><label class="form-label small mb-1">วันที่</label>
+    <div class="col-md-2"><label class="form-label small mb-1">วันที่</label>
       <input type="date" class="form-control rec-date" value="${esc(data.docDate||'')}"></div>
+    <div class="col-md-3"><label class="form-label small mb-1">ประเภท</label>
+      <select class="form-select rec-type">
+        <option value="">— เลือกประเภท —</option>
+        <optgroup label="หนังสือส่ง">${opt('หนังสือส่ง (ภายใน)')}${opt('หนังสือส่ง (ภายนอก)')}</optgroup>
+        <optgroup label="หนังสือรับ">${opt('หนังสือรับ (ภายใน)')}${opt('หนังสือรับ (ภายนอก)')}</optgroup>
+      </select></div>
     <div class="col-md-1 text-end">
       <button class="btn btn-outline-danger" onclick="this.closest('.record-row').remove()"><i class="bi bi-trash"></i></button></div>`;
   document.getElementById('recordRows').appendChild(div);
@@ -912,27 +1218,26 @@ async function saveRegister(){
   if(!folderCode){ toast(el,'danger','กรุณาเลือกแฟ้ม'); return; }
   const owner=document.getElementById('regOwner').value.trim();
   const department=document.getElementById('regDept').value;
-  const docType=document.getElementById('regType').value;
   const timeline=[...document.querySelectorAll('.tl:checked')].map(c=>c.value).join(', ');
   const records=[...document.querySelectorAll('.record-row')].map(r=>({
     aunum:r.querySelector('.rec-aunum').value.trim(),
     subject:r.querySelector('.rec-subject').value.trim(),
-    docDate:r.querySelector('.rec-date').value
-  })).filter(r=>r.aunum||r.subject||r.docDate);
+    docDate:r.querySelector('.rec-date').value,
+    docType:r.querySelector('.rec-type').value
+  })).filter(r=>r.aunum||r.subject||r.docDate||r.docType);
   if(!owner){ toast(el,'danger','กรุณากรอกเจ้าของแฟ้ม'); return; }
   if(!department){ toast(el,'danger','กรุณาเลือกฝ่ายงาน'); return; }
   if(!records.length){ toast(el,'danger','กรุณาเพิ่มอย่างน้อย 1 รายการเอกสาร'); return; }
+  if(records.some(r=>!r.docType)){ toast(el,'danger','กรุณาเลือก “ประเภท” ให้ครบทุกรายการเอกสาร'); return; }
   el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
   try{
-    const d=await api('registerFolder',{folderCode, owner, department, docType, timeline, records:JSON.stringify(records)});
+    const d=await api('registerFolder',{folderCode, owner, department, timeline, records:JSON.stringify(records)});
     if(!d.ok) throw new Error(d.error||'error');
     el.innerHTML=`<div class="alert alert-success mb-0"><i class="bi bi-check-circle me-1"></i>${esc(d.message)}
       <div class="mt-2"><button class="btn btn-sm btn-outline-brand" onclick="gotoTrack('${pad4(folderCode)}')"><i class="bi bi-search me-1"></i>ดูแฟ้มนี้</button></div></div>`;
-    // เตรียมฟอร์มสำหรับแฟ้มถัดไป + โหลดสถานะใหม่ + โฟกัสช่องยิงบาร์โค้ด
     document.getElementById('regScanInfo').innerHTML='';
     document.getElementById('regOwner').value='';
     document.getElementById('regDept').value='';
-    document.getElementById('regType').value='';
     document.querySelectorAll('.tl').forEach(c=>c.checked=false);
     document.getElementById('recordRows').innerHTML=''; addRecordRow();
     try{ const g=await api('getFolders'); if(g.ok) ALL_FOLDERS=g.folders||[]; }catch(e){}
@@ -990,12 +1295,21 @@ async function doScan(code){
   const auStr = recs.length ? recs.map(r=>r.docNumber||'').filter(Boolean).join(', ') : '';
   const subjStr = recs.length ? recs.map(r=>r.subject||'').filter(Boolean).join(' / ') : '';
   const dirColor = dir==='เข้า' ? 'text-success':'text-danger';
+  if(d.completed){
+    // ออกจากจุดสุดท้าย: เสร็จสิ้น + คืนว่างอัตโนมัติ
+    el.innerHTML=`<div class="alert alert-success mb-0">
+      <div class="fw-bold"><i class="bi bi-check2-circle me-1"></i>แฟ้ม ${pad4(f.folderCode)} เสร็จสิ้นครบทุกจุด</div>
+      <div class="small mt-1"><i class="bi bi-arrow-counterclockwise me-1"></i>คืนเป็น “ว่าง” อัตโนมัติแล้ว พร้อมใช้งานใหม่ (ข้อมูลถูกเก็บในประวัติ)</div></div>`;
+    sessionLog.unshift({time:new Date(), folderCode:pad4(f.folderCode), station, direction:dir, ok:true, au:auStr, subject:subjStr});
+    renderTrays(); loadDoneToday(); loadQueue(); focusScan(); return;
+  }
   el.innerHTML=`<div class="alert alert-success mb-0">
     <div class="fw-bold"><i class="bi bi-check-circle me-1"></i>สแกนสำเร็จ — แฟ้ม ${pad4(f.folderCode)} <span class="${dirColor}">(${esc(dir)})</span> ${editBadge(f)}</div>
     <div class="small">เจ้าของ: ${esc(f.owner)||'—'} &middot; ${esc(stationName(station))} &middot; สถานะ: ${esc(f.status)}</div>
     ${d.nextHint?`<div class="small mt-1 text-primary"><i class="bi bi-arrow-right-circle me-1"></i>${esc(d.nextHint)}</div>`:''}</div>`;
   sessionLog.unshift({time:new Date(), folderCode:pad4(f.folderCode), station, direction:dir, ok:true, au:auStr, subject:subjStr});
   renderTrays();
+  loadQueue();
   focusScan();
 }
 /* ถาดเข้า/ออก: จัดตามสถานะล่าสุดของแต่ละแฟ้มในรอบนี้ (เข้า=รออยู่, ออก=ส่งต่อแล้ว) */
@@ -1040,6 +1354,46 @@ async function openScanEdit(code){
 function closeScanEdit(){ document.getElementById('scanEditWrap').style.display='none'; focusScan(); }
 /* เอาเคอร์เซอร์ไว้ที่ช่องสแกนเสมอ (เมื่ออยู่หน้าสแกน) */
 function focusScan(){ const s=document.getElementById('scanInput'); if(s) setTimeout(()=>s.focus(),50); }
+/* คิวรอสแกนเข้าของจุดที่เลือก */
+async function loadQueue(){
+  const station=document.getElementById('scanStation').value;
+  document.getElementById('queueStname').textContent = station?('('+stationName(station)+')'):'';
+  const body=document.getElementById('queueBody');
+  if(!station){ body.innerHTML='<tr><td colspan="2" class="text-center text-muted py-3">—</td></tr>'; return; }
+  try{
+    const d=await api('getStationQueue',{station});
+    if(!d.ok) throw new Error(d.error||'error');
+    const rows=d.rows||[];
+    document.getElementById('queueCount').textContent=rows.length;
+    if(!rows.length){ body.innerHTML='<tr><td colspan="2" class="text-center text-muted py-3">ไม่มีแฟ้มรอสแกนเข้า</td></tr>'; return; }
+    body.innerHTML=rows.map(x=>{
+      const editTag = x.editStatus==='มีแก้ไข' ? `<span class="badge bg-warning text-dark ms-1" title="${x.editReturn==='restart'?'เริ่มธุรการ 1 ใหม่':'คืนจุดเดิม'}"><i class="bi bi-pencil-fill"></i> แก้ไข</span>` : '';
+      const au = x.docNumbers ? esc(x.docNumbers) : '<span class="text-muted">—</span>';
+      const subj = x.subjects ? `<div class="text-muted">${esc(x.subjects)}</div>` : '';
+      return `<tr><td><b>${esc(x.folderCode)}</b>${editTag}<div class="small text-muted">${esc(x.owner)||''}</div></td>
+        <td class="small">${au}${subj}</td></tr>`;
+    }).join('');
+  }catch(err){ body.innerHTML=`<tr><td colspan="2" class="text-center text-danger py-3">${esc(err.message)}</td></tr>`; }
+}
+/* แฟ้มที่เสร็จสิ้นวันนี้ (จากประวัติ) */
+async function loadDoneToday(){
+  const body=document.getElementById('doneTodayBody');
+  try{
+    const d=await api('getHistory',{period:'today', onlyCompleted:'1', limit:'50'});
+    if(!d.ok) throw new Error(d.error||'error');
+    const rows=d.rows||[];
+    document.getElementById('doneTodayCount').textContent=rows.length;
+    if(!rows.length){ body.innerHTML='<tr><td colspan="7" class="text-center text-muted py-3">ยังไม่มีแฟ้มที่เสร็จวันนี้</td></tr>'; return; }
+    body.innerHTML=rows.map(x=>{
+      const au=(x.records||[]).map(r=>r.docNumber||'').filter(Boolean).join(', ')||'—';
+      const subj=(x.records||[]).map(r=>r.subject||'').filter(Boolean).join(' / ')||'—';
+      const dd=(x.records||[]).map(r=>thaiDate(r.docDate)).filter(Boolean).join(', ')||'—';
+      return `<tr><td class="small">${thaiDateTime(x.completedAt)}</td><td><b>${esc(x.folderCode)}</b></td>
+        <td class="small">${esc(au)}</td><td>${esc(x.owner)||'—'}</td><td class="small">${esc(subj)}</td>
+        <td>${esc(x.department)||'—'}</td><td class="small">${esc(dd)}</td></tr>`;
+    }).join('');
+  }catch(err){ body.innerHTML=`<tr><td colspan="7" class="text-center text-danger py-3">${esc(err.message)}</td></tr>`; }
+}
 
 /* ========================= BARCODE ========================= */
 let PRINTED = new Set();
@@ -1217,6 +1571,104 @@ async function doTrack(){
         <tbody>${rowsHtml}</tbody>
       </table></div></div></div>`;
 }
+/* ---------- ประวัติแฟ้มทั้งหมด (ไทม์ไลน์) ---------- */
+/* จำแนกชื่อผู้บริหารในไทม์ไลน์ว่าเป็น รอง / ผอ. / คณบดี (อิงจากชื่อที่ตั้งค่าไว้) */
+function classifyExec(name){
+  const n=(name||'').trim();
+  for(let i=1;i<=5;i++){ if(n===cfg('rong'+i)) return 'rong'; }
+  if(n===cfg('dean')) return 'dean';
+  if(n===cfg('dir')) return 'dir';
+  if(/คณบดี/.test(n)) return 'dean';
+  if(/ผู้อำนวยการ|ผอ/.test(n)) return 'dir';
+  return 'rong';
+}
+function histTimeline(logs, timeline){
+  const done={}; (logs||[]).forEach(l=>{ done[l.station+'|'+l.direction]=l.timestamp; });
+  const p=n=>String(n).padStart(2,'0');
+  const tfmt=iso=>{ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; return thaiDate(iso)+' '+p(d.getHours())+':'+p(d.getMinutes()); };
+  const has=k=>!!done[k];
+  const s1out=has('S1|ออก'), s2in=has('S2|เข้า'), s2out=has('S2|ออก'), s3in=has('S3|เข้า'), s3out=has('S3|ออก'), s4in=has('S4|เข้า');
+  // จำแนกผู้บริหารที่แฟ้มเลือก
+  const execs=(timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const rongNames=[], dirNames=[], deanNames=[];
+  execs.forEach(nm=>{ const g=classifyExec(nm); if(g==='dean') deanNames.push(nm); else if(g==='dir') dirNames.push(nm); else rongNames.push(nm); });
+  const midHigh = deanNames.concat(dirNames);   // ช่วง ธุรการ3→4 : คณบดี อยู่เหนือ ผอ.
+
+  const stNode=(k)=>{
+    const inT=done[k+'|เข้า'], outT=done[k+'|ออก'];
+    const times = inT ? ('เข้า '+tfmt(inT)+(outT?('<br>ออก '+tfmt(outT)):'')) : '<span class="text-muted">ยังไม่ถึง</span>';
+    return { reached:!!inT, cls:outT?'done':(inT?'active':''),
+      inner:`<div class="hist-tl-dot"></div><div class="hist-tl-name">${esc(stationName(k))}</div><div class="hist-tl-times">${times}</div>` };
+  };
+  const lbNode=(names, reached, doneFlag, activeFlag)=>{
+    const txt=doneFlag?'ผ่านแล้ว':(activeFlag?'อยู่ช่วงนี้':'<span class="text-muted">ยังไม่ถึง</span>');
+    return { reached, cls:'label '+(doneFlag?'done':(activeFlag?'active':'')),
+      inner:`<div class="hist-tl-dot"></div><div class="hist-tl-name">${names.map(n=>esc(n)).join('<br>')}</div><div class="hist-tl-times">${txt}</div>` };
+  };
+
+  // ลำดับ: ธุรการ1 → หัวหน้าสำนักงาน → ธุรการ2 → รองที่เลือก → ธุรการ3 → ผอ./คณบดี → ธุรการ4
+  const nodes=[];
+  nodes.push(stNode('S1'));
+  nodes.push(lbNode(['หัวหน้าสำนักงาน'], s1out, s2in, s1out&&!s2in));
+  nodes.push(stNode('S2'));
+  if(rongNames.length) nodes.push(lbNode(rongNames, s2out, s3in, s2out&&!s3in));
+  nodes.push(stNode('S3'));
+  if(midHigh.length) nodes.push(lbNode(midHigh, s3out, s4in, s3out&&!s4in));
+  nodes.push(stNode('S4'));
+
+  let html='<div class="hist-tl">';
+  nodes.forEach((nd,i)=>{
+    if(i>0) html+=`<div class="hist-tl-line ${nd.reached?'done':''}"></div>`;
+    html+=`<div class="hist-tl-node ${nd.cls}">${nd.inner}</div>`;
+  });
+  return html+'</div>';
+}
+function toggleHist(head){
+  const item=head.closest('.hist-item');
+  const det=item.querySelector('.hist-detail');
+  const open=det.style.display==='none';
+  det.style.display=open?'block':'none';
+  item.classList.toggle('open', open);
+}
+async function loadHistory(){
+  const period=document.getElementById('histPeriod').value;
+  const limit=document.getElementById('histLimit').value;
+  const body=document.getElementById('histBody');
+  body.innerHTML='<div class="text-muted text-center py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดประวัติ…</div>';
+  try{
+    const d=await api('getHistory',{period, limit});
+    if(!d.ok) throw new Error(d.error||'error');
+    const rows=d.rows||[];
+    document.getElementById('histTotal').textContent = (d.total>rows.length)? (rows.length+' / '+d.total) : rows.length;
+    if(!rows.length){ body.innerHTML='<div class="text-muted text-center py-4">ไม่พบประวัติในช่วงเวลานี้</div>'; return; }
+    body.innerHTML=rows.map(x=>{
+      const when = x.live ? ('อัปเดต '+thaiDateTime(x.archivedAt)) : ('เสร็จ '+thaiDateTime(x.completedAt));
+      const recs=x.records||[];
+      const first=recs[0]||{};
+      const shortDoc = recs.length ? (`${esc(first.docNumber)||''}${first.subject?(' · '+esc(first.subject)):''}`+(recs.length>1?` <span class="text-muted">(+${recs.length-1})</span>`:'')) : '<span class="text-muted">—</span>';
+      const recsHtml=recs.length ? recs.map(r=>
+        `<div>• <b>${esc(r.docNumber)||'—'}</b> ${r.docType?('<span class="text-muted">('+esc(r.docType)+')</span>'):''} ${esc(r.subject)||''}${r.docDate?(' <span class="text-muted">· '+thaiDate(r.docDate)+'</span>'):''}</div>`
+      ).join('') : '<span class="text-muted">— ไม่มีรายการเอกสาร —</span>';
+      const liveBadge = x.live ? '<span class="badge bg-info text-dark">กำลังดำเนินการ</span>' : '';
+      const viewBtn = x.live ? `<button class="btn btn-sm btn-outline-brand" onclick="event.stopPropagation();openFolder('${esc(x.folderCode)}')"><i class="bi bi-eye me-1"></i>ดู</button>` : '';
+      return `<div class="hist-item border-bottom">
+        <div class="hist-head p-2 px-3 d-flex flex-wrap gap-2 align-items-center" style="cursor:pointer" onclick="toggleHist(this)">
+          <i class="bi bi-chevron-right hist-caret"></i>
+          <b>แฟ้ม ${esc(x.folderCode)}</b> ${statusBadge(x.status)} ${liveBadge}
+          <span class="small">ผู้เสนอ: <b>${esc(x.owner)||'—'}</b></span>
+          <span class="small text-muted d-none d-lg-inline">· ฝ่ายงาน: ${esc(x.department)||'—'}</span>
+          <span class="small text-muted d-none d-md-inline text-truncate" style="max-width:340px">· ${shortDoc}</span>
+          <span class="small text-muted ms-auto">${when}</span>
+          ${viewBtn}
+        </div>
+        <div class="hist-detail px-3 pb-3" style="display:none">
+          ${histTimeline(x.logs, x.timeline)}
+          <div class="small mt-2">${recsHtml}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(err){ body.innerHTML=`<div class="alert alert-danger m-3">${esc(err.message)}</div>`; }
+}
 function renderTrack(f){
   const keys=['S1','S2','S3','S4']; const dirs=['เข้า','ออก'];
   const done={}; (f.logs||[]).forEach(l=>{ done[l.station+'|'+l.direction]=l.timestamp; });
@@ -1232,8 +1684,8 @@ function renderTrack(f){
     idx++;
   });});
   const recs=(f.records||[]);
-  const recRows = recs.length ? recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.docNumber)||'—'}</td><td>${esc(r.subject)||'—'}</td><td>${thaiDate(r.docDate)}</td></tr>`).join('')
-    : '<tr><td colspan="4" class="text-center text-muted">ไม่มีรายการเอกสาร</td></tr>';
+  const recRows = recs.length ? recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.docNumber)||'—'}</td><td>${esc(r.subject)||'—'}</td><td>${esc(r.docType)||'—'}</td><td>${thaiDate(r.docDate)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="text-center text-muted">ไม่มีรายการเอกสาร</td></tr>';
   const tl=(f.timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
   const tlBadges = tl.length ? tl.map(t=>`<span class="badge bg-secondary me-1 mb-1">${esc(t)}</span>`).join('') : '<span class="text-muted">— ยังไม่ระบุ —</span>';
   const logRows=(f.logs||[]).length ? (f.logs||[]).map(l=>{
@@ -1271,9 +1723,11 @@ function renderTrack(f){
     const endMs=(f.status==='เสร็จสิ้น' && lastLeave!=null) ? lastLeave : nowMs;
     totalTxt=fmtDuration(endMs-firstEnter) || 'น้อยกว่า 1 นาที';
   }
+  const retTxt = f.editReturn==='restart' ? 'ผู้เสนอต้องนำแฟ้มมาเริ่มสแกนใหม่ที่ '+esc(cfg('station1')) : 'ผู้เสนอต้องนำแฟ้มกลับมาสแกน “เข้า” ที่ '+esc(stationName(f.editStation))+' อีกครั้ง';
   const editBanner=hasEdit ? `<div class="alert alert-warning py-2 mb-3">
       <i class="bi bi-exclamation-triangle-fill me-1"></i><b>แฟ้มนี้มีการแก้ไข</b> ที่ ${esc(stationName(f.editStation))}
-      ${f.editNote?(' &middot; '+esc(f.editNote)):''} <span class="text-muted small">(${thaiDateTime(f.editAt)})</span></div>` : '';
+      ${f.editNote?(' &middot; '+esc(f.editNote)):''} <span class="text-muted small">(${thaiDateTime(f.editAt)})</span>
+      <div class="small mt-1"><i class="bi bi-arrow-return-left me-1"></i>${retTxt}</div></div>` : '';
 
   document.getElementById('trackResult').innerHTML=`
     <div class="card mb-3">
@@ -1326,7 +1780,7 @@ function renderTrack(f){
       <div class="col-lg-6"><div class="card h-100">
         <div class="card-header"><i class="bi bi-list-ol me-1"></i>รายการเอกสารในแฟ้ม</div>
         <div class="card-body p-0"><div class="table-responsive">
-          <table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>วันที่</th></tr></thead>
+          <table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>ประเภท</th><th>วันที่</th></tr></thead>
           <tbody>${recRows}</tbody></table></div></div></div></div>
       <div class="col-lg-6"><div class="card h-100">
         <div class="card-header"><i class="bi bi-clock-history me-1"></i>ประวัติการสแกน</div>
@@ -1391,6 +1845,18 @@ function setConn(ok){
     document.getElementById('urlWarn').classList.remove('d-none');
     return;
   }
+  // โหลดครั้งเดียว: config + dashboard + สถานะเชื่อมต่อ (เร็วกว่าเรียกทีละอัน)
+  try{
+    const d = await api('getBootstrap');
+    if(d && d.ok){
+      if(d.config) CONFIG = Object.assign({}, DEFAULTS, d.config);
+      setConn(true);
+      fillStationSelect();
+      if(d.dashboard && d.dashboard.ok) applyDashboard(d.dashboard); else loadDashboard();
+      return;
+    }
+  }catch(e){}
+  // สำรอง (เผื่อ backend เวอร์ชันเก่ายังไม่มี getBootstrap)
   await loadConfig();
   fillStationSelect();
   testConnection();
