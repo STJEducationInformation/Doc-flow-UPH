@@ -124,6 +124,13 @@
   .hist-tl-times{ color:var(--muted); line-height:1.25; font-size:.72rem; }
   .hist-tl-line{ flex:1 1 18px; height:3px; background:#e2e8ec; margin-top:11px; min-width:12px; }
   .hist-tl-line.done{ background:var(--brand); }
+  .hist-tl-node.label .hist-tl-dot{ background:#fff; border:3px solid #cbd5dc; }
+  .hist-tl-node.label.active .hist-tl-dot{ background:#fff7e6; border-color:#f5b301; }
+  .hist-tl-node.label.done .hist-tl-dot{ background:#e7f8f4; border-color:var(--brand); }
+  .hist-tl-node.label .hist-tl-name{ font-weight:500; color:#475569; }
+  .hist-caret{ transition:transform .18s; color:var(--muted); }
+  .hist-item.open .hist-caret{ transform:rotate(90deg); }
+  .hist-head:hover{ background:#f6fbfa; }
   .hist-entry:hover{ background:#f6fbfa; }
   .bc-item svg{ max-width:100%; } .bc-code{ font-size:.85rem; color:var(--muted); margin-top:3px; }
 
@@ -166,7 +173,8 @@
       </div>
     </div>
     <nav>
-      <a class="nav-link active" data-page="dashboard" href="#"><i class="bi bi-grid-1x2-fill"></i>แดชบอร์ด</a>
+      <a class="nav-link active" data-page="dashboard" href="#"><i class="bi bi-grid-1x2-fill"></i>แดชบอร์ดแฟ้ม</a>
+      <a class="nav-link" data-page="report" href="#"><i class="bi bi-bar-chart-line-fill"></i>แดชบอร์ดรายงาน</a>
       <a class="nav-link" data-page="register" href="#"><i class="bi bi-pencil-square"></i>ลงทะเบียนแฟ้ม</a>
       <a class="nav-link" data-page="scan" href="#"><i class="bi bi-upc-scan"></i>สแกนเข้า-ออก</a>
       <a class="nav-link" data-page="barcode" href="#"><i class="bi bi-upc"></i>พิมพ์บาร์โค้ด</a>
@@ -182,7 +190,7 @@
     <header class="topbar">
       <button class="burger" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
       <div>
-        <div class="pt-title" id="pageTitle">แดชบอร์ด</div>
+        <div class="pt-title" id="pageTitle">แดชบอร์ดแฟ้ม</div>
         <div class="pt-sub" id="pageSub">ภาพรวมสถานะแฟ้มทั้งหมด</div>
       </div>
       <div class="ms-auto eyebrow d-none d-md-block" id="todayChip"></div>
@@ -226,6 +234,73 @@
           </table>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ================= REPORT ================= -->
+  <div class="page" id="page-report">
+    <div class="card mb-3">
+      <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+        <span class="fw-semibold"><i class="bi bi-funnel me-1"></i>ช่วงเวลารายงาน</span>
+        <select id="repPeriod" class="form-select form-select-sm" style="width:170px" onchange="loadReport()">
+          <option value="today">วันนี้</option>
+          <option value="week">7 วัน</option>
+          <option value="month">1 เดือน</option>
+          <option value="quarter">ไตรมาส (3 เดือน)</option>
+          <option value="half">6 เดือน</option>
+          <option value="year">1 ปี</option>
+          <option value="all" selected>ทั้งหมด</option>
+        </select>
+        <button class="btn btn-sm btn-outline-brand" onclick="loadReport()"><i class="bi bi-arrow-clockwise me-1"></i>รีเฟรช</button>
+        <div class="ms-auto d-flex gap-2">
+          <button class="btn btn-sm btn-success" onclick="exportReportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</button>
+          <button class="btn btn-sm btn-danger" onclick="exportReportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-1">
+      <div class="col-6 col-lg-3"><div class="stat total"><span class="bar"></span><span class="chip"><i class="bi bi-folder2"></i></span><div class="lbl">แฟ้มในช่วงนี้</div><div class="num" id="repFolders">–</div></div></div>
+      <div class="col-6 col-lg-3"><div class="stat using"><span class="bar"></span><span class="chip"><i class="bi bi-files"></i></span><div class="lbl">จำนวนเรื่อง (เอกสาร)</div><div class="num" id="repRecords">–</div></div></div>
+      <div class="col-6 col-lg-3"><div class="stat done"><span class="bar"></span><span class="chip"><i class="bi bi-check2-circle"></i></span><div class="lbl">เดินครบกระบวนการ</div><div class="num" id="repDone">–</div></div></div>
+      <div class="col-6 col-lg-3"><div class="stat vang"><span class="bar"></span><span class="chip"><i class="bi bi-hourglass-split"></i></span><div class="lbl">เวลาเฉลี่ยต่อแฟ้ม</div><div class="num" id="repAvg" style="font-size:1.2rem">–</div></div></div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-diagram-3 me-1"></i>ฝ่ายงานที่เสนอแฟ้ม (จำนวนแฟ้ม / จำนวนเรื่อง)</div>
+        <div class="card-body p-0"><div class="table-responsive" style="max-height:340px;overflow:auto">
+          <table class="table table-sm mb-0 align-middle"><thead class="table-light"><tr><th>ฝ่ายงาน</th><th class="text-end">แฟ้ม</th><th class="text-end">เรื่อง</th><th style="width:35%">สัดส่วนแฟ้ม</th></tr></thead>
+          <tbody id="repDeptBody"><tr><td colspan="4" class="text-center text-muted py-4">—</td></tr></tbody></table>
+        </div></div></div></div>
+
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-stopwatch me-1"></i>เวลาเฉลี่ยที่แต่ละจุดสแกน (จุดที่ใช้เวลามากสุดจะเน้นสี)</div>
+        <div class="card-body"><div id="repStation"><div class="text-muted text-center py-4">—</div></div></div>
+      </div></div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-arrow-down-circle text-danger me-1"></i>10 อันดับแฟ้มที่ใช้เวลานานที่สุด</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>รหัสแฟ้ม</th><th>ผู้เสนอ</th><th>ฝ่ายงาน</th><th class="text-end">เวลา</th></tr></thead><tbody id="repSlowBody"><tr><td colspan="5" class="text-center text-muted py-4">—</td></tr></tbody></table></div></div></div></div>
+
+      <div class="col-lg-6"><div class="card h-100">
+        <div class="card-header"><i class="bi bi-arrow-up-circle text-success me-1"></i>10 อันดับแฟ้มที่ใช้เวลาน้อยที่สุด</div>
+        <div class="card-body p-0"><div class="table-responsive"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>รหัสแฟ้ม</th><th>ผู้เสนอ</th><th>ฝ่ายงาน</th><th class="text-end">เวลา</th></tr></thead><tbody id="repFastBody"><tr><td colspan="5" class="text-center text-muted py-4">—</td></tr></tbody></table></div></div></div></div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header d-flex align-items-center">
+        <span><i class="bi bi-list-ul me-1"></i>รายการทั้งหมด <span id="repRowCount" class="badge bg-secondary ms-1">0</span></span>
+        <input id="repSearch" class="form-control form-control-sm ms-auto" style="width:220px" placeholder="ค้นหาในรายการ" oninput="renderRepRows()">
+      </div>
+      <div class="card-body p-0"><div class="table-responsive" style="max-height:460px;overflow:auto">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th>รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ชื่อผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th>ประเภท</th><th>วันที่</th><th>สถานะ</th></tr></thead>
+          <tbody id="repRowsBody"><tr><td colspan="8" class="text-center text-muted py-4">— เลือกช่วงเวลาแล้วกดรีเฟรช —</td></tr></tbody>
+        </table>
+      </div></div>
     </div>
   </div>
 
@@ -675,7 +750,8 @@ async function loadConfig(){ try{ const d=await api('getConfig'); if(d.ok) CONFI
 
 /* ---------- เมนู / สลับหน้า / Sidebar ---------- */
 const PAGE_META = {
-  dashboard: ['แดชบอร์ด', 'ภาพรวมสถานะแฟ้มทั้งหมด'],
+  dashboard: ['แดชบอร์ดแฟ้ม', 'ภาพรวมสถานะแฟ้มทั้งหมด'],
+  report:    ['แดชบอร์ดรายงาน', 'สรุปสถิติและรายงานการเดินแฟ้ม'],
   register:  ['ลงทะเบียนแฟ้ม', 'ธุรการ 1 · กรอกข้อมูลและเลือกไทม์ไลน์'],
   scan:      ['สแกนเข้า-ออก', 'ยิงบาร์โค้ดเพื่อบันทึกการเคลื่อนไหวของแฟ้ม'],
   barcode:   ['พิมพ์บาร์โค้ด', 'สร้างบาร์โค้ด Code 128 สำหรับติดแฟ้ม'],
@@ -700,6 +776,7 @@ document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
     document.getElementById('pageSub').textContent=meta[1];
     toggleSidebar(false);
     if(p==='dashboard') loadDashboard();
+    if(p==='report') loadReport();
     if(p==='register') loadRegister();
     if(p==='scan'){ fillStationSelect(); loadDoneToday(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
     if(p==='barcode'){ PRINTED_LOADED=false; loadPrinted(); }
@@ -729,6 +806,89 @@ function applyDashboard(d){
   ALL_FOLDERS = d.folders||[];
   stTotal.textContent=d.total; stVang.textContent=d.available; stUsing.textContent=d.inUse; stDone.textContent=d.done;
   renderDash();
+}
+
+/* ========================= แดชบอร์ดรายงาน ========================= */
+let REPORT_DATA = null;
+async function loadReport(){
+  const period=document.getElementById('repPeriod').value;
+  document.getElementById('repRowsBody').innerHTML='<tr><td colspan="8" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดรายงาน…</td></tr>';
+  try{
+    const d=await api('getReport',{period});
+    if(!d.ok) throw new Error(d.error||'error');
+    REPORT_DATA=d;
+    // การ์ดสรุป
+    document.getElementById('repFolders').textContent=d.totalFolders;
+    document.getElementById('repRecords').textContent=d.totalRecords;
+    document.getElementById('repDone').textContent=d.completedCount;
+    document.getElementById('repAvg').textContent=d.overallAvgMs?fmtDuration(d.overallAvgMs):'—';
+    // ฝ่ายงาน
+    const maxF=Math.max(1, ...d.byDepartment.map(x=>x.folders));
+    document.getElementById('repDeptBody').innerHTML = d.byDepartment.length ? d.byDepartment.map(x=>`
+      <tr><td>${esc(x.department)}</td><td class="text-end"><b>${x.folders}</b></td><td class="text-end">${x.records}</td>
+      <td><div class="progress" style="height:8px"><div class="progress-bar" style="width:${Math.round(x.folders/maxF*100)}%;background:var(--brand)"></div></div></td></tr>`).join('')
+      : '<tr><td colspan="4" class="text-center text-muted py-4">ไม่มีข้อมูล</td></tr>';
+    // เวลาเฉลี่ยแต่ละจุด
+    const slowKey = d.slowestStation ? d.slowestStation.station : '';
+    const maxAvg = Math.max(1, ...d.stationStats.map(s=>s.avgMs));
+    document.getElementById('repStation').innerHTML = d.stationStats.map(s=>{
+      const isSlow=s.station===slowKey && s.avgMs>0;
+      const pct=Math.round(s.avgMs/maxAvg*100);
+      return `<div class="mb-2">
+        <div class="d-flex justify-content-between"><span class="fw-semibold">${esc(s.name)} ${isSlow?'<span class="badge bg-danger ms-1">ใช้เวลามากสุด</span>':''}</span>
+        <span class="small ${isSlow?'text-danger fw-bold':'text-muted'}">${s.avgMs?fmtDuration(s.avgMs):'—'} <span class="text-muted">(${s.count} แฟ้ม)</span></span></div>
+        <div class="progress" style="height:9px"><div class="progress-bar" style="width:${pct}%;background:${isSlow?'#c0392b':'var(--brand)'}"></div></div>
+      </div>`;
+    }).join('');
+    // top10
+    const rankRows=(arr)=> arr.length ? arr.map((t,i)=>`<tr><td>${i+1}</td><td><b>${esc(t.folderCode)}</b></td><td>${esc(t.owner)||'—'}</td><td>${esc(t.department)||'—'}</td><td class="text-end">${fmtDuration(t.totalMs)||'—'}</td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีแฟ้มที่เดินครบ</td></tr>';
+    document.getElementById('repSlowBody').innerHTML=rankRows(d.top10Slow);
+    document.getElementById('repFastBody').innerHTML=rankRows(d.top10Fast);
+    // รายการทั้งหมด
+    renderRepRows();
+  }catch(err){ document.getElementById('repRowsBody').innerHTML=`<tr><td colspan="8" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+}
+function renderRepRows(){
+  if(!REPORT_DATA) return;
+  const q=(document.getElementById('repSearch').value||'').toLowerCase().trim();
+  let rows=REPORT_DATA.rows||[];
+  if(q) rows=rows.filter(r=>[r.folderCode,r.docNumber,r.owner,r.subject,r.department,r.docType].map(x=>(x||'').toString().toLowerCase()).join(' | ').indexOf(q)>=0);
+  document.getElementById('repRowCount').textContent=rows.length;
+  const body=document.getElementById('repRowsBody');
+  if(!rows.length){ body.innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>'; return; }
+  body.innerHTML=rows.slice(0,1000).map(r=>`<tr>
+    <td><b>${pad4(r.folderCode)}</b></td><td class="small">${esc(r.docNumber)||'—'}</td><td>${esc(r.owner)||'—'}</td>
+    <td class="small">${esc(r.subject)||'—'}</td><td>${esc(r.department)||'—'}</td><td class="small">${esc(r.docType)||'—'}</td>
+    <td class="small">${thaiDate(r.docDate)||'—'}</td><td>${statusBadge(r.status)}</td></tr>`).join('');
+}
+async function exportReportExcel(){
+  if(!REPORT_DATA){ await loadReport(); }
+  const rows=REPORT_DATA.rows||[];
+  if(!rows.length){ alert('ไม่มีข้อมูลให้ส่งออก'); return; }
+  const data=rows.map((r,i)=>({
+    'ลำดับ':i+1,'รหัสแฟ้ม':pad4(r.folderCode),'เลขที่ อว':r.docNumber||'','ชื่อผู้เสนอ':r.owner||'',
+    'ชื่อเรื่อง':r.subject||'','ฝ่ายงาน':r.department||'','ประเภท':r.docType||'','วันที่':thaiDate(r.docDate),'สถานะ':r.status||''
+  }));
+  const ws=XLSX.utils.json_to_sheet(data);
+  ws['!cols']=[{wch:6},{wch:10},{wch:18},{wch:22},{wch:40},{wch:16},{wch:20},{wch:14},{wch:12}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'รายงาน');
+  XLSX.writeFile(wb,'รายงานแฟ้ม_'+dateStamp()+'.xlsx');
+}
+function exportReportPDF(){
+  if(!REPORT_DATA){ alert('กรุณากดรีเฟรชรายงานก่อน'); return; }
+  const rows=REPORT_DATA.rows||[];
+  const body=rows.map((r,i)=>`<tr><td class="c">${i+1}</td><td class="c">${pad4(r.folderCode)}</td><td>${esc(r.docNumber)}</td><td>${esc(r.owner)}</td><td>${esc(r.subject)}</td><td>${esc(r.department)}</td><td class="c">${esc(r.docType)}</td><td class="c">${thaiDate(r.docDate)}</td><td class="c">${esc(r.status)}</td></tr>`).join('');
+  const dep=(REPORT_DATA.byDepartment||[]).map(x=>`<tr><td>${esc(x.department)}</td><td class="c">${x.folders}</td><td class="c">${x.records}</td></tr>`).join('');
+  const st=(REPORT_DATA.stationStats||[]).map(s=>`<tr><td>${esc(s.name)}</td><td class="c">${s.avgMs?fmtDuration(s.avgMs):'—'}</td><td class="c">${s.count}</td></tr>`).join('');
+  const html='<html><head><meta charset="utf-8"><title>รายงานแฟ้ม</title>'+
+    '<style>body{font-family:sans-serif;padding:16px}h2,h3{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:14px}th,td{border:1px solid #999;padding:4px 6px;text-align:left}.c{text-align:center}th{background:#eee}</style></head><body>'+
+    '<h2>รายงานการเดินแฟ้ม</h2>'+
+    `<div>แฟ้มในช่วงนี้: <b>${REPORT_DATA.totalFolders}</b> · จำนวนเรื่อง: <b>${REPORT_DATA.totalRecords}</b> · เดินครบ: <b>${REPORT_DATA.completedCount}</b> · เวลาเฉลี่ยต่อแฟ้ม: <b>${REPORT_DATA.overallAvgMs?fmtDuration(REPORT_DATA.overallAvgMs):'—'}</b></div>`+
+    '<h3>ฝ่ายงานที่เสนอแฟ้ม</h3><table><thead><tr><th>ฝ่ายงาน</th><th>แฟ้ม</th><th>เรื่อง</th></tr></thead><tbody>'+dep+'</tbody></table>'+
+    '<h3>เวลาเฉลี่ยแต่ละจุดสแกน</h3><table><thead><tr><th>จุด</th><th>เวลาเฉลี่ย</th><th>จำนวนแฟ้ม</th></tr></thead><tbody>'+st+'</tbody></table>'+
+    '<h3>รายการทั้งหมด</h3><table><thead><tr><th>ลำดับ</th><th>รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th>ประเภท</th><th>วันที่</th><th>สถานะ</th></tr></thead><tbody>'+body+'</tbody></table>'+
+    '</body></html>';
+  const w=window.open('','_blank'); w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(),400);
 }
 function renderDash(){
   const q=(document.getElementById('dashSearch').value||'').toLowerCase().trim();
@@ -1297,20 +1457,63 @@ async function doTrack(){
       </table></div></div></div>`;
 }
 /* ---------- ประวัติแฟ้มทั้งหมด (ไทม์ไลน์) ---------- */
-function histTimeline(logs){
-  const keys=['S1','S2','S3','S4'];
+/* จำแนกชื่อผู้บริหารในไทม์ไลน์ว่าเป็น รอง / ผอ. / คณบดี (อิงจากชื่อที่ตั้งค่าไว้) */
+function classifyExec(name){
+  const n=(name||'').trim();
+  for(let i=1;i<=5;i++){ if(n===cfg('rong'+i)) return 'rong'; }
+  if(n===cfg('dean')) return 'dean';
+  if(n===cfg('dir')) return 'dir';
+  if(/คณบดี/.test(n)) return 'dean';
+  if(/ผู้อำนวยการ|ผอ/.test(n)) return 'dir';
+  return 'rong';
+}
+function histTimeline(logs, timeline){
   const done={}; (logs||[]).forEach(l=>{ done[l.station+'|'+l.direction]=l.timestamp; });
   const p=n=>String(n).padStart(2,'0');
   const tfmt=iso=>{ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; return thaiDate(iso)+' '+p(d.getHours())+':'+p(d.getMinutes()); };
-  return '<div class="hist-tl">'+keys.map((k,i)=>{
+  const has=k=>!!done[k];
+  const s1out=has('S1|ออก'), s2in=has('S2|เข้า'), s2out=has('S2|ออก'), s3in=has('S3|เข้า'), s3out=has('S3|ออก'), s4in=has('S4|เข้า');
+  // จำแนกผู้บริหารที่แฟ้มเลือก
+  const execs=(timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const rongNames=[], dirNames=[], deanNames=[];
+  execs.forEach(nm=>{ const g=classifyExec(nm); if(g==='dean') deanNames.push(nm); else if(g==='dir') dirNames.push(nm); else rongNames.push(nm); });
+  const midHigh = deanNames.concat(dirNames);   // ช่วง ธุรการ3→4 : คณบดี อยู่เหนือ ผอ.
+
+  const stNode=(k)=>{
     const inT=done[k+'|เข้า'], outT=done[k+'|ออก'];
-    const cls = outT?'done':(inT?'active':'');
     const times = inT ? ('เข้า '+tfmt(inT)+(outT?('<br>ออก '+tfmt(outT)):'')) : '<span class="text-muted">ยังไม่ถึง</span>';
-    return `<div class="hist-tl-node ${cls}"><div class="hist-tl-dot"></div>
-      <div class="hist-tl-name">${esc(stationName(k))}</div>
-      <div class="hist-tl-times">${times}</div></div>`+
-      (i<keys.length-1?`<div class="hist-tl-line ${outT?'done':''}"></div>`:'');
-  }).join('')+'</div>';
+    return { reached:!!inT, cls:outT?'done':(inT?'active':''),
+      inner:`<div class="hist-tl-dot"></div><div class="hist-tl-name">${esc(stationName(k))}</div><div class="hist-tl-times">${times}</div>` };
+  };
+  const lbNode=(names, reached, doneFlag, activeFlag)=>{
+    const txt=doneFlag?'ผ่านแล้ว':(activeFlag?'อยู่ช่วงนี้':'<span class="text-muted">ยังไม่ถึง</span>');
+    return { reached, cls:'label '+(doneFlag?'done':(activeFlag?'active':'')),
+      inner:`<div class="hist-tl-dot"></div><div class="hist-tl-name">${names.map(n=>esc(n)).join('<br>')}</div><div class="hist-tl-times">${txt}</div>` };
+  };
+
+  // ลำดับ: ธุรการ1 → หัวหน้าสำนักงาน → ธุรการ2 → รองที่เลือก → ธุรการ3 → ผอ./คณบดี → ธุรการ4
+  const nodes=[];
+  nodes.push(stNode('S1'));
+  nodes.push(lbNode(['หัวหน้าสำนักงาน'], s1out, s2in, s1out&&!s2in));
+  nodes.push(stNode('S2'));
+  if(rongNames.length) nodes.push(lbNode(rongNames, s2out, s3in, s2out&&!s3in));
+  nodes.push(stNode('S3'));
+  if(midHigh.length) nodes.push(lbNode(midHigh, s3out, s4in, s3out&&!s4in));
+  nodes.push(stNode('S4'));
+
+  let html='<div class="hist-tl">';
+  nodes.forEach((nd,i)=>{
+    if(i>0) html+=`<div class="hist-tl-line ${nd.reached?'done':''}"></div>`;
+    html+=`<div class="hist-tl-node ${nd.cls}">${nd.inner}</div>`;
+  });
+  return html+'</div>';
+}
+function toggleHist(head){
+  const item=head.closest('.hist-item');
+  const det=item.querySelector('.hist-detail');
+  const open=det.style.display==='none';
+  det.style.display=open?'block':'none';
+  item.classList.toggle('open', open);
 }
 async function loadHistory(){
   const period=document.getElementById('histPeriod').value;
@@ -1324,20 +1527,29 @@ async function loadHistory(){
     document.getElementById('histTotal').textContent = (d.total>rows.length)? (rows.length+' / '+d.total) : rows.length;
     if(!rows.length){ body.innerHTML='<div class="text-muted text-center py-4">ไม่พบประวัติในช่วงเวลานี้</div>'; return; }
     body.innerHTML=rows.map(x=>{
-      const when = x.live ? ('อัปเดตล่าสุด '+thaiDateTime(x.archivedAt)) : ('เสร็จสิ้น '+thaiDateTime(x.completedAt));
-      const recsHtml=(x.records||[]).length ? (x.records||[]).map(r=>
+      const when = x.live ? ('อัปเดต '+thaiDateTime(x.archivedAt)) : ('เสร็จ '+thaiDateTime(x.completedAt));
+      const recs=x.records||[];
+      const first=recs[0]||{};
+      const shortDoc = recs.length ? (`${esc(first.docNumber)||''}${first.subject?(' · '+esc(first.subject)):''}`+(recs.length>1?` <span class="text-muted">(+${recs.length-1})</span>`:'')) : '<span class="text-muted">—</span>';
+      const recsHtml=recs.length ? recs.map(r=>
         `<div>• <b>${esc(r.docNumber)||'—'}</b> ${r.docType?('<span class="text-muted">('+esc(r.docType)+')</span>'):''} ${esc(r.subject)||''}${r.docDate?(' <span class="text-muted">· '+thaiDate(r.docDate)+'</span>'):''}</div>`
       ).join('') : '<span class="text-muted">— ไม่มีรายการเอกสาร —</span>';
       const liveBadge = x.live ? '<span class="badge bg-info text-dark">กำลังดำเนินการ</span>' : '';
-      const viewBtn = x.live ? `<button class="btn btn-sm btn-outline-brand ms-auto" onclick="openFolder('${esc(x.folderCode)}')"><i class="bi bi-eye me-1"></i>ดู</button>` : '';
-      return `<div class="p-3 border-bottom hist-entry">
-        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+      const viewBtn = x.live ? `<button class="btn btn-sm btn-outline-brand" onclick="event.stopPropagation();openFolder('${esc(x.folderCode)}')"><i class="bi bi-eye me-1"></i>ดู</button>` : '';
+      return `<div class="hist-item border-bottom">
+        <div class="hist-head p-2 px-3 d-flex flex-wrap gap-2 align-items-center" style="cursor:pointer" onclick="toggleHist(this)">
+          <i class="bi bi-chevron-right hist-caret"></i>
           <b>แฟ้ม ${esc(x.folderCode)}</b> ${statusBadge(x.status)} ${liveBadge}
-          <span class="small text-muted">ผู้เสนอ: ${esc(x.owner)||'—'} &middot; ฝ่ายงาน: ${esc(x.department)||'—'} &middot; ${when}</span>
+          <span class="small">ผู้เสนอ: <b>${esc(x.owner)||'—'}</b></span>
+          <span class="small text-muted d-none d-lg-inline">· ฝ่ายงาน: ${esc(x.department)||'—'}</span>
+          <span class="small text-muted d-none d-md-inline text-truncate" style="max-width:340px">· ${shortDoc}</span>
+          <span class="small text-muted ms-auto">${when}</span>
           ${viewBtn}
         </div>
-        ${histTimeline(x.logs)}
-        <div class="small mt-2">${recsHtml}</div>
+        <div class="hist-detail px-3 pb-3" style="display:none">
+          ${histTimeline(x.logs, x.timeline)}
+          <div class="small mt-2">${recsHtml}</div>
+        </div>
       </div>`;
     }).join('');
   }catch(err){ body.innerHTML=`<div class="alert alert-danger m-3">${esc(err.message)}</div>`; }
