@@ -114,6 +114,17 @@
   .dwell-box{ border:1px solid var(--line); border-radius:12px; padding:12px 14px; background:#f7f9fa; height:100%; }
   .dwell-box.dwell-now{ background:#fff6e6; border-color:#f5b301; box-shadow:0 6px 16px -10px rgba(245,179,1,.7); }
   .dwell-box.dwell-now .fw-bold{ color:#8a5a00; }
+  /* ไทม์ไลน์ประวัติแนวนอน */
+  .hist-tl{ display:flex; align-items:flex-start; flex-wrap:wrap; }
+  .hist-tl-node{ text-align:center; min-width:88px; flex:0 0 auto; }
+  .hist-tl-dot{ width:16px;height:16px;border-radius:50%;background:#cbd5dc;margin:4px auto 4px;border:3px solid #eef2f4; }
+  .hist-tl-node.active .hist-tl-dot{ background:#f5b301; }
+  .hist-tl-node.done .hist-tl-dot{ background:var(--brand); }
+  .hist-tl-name{ font-weight:600; font-size:.8rem; }
+  .hist-tl-times{ color:var(--muted); line-height:1.25; font-size:.72rem; }
+  .hist-tl-line{ flex:1 1 18px; height:3px; background:#e2e8ec; margin-top:11px; min-width:12px; }
+  .hist-tl-line.done{ background:var(--brand); }
+  .hist-entry:hover{ background:#f6fbfa; }
   .bc-item svg{ max-width:100%; } .bc-code{ font-size:.85rem; color:var(--muted); margin-top:3px; }
 
   .scan-modal-overlay{ position:fixed; inset:0; background:rgba(8,24,27,.55); z-index:1090; display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(2px); }
@@ -233,26 +244,20 @@
         </div>
         <hr class="mt-0 mb-3">
         <div class="row g-3">
-          <div class="col-md-3">
+          <div class="col-md-4">
             <label class="form-label">เลือกแฟ้ม <span class="text-muted small">(หรือใช้ยิงบาร์โค้ดด้านบน)</span></label>
             <select id="regFolder" class="form-select"></select>
             <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="regShowAll" onchange="fillFolderSelect()">
               <label class="form-check-label small" for="regShowAll">แสดงแฟ้มทั้งหมด</label></div>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <label class="form-label">เจ้าของแฟ้ม (ชื่อ-นามสกุล)</label>
             <input id="regOwner" class="form-control" placeholder="เช่น นายสมชาย ใจดี">
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <label class="form-label">ฝ่ายงาน</label>
             <select id="regDept" class="form-select"></select>
-            <div class="form-text">ตั้งค่ารายการฝ่ายงานได้ที่เมนู “ตั้งค่า”</div>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">ประเภท</label>
-            <select id="regType" class="form-select">
-              <option value="">— เลือกประเภท —</option><option>หนังสือส่ง</option><option>หนังสือรับ</option>
-            </select>
+            <div class="form-text">ประเภทหนังสือย้ายไปเลือกในแต่ละรายการด้านล่าง (ตามเลข อว.) &middot; ตั้งค่าฝ่ายงานที่เมนู “ตั้งค่า”</div>
           </div>
         </div>
 
@@ -324,6 +329,18 @@
         </div>
         <div class="form-text mt-1"><i class="bi bi-hand-index me-1"></i>คลิกที่แฟ้มในตารางเพื่อบันทึก “สถานะการแก้ไขแฟ้ม”</div>
       </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header d-flex align-items-center">
+        <span><i class="bi bi-check2-circle text-success me-1"></i>แฟ้มที่ดำเนินการเสร็จสิ้นวันนี้ <span id="doneTodayCount" class="badge bg-success ms-1">0</span></span>
+        <button class="btn btn-sm btn-outline-brand ms-auto" onclick="loadDoneToday()"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
+      <div class="card-body p-0"><div class="table-responsive" style="max-height:300px;overflow:auto">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th>เวลาเสร็จ</th><th>รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ชื่อผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th>วันที่</th></tr></thead>
+          <tbody id="doneTodayBody"><tr><td colspan="7" class="text-center text-muted py-3">ยังไม่มีแฟ้มที่เสร็จวันนี้</td></tr></tbody>
+        </table></div></div>
     </div>
 
     <div id="scanEditWrap" class="mt-3" style="display:none">
@@ -399,6 +416,33 @@
     </div>
     <div id="trackList"></div>
     <div id="trackResult"></div>
+
+    <div class="card mt-3">
+      <div class="card-header d-flex flex-wrap gap-2 align-items-center">
+        <span><i class="bi bi-clock-history me-1"></i>ประวัติแฟ้มทั้งหมด <span id="histTotal" class="badge bg-secondary ms-1">0</span></span>
+        <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+          <label class="small text-muted mb-0">ช่วงเวลา</label>
+          <select id="histPeriod" class="form-select form-select-sm" style="width:130px" onchange="loadHistory()">
+            <option value="today">วันนี้</option>
+            <option value="week">7 วัน</option>
+            <option value="month">1 เดือน</option>
+            <option value="quarter">ไตรมาส (3 เดือน)</option>
+            <option value="half">6 เดือน</option>
+            <option value="year">1 ปี</option>
+            <option value="all" selected>ทั้งหมด</option>
+          </select>
+          <label class="small text-muted mb-0">แสดง</label>
+          <select id="histLimit" class="form-select form-select-sm" style="width:110px" onchange="loadHistory()">
+            <option value="50">50 แถว</option>
+            <option value="100" selected>100 แถว</option>
+            <option value="200">200 แถว</option>
+            <option value="all">ทั้งหมด</option>
+          </select>
+          <button class="btn btn-sm btn-outline-brand" onclick="loadHistory()"><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
+      </div>
+      <div class="card-body p-0"><div id="histBody"><div class="text-muted text-center py-4">— กดโหลดหรือเลือกช่วงเวลา —</div></div></div>
+    </div>
   </div>
 
   <!-- ================= SETTINGS ================= -->
@@ -657,9 +701,9 @@ document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
     toggleSidebar(false);
     if(p==='dashboard') loadDashboard();
     if(p==='register') loadRegister();
-    if(p==='scan'){ fillStationSelect(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
+    if(p==='scan'){ fillStationSelect(); loadDoneToday(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
     if(p==='barcode'){ PRINTED_LOADED=false; loadPrinted(); }
-    if(p==='track'){ fillTrackDept(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
+    if(p==='track'){ fillTrackDept(); loadHistory(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
     if(p==='settings') loadConfigForm();
   });
 });
@@ -674,14 +718,17 @@ function fillDashDept(){
 async function loadDashboard(){
   const body=document.getElementById('dashBody');
   body.innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">กำลังโหลด…</td></tr>';
-  fillDashDept();
   try{
     const d = await api('dashboard');
     if(!d.ok) throw new Error(d.error||'error');
-    ALL_FOLDERS = d.folders||[];
-    stTotal.textContent=d.total; stVang.textContent=d.available; stUsing.textContent=d.inUse; stDone.textContent=d.done;
-    renderDash();
+    applyDashboard(d);
   }catch(err){ body.innerHTML=`<tr><td colspan="8" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+}
+function applyDashboard(d){
+  fillDashDept();
+  ALL_FOLDERS = d.folders||[];
+  stTotal.textContent=d.total; stVang.textContent=d.available; stUsing.textContent=d.inUse; stDone.textContent=d.done;
+  renderDash();
 }
 function renderDash(){
   const q=(document.getElementById('dashSearch').value||'').toLowerCase().trim();
@@ -784,7 +831,6 @@ async function loadRegister(){
   document.getElementById('regScanInfo').innerHTML='';
   document.getElementById('regScanInput').value='';
   document.getElementById('regOwner').value='';
-  document.getElementById('regType').value='';
   document.getElementById('recordRows').innerHTML='';
   addRecordRow();
   if(!CONFIG || !CONFIG.rong1) await loadConfig();
@@ -850,13 +896,12 @@ async function loadExistingFolder(code){
     document.getElementById('regShowAll').checked=true; fillFolderSelect();
     setSelectValue(document.getElementById('regFolder'), fc);
     document.getElementById('regOwner').value=f.owner||'';
-    document.getElementById('regType').value=f.docType||'';
     fillDeptSelect(); setSelectValue(document.getElementById('regDept'), f.department||'');
     const tl=(f.timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
     document.querySelectorAll('.tl').forEach(c=>{ c.checked=tl.indexOf(c.value)>=0; });
     document.getElementById('recordRows').innerHTML='';
     const recs=f.records||[];
-    if(recs.length){ recs.forEach(r=>{ const aunum=((r.docNumber||'').split('/')[1]||''); addRecordRow({aunum, subject:r.subject, docDate:r.docDate}); }); }
+    if(recs.length){ recs.forEach(r=>{ const aunum=((r.docNumber||'').split('/')[1]||''); addRecordRow({aunum, subject:r.subject, docDate:r.docDate, docType:r.docType}); }); }
     else { addRecordRow(); }
     info.innerHTML=`<div class="alert alert-info py-2 mb-0"><i class="bi bi-info-circle me-1"></i>โหลดข้อมูลเดิมของแฟ้ม <b>${fc}</b> มาแล้ว — แก้ไขแล้วกด “บันทึกข้อมูลแฟ้ม” จะเขียนทับของเดิม</div>`;
   }catch(err){ toast(info,'danger',err.message); }
@@ -892,16 +937,24 @@ function fillFolderSelect(){
 document.getElementById('regFolder').addEventListener('change', function(){ if(this.value) showRegFolderStatus(this.value); });
 function addRecordRow(data){
   data=data||{};
+  const dt=esc(data.docType||'');
+  const opt=(v)=>`<option value="${esc(v)}" ${dt===v?'selected':''}>${esc(v)}</option>`;
   const div=document.createElement('div');
   div.className='row g-2 align-items-end mb-2 record-row';
   div.innerHTML=`
-    <div class="col-md-4"><label class="form-label small mb-1">เลขที่หนังสือ</label>
+    <div class="col-md-3"><label class="form-label small mb-1">เลขที่หนังสือ</label>
       <div class="input-group"><span class="input-group-text fixed-prefix">อว 7332.02/</span>
       <input class="form-control rec-aunum" maxlength="6" inputmode="numeric" placeholder="01234" value="${esc(data.aunum||'')}"></div></div>
-    <div class="col-md-4"><label class="form-label small mb-1">ชื่อเรื่อง</label>
+    <div class="col-md-3"><label class="form-label small mb-1">ชื่อเรื่อง</label>
       <input class="form-control rec-subject" placeholder="กรอกชื่อเรื่องเอกสาร" value="${esc(data.subject||'')}"></div>
-    <div class="col-md-3"><label class="form-label small mb-1">วันที่</label>
+    <div class="col-md-2"><label class="form-label small mb-1">วันที่</label>
       <input type="date" class="form-control rec-date" value="${esc(data.docDate||'')}"></div>
+    <div class="col-md-3"><label class="form-label small mb-1">ประเภท</label>
+      <select class="form-select rec-type">
+        <option value="">— เลือกประเภท —</option>
+        <optgroup label="หนังสือส่ง">${opt('หนังสือส่ง (ภายใน)')}${opt('หนังสือส่ง (ภายนอก)')}</optgroup>
+        <optgroup label="หนังสือรับ">${opt('หนังสือรับ (ภายใน)')}${opt('หนังสือรับ (ภายนอก)')}</optgroup>
+      </select></div>
     <div class="col-md-1 text-end">
       <button class="btn btn-outline-danger" onclick="this.closest('.record-row').remove()"><i class="bi bi-trash"></i></button></div>`;
   document.getElementById('recordRows').appendChild(div);
@@ -912,27 +965,26 @@ async function saveRegister(){
   if(!folderCode){ toast(el,'danger','กรุณาเลือกแฟ้ม'); return; }
   const owner=document.getElementById('regOwner').value.trim();
   const department=document.getElementById('regDept').value;
-  const docType=document.getElementById('regType').value;
   const timeline=[...document.querySelectorAll('.tl:checked')].map(c=>c.value).join(', ');
   const records=[...document.querySelectorAll('.record-row')].map(r=>({
     aunum:r.querySelector('.rec-aunum').value.trim(),
     subject:r.querySelector('.rec-subject').value.trim(),
-    docDate:r.querySelector('.rec-date').value
-  })).filter(r=>r.aunum||r.subject||r.docDate);
+    docDate:r.querySelector('.rec-date').value,
+    docType:r.querySelector('.rec-type').value
+  })).filter(r=>r.aunum||r.subject||r.docDate||r.docType);
   if(!owner){ toast(el,'danger','กรุณากรอกเจ้าของแฟ้ม'); return; }
   if(!department){ toast(el,'danger','กรุณาเลือกฝ่ายงาน'); return; }
   if(!records.length){ toast(el,'danger','กรุณาเพิ่มอย่างน้อย 1 รายการเอกสาร'); return; }
+  if(records.some(r=>!r.docType)){ toast(el,'danger','กรุณาเลือก “ประเภท” ให้ครบทุกรายการเอกสาร'); return; }
   el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
   try{
-    const d=await api('registerFolder',{folderCode, owner, department, docType, timeline, records:JSON.stringify(records)});
+    const d=await api('registerFolder',{folderCode, owner, department, timeline, records:JSON.stringify(records)});
     if(!d.ok) throw new Error(d.error||'error');
     el.innerHTML=`<div class="alert alert-success mb-0"><i class="bi bi-check-circle me-1"></i>${esc(d.message)}
       <div class="mt-2"><button class="btn btn-sm btn-outline-brand" onclick="gotoTrack('${pad4(folderCode)}')"><i class="bi bi-search me-1"></i>ดูแฟ้มนี้</button></div></div>`;
-    // เตรียมฟอร์มสำหรับแฟ้มถัดไป + โหลดสถานะใหม่ + โฟกัสช่องยิงบาร์โค้ด
     document.getElementById('regScanInfo').innerHTML='';
     document.getElementById('regOwner').value='';
     document.getElementById('regDept').value='';
-    document.getElementById('regType').value='';
     document.querySelectorAll('.tl').forEach(c=>c.checked=false);
     document.getElementById('recordRows').innerHTML=''; addRecordRow();
     try{ const g=await api('getFolders'); if(g.ok) ALL_FOLDERS=g.folders||[]; }catch(e){}
@@ -990,6 +1042,14 @@ async function doScan(code){
   const auStr = recs.length ? recs.map(r=>r.docNumber||'').filter(Boolean).join(', ') : '';
   const subjStr = recs.length ? recs.map(r=>r.subject||'').filter(Boolean).join(' / ') : '';
   const dirColor = dir==='เข้า' ? 'text-success':'text-danger';
+  if(d.completed){
+    // ออกจากจุดสุดท้าย: เสร็จสิ้น + คืนว่างอัตโนมัติ
+    el.innerHTML=`<div class="alert alert-success mb-0">
+      <div class="fw-bold"><i class="bi bi-check2-circle me-1"></i>แฟ้ม ${pad4(f.folderCode)} เสร็จสิ้นครบทุกจุด</div>
+      <div class="small mt-1"><i class="bi bi-arrow-counterclockwise me-1"></i>คืนเป็น “ว่าง” อัตโนมัติแล้ว พร้อมใช้งานใหม่ (ข้อมูลถูกเก็บในประวัติ)</div></div>`;
+    sessionLog.unshift({time:new Date(), folderCode:pad4(f.folderCode), station, direction:dir, ok:true, au:auStr, subject:subjStr});
+    renderTrays(); loadDoneToday(); focusScan(); return;
+  }
   el.innerHTML=`<div class="alert alert-success mb-0">
     <div class="fw-bold"><i class="bi bi-check-circle me-1"></i>สแกนสำเร็จ — แฟ้ม ${pad4(f.folderCode)} <span class="${dirColor}">(${esc(dir)})</span> ${editBadge(f)}</div>
     <div class="small">เจ้าของ: ${esc(f.owner)||'—'} &middot; ${esc(stationName(station))} &middot; สถานะ: ${esc(f.status)}</div>
@@ -1040,6 +1100,25 @@ async function openScanEdit(code){
 function closeScanEdit(){ document.getElementById('scanEditWrap').style.display='none'; focusScan(); }
 /* เอาเคอร์เซอร์ไว้ที่ช่องสแกนเสมอ (เมื่ออยู่หน้าสแกน) */
 function focusScan(){ const s=document.getElementById('scanInput'); if(s) setTimeout(()=>s.focus(),50); }
+/* แฟ้มที่เสร็จสิ้นวันนี้ (จากประวัติ) */
+async function loadDoneToday(){
+  const body=document.getElementById('doneTodayBody');
+  try{
+    const d=await api('getHistory',{period:'today', onlyCompleted:'1', limit:'50'});
+    if(!d.ok) throw new Error(d.error||'error');
+    const rows=d.rows||[];
+    document.getElementById('doneTodayCount').textContent=rows.length;
+    if(!rows.length){ body.innerHTML='<tr><td colspan="7" class="text-center text-muted py-3">ยังไม่มีแฟ้มที่เสร็จวันนี้</td></tr>'; return; }
+    body.innerHTML=rows.map(x=>{
+      const au=(x.records||[]).map(r=>r.docNumber||'').filter(Boolean).join(', ')||'—';
+      const subj=(x.records||[]).map(r=>r.subject||'').filter(Boolean).join(' / ')||'—';
+      const dd=(x.records||[]).map(r=>thaiDate(r.docDate)).filter(Boolean).join(', ')||'—';
+      return `<tr><td class="small">${thaiDateTime(x.completedAt)}</td><td><b>${esc(x.folderCode)}</b></td>
+        <td class="small">${esc(au)}</td><td>${esc(x.owner)||'—'}</td><td class="small">${esc(subj)}</td>
+        <td>${esc(x.department)||'—'}</td><td class="small">${esc(dd)}</td></tr>`;
+    }).join('');
+  }catch(err){ body.innerHTML=`<tr><td colspan="7" class="text-center text-danger py-3">${esc(err.message)}</td></tr>`; }
+}
 
 /* ========================= BARCODE ========================= */
 let PRINTED = new Set();
@@ -1217,6 +1296,52 @@ async function doTrack(){
         <tbody>${rowsHtml}</tbody>
       </table></div></div></div>`;
 }
+/* ---------- ประวัติแฟ้มทั้งหมด (ไทม์ไลน์) ---------- */
+function histTimeline(logs){
+  const keys=['S1','S2','S3','S4'];
+  const done={}; (logs||[]).forEach(l=>{ done[l.station+'|'+l.direction]=l.timestamp; });
+  const p=n=>String(n).padStart(2,'0');
+  const tfmt=iso=>{ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; return thaiDate(iso)+' '+p(d.getHours())+':'+p(d.getMinutes()); };
+  return '<div class="hist-tl">'+keys.map((k,i)=>{
+    const inT=done[k+'|เข้า'], outT=done[k+'|ออก'];
+    const cls = outT?'done':(inT?'active':'');
+    const times = inT ? ('เข้า '+tfmt(inT)+(outT?('<br>ออก '+tfmt(outT)):'')) : '<span class="text-muted">ยังไม่ถึง</span>';
+    return `<div class="hist-tl-node ${cls}"><div class="hist-tl-dot"></div>
+      <div class="hist-tl-name">${esc(stationName(k))}</div>
+      <div class="hist-tl-times">${times}</div></div>`+
+      (i<keys.length-1?`<div class="hist-tl-line ${outT?'done':''}"></div>`:'');
+  }).join('')+'</div>';
+}
+async function loadHistory(){
+  const period=document.getElementById('histPeriod').value;
+  const limit=document.getElementById('histLimit').value;
+  const body=document.getElementById('histBody');
+  body.innerHTML='<div class="text-muted text-center py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดประวัติ…</div>';
+  try{
+    const d=await api('getHistory',{period, limit});
+    if(!d.ok) throw new Error(d.error||'error');
+    const rows=d.rows||[];
+    document.getElementById('histTotal').textContent = (d.total>rows.length)? (rows.length+' / '+d.total) : rows.length;
+    if(!rows.length){ body.innerHTML='<div class="text-muted text-center py-4">ไม่พบประวัติในช่วงเวลานี้</div>'; return; }
+    body.innerHTML=rows.map(x=>{
+      const when = x.live ? ('อัปเดตล่าสุด '+thaiDateTime(x.archivedAt)) : ('เสร็จสิ้น '+thaiDateTime(x.completedAt));
+      const recsHtml=(x.records||[]).length ? (x.records||[]).map(r=>
+        `<div>• <b>${esc(r.docNumber)||'—'}</b> ${r.docType?('<span class="text-muted">('+esc(r.docType)+')</span>'):''} ${esc(r.subject)||''}${r.docDate?(' <span class="text-muted">· '+thaiDate(r.docDate)+'</span>'):''}</div>`
+      ).join('') : '<span class="text-muted">— ไม่มีรายการเอกสาร —</span>';
+      const liveBadge = x.live ? '<span class="badge bg-info text-dark">กำลังดำเนินการ</span>' : '';
+      const viewBtn = x.live ? `<button class="btn btn-sm btn-outline-brand ms-auto" onclick="openFolder('${esc(x.folderCode)}')"><i class="bi bi-eye me-1"></i>ดู</button>` : '';
+      return `<div class="p-3 border-bottom hist-entry">
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+          <b>แฟ้ม ${esc(x.folderCode)}</b> ${statusBadge(x.status)} ${liveBadge}
+          <span class="small text-muted">ผู้เสนอ: ${esc(x.owner)||'—'} &middot; ฝ่ายงาน: ${esc(x.department)||'—'} &middot; ${when}</span>
+          ${viewBtn}
+        </div>
+        ${histTimeline(x.logs)}
+        <div class="small mt-2">${recsHtml}</div>
+      </div>`;
+    }).join('');
+  }catch(err){ body.innerHTML=`<div class="alert alert-danger m-3">${esc(err.message)}</div>`; }
+}
 function renderTrack(f){
   const keys=['S1','S2','S3','S4']; const dirs=['เข้า','ออก'];
   const done={}; (f.logs||[]).forEach(l=>{ done[l.station+'|'+l.direction]=l.timestamp; });
@@ -1232,8 +1357,8 @@ function renderTrack(f){
     idx++;
   });});
   const recs=(f.records||[]);
-  const recRows = recs.length ? recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.docNumber)||'—'}</td><td>${esc(r.subject)||'—'}</td><td>${thaiDate(r.docDate)}</td></tr>`).join('')
-    : '<tr><td colspan="4" class="text-center text-muted">ไม่มีรายการเอกสาร</td></tr>';
+  const recRows = recs.length ? recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.docNumber)||'—'}</td><td>${esc(r.subject)||'—'}</td><td>${esc(r.docType)||'—'}</td><td>${thaiDate(r.docDate)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="text-center text-muted">ไม่มีรายการเอกสาร</td></tr>';
   const tl=(f.timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
   const tlBadges = tl.length ? tl.map(t=>`<span class="badge bg-secondary me-1 mb-1">${esc(t)}</span>`).join('') : '<span class="text-muted">— ยังไม่ระบุ —</span>';
   const logRows=(f.logs||[]).length ? (f.logs||[]).map(l=>{
@@ -1326,7 +1451,7 @@ function renderTrack(f){
       <div class="col-lg-6"><div class="card h-100">
         <div class="card-header"><i class="bi bi-list-ol me-1"></i>รายการเอกสารในแฟ้ม</div>
         <div class="card-body p-0"><div class="table-responsive">
-          <table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>วันที่</th></tr></thead>
+          <table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>ประเภท</th><th>วันที่</th></tr></thead>
           <tbody>${recRows}</tbody></table></div></div></div></div>
       <div class="col-lg-6"><div class="card h-100">
         <div class="card-header"><i class="bi bi-clock-history me-1"></i>ประวัติการสแกน</div>
@@ -1391,6 +1516,18 @@ function setConn(ok){
     document.getElementById('urlWarn').classList.remove('d-none');
     return;
   }
+  // โหลดครั้งเดียว: config + dashboard + สถานะเชื่อมต่อ (เร็วกว่าเรียกทีละอัน)
+  try{
+    const d = await api('getBootstrap');
+    if(d && d.ok){
+      if(d.config) CONFIG = Object.assign({}, DEFAULTS, d.config);
+      setConn(true);
+      fillStationSelect();
+      if(d.dashboard && d.dashboard.ok) applyDashboard(d.dashboard); else loadDashboard();
+      return;
+    }
+  }catch(e){}
+  // สำรอง (เผื่อ backend เวอร์ชันเก่ายังไม่มี getBootstrap)
   await loadConfig();
   fillStationSelect();
   testConnection();
