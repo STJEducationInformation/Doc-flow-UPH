@@ -281,46 +281,58 @@
   <!-- ================= SCAN ================= -->
   <div class="page" id="page-scan">
     <div class="row g-3">
-      <div class="col-lg-5">
+      <div class="col-lg-4">
         <div class="card">
           <div class="card-header"><i class="bi bi-upc-scan me-1"></i>สแกนเข้า-ออก</div>
           <div class="card-body">
             <label class="form-label">จุดสแกน (ธุรการ)</label>
             <select id="scanStation" class="form-select mb-3"></select>
-            <label class="form-label">ทิศทาง</label>
-            <div class="btn-group w-100 mb-3" role="group">
-              <input type="radio" class="btn-check" name="dir" id="dirIn" value="เข้า" checked>
-              <label class="btn btn-outline-success" for="dirIn"><i class="bi bi-box-arrow-in-right me-1"></i>เข้า</label>
-              <input type="radio" class="btn-check" name="dir" id="dirOut" value="ออก">
-              <label class="btn btn-outline-danger" for="dirOut"><i class="bi bi-box-arrow-right me-1"></i>ออก</label>
-            </div>
             <label class="form-label">ยิงบาร์โค้ดที่นี่</label>
             <input id="scanInput" class="form-control scan-input" placeholder="รอสแกน…" autocomplete="off">
-            <div class="form-text">วางเคอร์เซอร์ในช่องนี้ค้างไว้ แล้วใช้เครื่องสแกนยิงบาร์โค้ดบนแฟ้มได้เลย</div>
+            <div class="form-text">ยิงบาร์โค้ดแฟ้มได้เลย ระบบจะรู้เองว่าเป็นการ <b>เข้า</b> หรือ <b>ออก</b> โดยไม่ต้องเลือกทิศทาง</div>
             <div id="scanResult" class="mt-3"></div>
-            <div id="scanEditWrap" class="mt-3" style="display:none">
-              <hr class="my-2">
-              <div class="fw-semibold mb-2"><i class="bi bi-pencil-square me-1"></i>สถานะการแก้ไขแฟ้มนี้ (ธุรการลงเอง)</div>
-              <div id="scanEditBox"></div>
-            </div>
           </div>
         </div>
       </div>
-      <div class="col-lg-7">
-        <div class="card">
-          <div class="card-header d-flex align-items-center">
-            <span><i class="bi bi-clock-history me-1"></i>บันทึกการสแกน (รอบนี้)</span>
-            <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="sessionLog=[];renderSessionLog()">ล้าง</button>
+      <div class="col-lg-8">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center">
+                <span><i class="bi bi-box-arrow-in-right text-success me-1"></i>สแกนเข้าแล้ว — รออยู่ที่จุดนี้ <span id="inCount" class="badge bg-success ms-1">0</span></span>
+              </div>
+              <div class="card-body p-0"><div class="table-responsive" style="max-height:420px;overflow:auto">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                  <thead class="table-light"><tr><th>แฟ้ม / เวลา</th><th>เลขที่ อว · ชื่อเรื่อง</th></tr></thead>
+                  <tbody id="inBody"><tr><td colspan="2" class="text-center text-muted py-4">ยังไม่มีแฟ้ม</td></tr></tbody>
+                </table></div></div>
+            </div>
           </div>
-          <div class="card-body p-0">
-            <div class="table-responsive" style="max-height:460px;overflow:auto">
-              <table class="table table-sm mb-0 align-middle">
-                <thead class="table-light"><tr><th>เวลา</th><th>รหัสแฟ้ม</th><th>จุด</th><th>ทิศทาง</th><th>ผล</th></tr></thead>
-                <tbody id="sessionBody"><tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีการสแกน</td></tr></tbody>
-              </table>
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header d-flex align-items-center">
+                <span><i class="bi bi-box-arrow-right text-danger me-1"></i>สแกนออกแล้ว <span id="outCount" class="badge bg-danger ms-1">0</span></span>
+                <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="sessionLog=[];renderTrays()">ล้าง</button>
+              </div>
+              <div class="card-body p-0"><div class="table-responsive" style="max-height:420px;overflow:auto">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                  <thead class="table-light"><tr><th>แฟ้ม / เวลา</th><th>เลขที่ อว · ชื่อเรื่อง</th></tr></thead>
+                  <tbody id="outBody"><tr><td colspan="2" class="text-center text-muted py-4">ยังไม่มีแฟ้ม</td></tr></tbody>
+                </table></div></div>
             </div>
           </div>
         </div>
+        <div class="form-text mt-1"><i class="bi bi-hand-index me-1"></i>คลิกที่แฟ้มในตารางเพื่อบันทึก “สถานะการแก้ไขแฟ้ม”</div>
+      </div>
+    </div>
+
+    <div id="scanEditWrap" class="mt-3" style="display:none">
+      <div class="card border-warning">
+        <div class="card-header d-flex align-items-center">
+          <span><i class="bi bi-pencil-square me-1"></i>สถานะการแก้ไขแฟ้ม <span id="scanEditCode" class="fw-bold ms-1"></span> (ธุรการลงเอง)</span>
+          <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="closeScanEdit()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="card-body"><div id="scanEditBox"></div></div>
       </div>
     </div>
   </div>
@@ -938,64 +950,96 @@ function fillStationSelect(){
 }
 const scanInput=document.getElementById('scanInput');
 scanInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doScan(scanInput.value); } });
+// เอาเคอร์เซอร์กลับมาที่ช่องสแกนเสมอ ยกเว้นตั้งใจไปคลิกช่องกรอกอื่น
+scanInput.addEventListener('blur', ()=>{ setTimeout(()=>{
+  const pg=document.getElementById('page-scan');
+  if(!pg || !pg.classList.contains('active')) return;
+  const a=document.activeElement;
+  if(!a || !['INPUT','SELECT','TEXTAREA','BUTTON','A'].includes(a.tagName)) scanInput.focus();
+}, 60); });
 async function doScan(code){
   const raw=(code||'').trim();
   scanInput.value='';
   if(!raw) return;
   const station=document.getElementById('scanStation').value;   // คีย์ S1-S4
-  const direction=document.querySelector('input[name="dir"]:checked').value;
   const el=document.getElementById('scanResult');
   const norm=normalizeScan(raw);
   if(norm.warn){
     beep(false);
     showScanModal('สแกนในโหมดภาษาไทย', norm.warn, true);
-    document.getElementById('scanEditWrap').style.display='none';
-    sessionLog.unshift({time:new Date(), folderCode:raw, station, direction, ok:false, msg:'โหมดภาษาไทย'});
-    renderSessionLog(); return;
+    return;
   }
   const folderCode=pad4(norm.code);
   let d;
-  try{ d=await api('scan',{folderCode, station, direction}); }
+  try{ d=await api('scan',{folderCode, station, direction:'auto'}); }   // ทิศทาง auto: ระบบกำหนดเอง
   catch(err){
     beep(false);
     showScanModal('เชื่อมต่อไม่สำเร็จ', err.message, true);
-    toast(el,'danger',err.message);
-    document.getElementById('scanEditWrap').style.display='none';
-    sessionLog.unshift({time:new Date(), folderCode, station, direction, ok:false, msg:err.message});
-    renderSessionLog(); return;
+    return;
   }
   if(!d.ok){
     beep(false);
-    const firstLine=(d.error||'เกิดข้อผิดพลาด').split('\n')[0];
     showScanModal('สแกนไม่สำเร็จ', d.error||'เกิดข้อผิดพลาด', true);
-    toast(el,'danger',firstLine);
-    document.getElementById('scanEditWrap').style.display='none';
-    sessionLog.unshift({time:new Date(), folderCode, station, direction, ok:false, msg:firstLine});
-    renderSessionLog(); return;
+    return;
   }
   // สแกนสำเร็จ
   beep(true);
   const f=d.folder;
+  const dir=d.direction||f.lastDirection||'';
+  const recs=f.records||[];
+  const auStr = recs.length ? recs.map(r=>r.docNumber||'').filter(Boolean).join(', ') : '';
+  const subjStr = recs.length ? recs.map(r=>r.subject||'').filter(Boolean).join(' / ') : '';
+  const dirColor = dir==='เข้า' ? 'text-success':'text-danger';
   el.innerHTML=`<div class="alert alert-success mb-0">
-    <div class="fw-bold"><i class="bi bi-check-circle me-1"></i>สแกนสำเร็จ — แฟ้ม ${pad4(f.folderCode)} ${editBadge(f)}</div>
-    <div class="small">เจ้าของ: ${esc(f.owner)||'—'} &middot; สถานะ: ${esc(f.status)} &middot; ${esc(stationName(station))} (${esc(direction)})</div>
+    <div class="fw-bold"><i class="bi bi-check-circle me-1"></i>สแกนสำเร็จ — แฟ้ม ${pad4(f.folderCode)} <span class="${dirColor}">(${esc(dir)})</span> ${editBadge(f)}</div>
+    <div class="small">เจ้าของ: ${esc(f.owner)||'—'} &middot; ${esc(stationName(station))} &middot; สถานะ: ${esc(f.status)}</div>
     ${d.nextHint?`<div class="small mt-1 text-primary"><i class="bi bi-arrow-right-circle me-1"></i>${esc(d.nextHint)}</div>`:''}</div>`;
-  document.getElementById('scanEditBox').innerHTML=editFormHTML(f,'scan',station);
-  document.getElementById('scanEditWrap').style.display='block';
-  sessionLog.unshift({time:new Date(), folderCode:pad4(f.folderCode), station, direction, ok:true, msg:'สำเร็จ'});
-  renderSessionLog(); scanInput.focus();
+  sessionLog.unshift({time:new Date(), folderCode:pad4(f.folderCode), station, direction:dir, ok:true, au:auStr, subject:subjStr});
+  renderTrays();
+  focusScan();
 }
-function renderSessionLog(){
-  const b=document.getElementById('sessionBody');
-  if(!sessionLog.length){ b.innerHTML='<tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีการสแกน</td></tr>'; return; }
+/* ถาดเข้า/ออก: จัดตามสถานะล่าสุดของแต่ละแฟ้มในรอบนี้ (เข้า=รออยู่, ออก=ส่งต่อแล้ว) */
+function renderTrays(){
+  const latest={};
+  sessionLog.forEach(x=>{ if(x.ok && !latest[x.folderCode]) latest[x.folderCode]=x; }); // sessionLog ใหม่สุดอยู่บน
+  const inList=[], outList=[];
+  Object.keys(latest).forEach(c=>{ const x=latest[c]; (x.direction==='เข้า'?inList:outList).push(x); });
+  const byTime=(a,b)=>b.time-a.time; inList.sort(byTime); outList.sort(byTime);
+  renderTray('inBody', inList); renderTray('outBody', outList);
+  document.getElementById('inCount').textContent=inList.length;
+  document.getElementById('outCount').textContent=outList.length;
+}
+function renderTray(bodyId, list){
+  const b=document.getElementById(bodyId);
+  if(!list.length){ b.innerHTML='<tr><td colspan="2" class="text-center text-muted py-4">ยังไม่มีแฟ้ม</td></tr>'; return; }
   const p=n=>String(n).padStart(2,'0');
-  b.innerHTML=sessionLog.slice(0,80).map(x=>{
+  b.innerHTML=list.map(x=>{
     const t=x.time; const tt=`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`;
-    const dir = x.direction==='เข้า'?'<span class="text-success fw-bold">เข้า</span>':'<span class="text-danger fw-bold">ออก</span>';
-    const res = x.ok?'<span class="badge bg-success">OK</span>':`<span class="badge bg-danger">${esc(x.msg)}</span>`;
-    return `<tr><td class="small">${tt}</td><td><b>${esc(x.folderCode)}</b></td><td class="small">${esc(stationName(x.station))}</td><td>${dir}</td><td>${res}</td></tr>`;
+    const au = x.au ? esc(x.au) : '<span class="text-muted">—</span>';
+    const subj = x.subject ? `<div class="text-muted">${esc(x.subject)}</div>` : '';
+    return `<tr style="cursor:pointer" onclick="openScanEdit('${esc(x.folderCode)}')">
+      <td><b>${esc(x.folderCode)}</b><div class="small text-muted">${tt}</div></td>
+      <td class="small">${au}${subj}</td></tr>`;
   }).join('');
 }
+/* คลิกแฟ้ม -> แสดงแผงสถานะแก้ไข (เลื่อนลงมาให้เห็น) */
+async function openScanEdit(code){
+  const fc=pad4(code);
+  const wrap=document.getElementById('scanEditWrap');
+  const box=document.getElementById('scanEditBox');
+  document.getElementById('scanEditCode').textContent=fc;
+  box.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</div>';
+  wrap.style.display='block';
+  wrap.scrollIntoView({behavior:'smooth', block:'center'});
+  try{
+    const d=await api('getFolder',{folderCode:fc});
+    if(!d.ok) throw new Error(d.error||'error');
+    box.innerHTML=editFormHTML(d.folder,'scan', document.getElementById('scanStation').value);
+  }catch(err){ box.innerHTML=`<div class="alert alert-danger mb-0">${esc(err.message)}</div>`; }
+}
+function closeScanEdit(){ document.getElementById('scanEditWrap').style.display='none'; focusScan(); }
+/* เอาเคอร์เซอร์ไว้ที่ช่องสแกนเสมอ (เมื่ออยู่หน้าสแกน) */
+function focusScan(){ const s=document.getElementById('scanInput'); if(s) setTimeout(()=>s.focus(),50); }
 
 /* ========================= BARCODE ========================= */
 let PRINTED = new Set();
