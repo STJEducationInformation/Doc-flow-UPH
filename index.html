@@ -27,6 +27,23 @@
   body{ background:var(--bg); color:var(--ink); }
   .eyebrow{ text-transform:uppercase; letter-spacing:.12em; font-size:.68rem; font-weight:600; color:var(--muted); }
 
+  /* ---------- หน้าเข้าสู่ระบบ ---------- */
+  .auth-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+    background:linear-gradient(135deg,#0e2a30,#123a41 55%,#0d5c63); }
+  .auth-card{ width:100%; max-width:410px; background:#fff; border-radius:20px; padding:30px 28px;
+    box-shadow:0 24px 60px rgba(0,0,0,.35); }
+  .auth-logo{ width:76px; height:76px; margin:0 auto 10px; border-radius:18px; background:#fff;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px -8px rgba(0,0,0,.4); overflow:hidden; }
+  .auth-logo img{ width:100%; height:100%; object-fit:contain; padding:4px; }
+  .auth-title{ font-family:'Anuphan',sans-serif; font-weight:700; font-size:1.18rem; color:var(--pp,#5f2a83); }
+  .auth-sub{ font-size:.85rem; color:var(--muted); }
+  .auth-foot{ margin-top:18px; padding-top:12px; border-top:1px solid var(--line); font-size:.78rem; color:var(--muted); text-align:center; }
+  .user-chip{ display:flex; align-items:center; gap:9px; }
+  .user-chip .ava{ width:34px;height:34px;border-radius:50%;background:var(--brand);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;flex:0 0 auto; }
+  .user-chip .nm{ font-size:.85rem; color:#fff; font-weight:600; line-height:1.1; }
+  .user-chip .rl{ font-size:.72rem; color:#7fb2ad; }
+
   /* ---------- Layout ---------- */
   .layout{ display:flex; min-height:100vh; }
   .sidebar{ width:264px; flex-shrink:0; background:linear-gradient(180deg,var(--sidebar),var(--sidebar-2));
@@ -132,6 +149,27 @@
   .hist-caret{ transition:transform .18s; color:var(--muted); }
   .hist-item.open .hist-caret{ transform:rotate(90deg); }
   .hist-head:hover{ background:#f6fbfa; }
+  /* ---- จัดรายการประวัติ/ผลค้นหา เป็นคอลัมน์ตรงแนว ---- */
+  .hist-row{ display:grid; align-items:center; gap:10px; padding:9px 14px;
+    grid-template-columns:20px 148px 104px minmax(180px,2fr) minmax(120px,1.15fr) minmax(95px,.85fr) 132px 86px 104px 142px 44px; }
+  .hist-colhead{ font-size:.76rem; font-weight:600; color:var(--muted); background:#f7f9fa;
+    border-bottom:1px solid var(--line); padding-top:8px; padding-bottom:8px; }
+  .hist-cell{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hist-cell.num{ font-weight:700; }
+  .hist-cell.time{ text-align:right; font-size:.78rem; color:var(--muted); }
+  .hist-item:last-child .hist-row{ border-bottom:0; }
+  @media (max-width: 1500px){
+    .hist-row{ grid-template-columns:20px 140px 100px minmax(160px,2fr) minmax(110px,1.1fr) 124px 84px 100px 138px 44px; }
+    .hist-row .col-dept{ display:none; }
+  }
+  @media (max-width: 1250px){
+    .hist-row{ grid-template-columns:20px 134px 96px minmax(150px,2fr) minmax(105px,1fr) 82px 98px 132px 44px; }
+    .hist-row .col-type{ display:none; }
+  }
+  @media (max-width: 1000px){
+    .hist-row{ grid-template-columns:20px 128px minmax(140px,2fr) minmax(100px,1fr) 96px 44px; }
+    .hist-row .col-docdate, .hist-row .col-urg, .hist-row .col-time{ display:none; }
+  }
   .hist-entry:hover{ background:#f6fbfa; }
   .bc-item svg{ max-width:100%; } .bc-code{ font-size:.85rem; color:var(--muted); margin-top:3px; }
 
@@ -162,7 +200,66 @@
 </head>
 <body>
 
-<div class="layout" id="layout">
+<!-- ================= หน้าเข้าสู่ระบบ ================= -->
+<div id="authGate" class="auth-wrap">
+  <div class="auth-card">
+    <div class="text-center mb-3">
+      <div class="auth-logo"><img src="" id="authLogo" alt="logo"></div>
+      <div class="auth-title">ระบบติดตามแฟ้มเสนอผู้บริหาร</div>
+      <div class="auth-sub">โรงพยาบาลมหาวิทยาลัยพะเยา</div>
+    </div>
+
+    <!-- เข้าสู่ระบบ -->
+    <div id="paneLogin">
+      <label class="form-label small mb-1">อีเมล (@up.ac.th)</label>
+      <input id="loginEmail" class="form-control mb-2" type="email" placeholder="name@up.ac.th" autocomplete="username">
+      <label class="form-label small mb-1">รหัสผ่าน</label>
+      <input id="loginPw" class="form-control mb-3" type="password" placeholder="รหัสผ่าน" autocomplete="current-password">
+      <button class="btn btn-brand w-100" id="btnLogin" onclick="doLogin()"><i class="bi bi-box-arrow-in-right me-1"></i>เข้าสู่ระบบ</button>
+      <div class="text-center mt-3">
+        <a href="#" class="small" onclick="showPane('Forgot');return false;">ลืมรหัสผ่าน?</a>
+      </div>
+      <div id="loginMsg" class="mt-3"></div>
+    </div>
+
+    <!-- ลืมรหัสผ่าน -->
+    <div id="paneForgot" style="display:none">
+      <div class="fw-semibold mb-2">ลืมรหัสผ่าน</div>
+      <div class="small text-muted mb-2">กรอกอีเมลที่ลงทะเบียนไว้ ระบบจะส่งลิงก์ตั้งรหัสผ่านใหม่ให้</div>
+      <input id="fgEmail" class="form-control mb-3" type="email" placeholder="name@up.ac.th">
+      <button class="btn btn-brand w-100" onclick="doForgot()"><i class="bi bi-envelope me-1"></i>ส่งลิงก์ตั้งรหัสผ่านใหม่</button>
+      <div class="text-center mt-3"><a href="#" class="small" onclick="showPane('Login');return false;">← กลับไปเข้าสู่ระบบ</a></div>
+      <div id="fgMsg" class="mt-3"></div>
+    </div>
+
+    <!-- ตั้งรหัสผ่านใหม่ (จากลิงก์อีเมล) -->
+    <div id="paneReset" style="display:none">
+      <div class="fw-semibold mb-2">ตั้งรหัสผ่านใหม่</div>
+      <input id="rsPw1" class="form-control mb-2" type="password" placeholder="รหัสผ่านใหม่">
+      <input id="rsPw2" class="form-control mb-2" type="password" placeholder="ยืนยันรหัสผ่านใหม่">
+      <div class="small text-muted mb-3">อย่างน้อย 8 ตัวอักษร ประกอบด้วยตัวอักษรและตัวเลข</div>
+      <button class="btn btn-brand w-100" onclick="doReset()"><i class="bi bi-key me-1"></i>บันทึกรหัสผ่านใหม่</button>
+      <div class="text-center mt-3"><a href="#" class="small" onclick="showPane('Login');return false;">← กลับไปเข้าสู่ระบบ</a></div>
+      <div id="rsMsg" class="mt-3"></div>
+    </div>
+
+    <!-- เปลี่ยนรหัสผ่านครั้งแรก -->
+    <div id="paneMustChange" style="display:none">
+      <div class="fw-semibold mb-2">กรุณาเปลี่ยนรหัสผ่านก่อนใช้งาน</div>
+      <div class="small text-muted mb-2">คุณกำลังใช้รหัสผ่านชั่วคราว กรุณาตั้งรหัสผ่านของคุณเอง</div>
+      <input id="mcOld" class="form-control mb-2" type="password" placeholder="รหัสผ่านปัจจุบัน">
+      <input id="mcNew1" class="form-control mb-2" type="password" placeholder="รหัสผ่านใหม่">
+      <input id="mcNew2" class="form-control mb-3" type="password" placeholder="ยืนยันรหัสผ่านใหม่">
+      <button class="btn btn-brand w-100" onclick="doChangePw('mc')"><i class="bi bi-key me-1"></i>บันทึกรหัสผ่านใหม่</button>
+      <div class="text-center mt-3"><a href="#" class="small" onclick="doLogout()">ออกจากระบบ</a></div>
+      <div id="mcMsg" class="mt-3"></div>
+    </div>
+
+    <div class="auth-foot">อนุญาตเฉพาะบัญชีอีเมล <b>@up.ac.th</b> เท่านั้น</div>
+  </div>
+</div>
+
+<div class="layout" id="layout" style="display:none">
   <div class="sidebar-backdrop" id="sbBackdrop" onclick="toggleSidebar(false)"></div>
 
   <aside class="sidebar" id="sidebar">
@@ -183,6 +280,17 @@
       <a class="nav-link" data-page="settings" href="#"><i class="bi bi-gear"></i>ตั้งค่า</a>
     </nav>
     <div class="side-foot">
+      <div class="user-chip mb-2">
+        <div class="ava" id="uAva">–</div>
+        <div style="min-width:0">
+          <div class="nm text-truncate" id="uName">—</div>
+          <div class="rl text-truncate" id="uRole">—</div>
+        </div>
+      </div>
+      <div class="d-flex gap-1 mb-2">
+        <button class="btn btn-sm btn-outline-light flex-fill py-0" onclick="openChangePw()" title="เปลี่ยนรหัสผ่าน"><i class="bi bi-key"></i></button>
+        <button class="btn btn-sm btn-outline-light flex-fill py-0" onclick="doLogout()" title="ออกจากระบบ"><i class="bi bi-box-arrow-right"></i></button>
+      </div>
       <span id="connBadge" class="badge bg-secondary"><i class="bi bi-plug"></i> ยังไม่เชื่อมต่อ</span>
     </div>
   </aside>
@@ -222,16 +330,16 @@
           </select>
           <button class="btn btn-sm btn-success" onclick="exportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
           <button class="btn btn-sm btn-danger" onclick="exportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
-          <button class="btn btn-sm btn-outline-brand" onclick="loadDashboard()"><i class="bi bi-arrow-clockwise"></i></button>
+          <button class="btn btn-sm btn-outline-brand" onclick="clearCache();loadDashboard()"><i class="bi bi-arrow-clockwise"></i></button>
         </div>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
             <thead class="table-light"><tr>
-              <th>รหัสแฟ้ม</th><th>เจ้าของแฟ้ม</th><th>ประเภท</th><th>สถานะ</th><th>ตำแหน่งปัจจุบัน</th><th>ระยะเวลารอ</th><th>อัปเดตล่าสุด</th><th></th>
+              <th>รหัสแฟ้ม</th><th>เจ้าของแฟ้ม</th><th>ประเภท</th><th>ชั้นความเร็ว</th><th>สถานะ</th><th>ตำแหน่งปัจจุบัน</th><th>ระยะเวลารอ</th><th>อัปเดตล่าสุด</th><th></th>
             </tr></thead>
-            <tbody id="dashBody"><tr><td colspan="8" class="text-center text-muted py-4">กำลังโหลด…</td></tr></tbody>
+            <tbody id="dashBody"><tr><td colspan="9" class="text-center text-muted py-4">กำลังโหลด…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -252,7 +360,7 @@
           <option value="year">1 ปี</option>
           <option value="all" selected>ทั้งหมด</option>
         </select>
-        <button class="btn btn-sm btn-outline-brand" onclick="loadReport()"><i class="bi bi-arrow-clockwise me-1"></i>รีเฟรช</button>
+        <button class="btn btn-sm btn-outline-brand" onclick="clearCache();loadReport()"><i class="bi bi-arrow-clockwise me-1"></i>รีเฟรช</button>
         <div class="ms-auto d-flex gap-2">
           <button class="btn btn-sm btn-success" onclick="exportReportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</button>
           <button class="btn btn-sm btn-danger" onclick="exportReportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</button>
@@ -298,10 +406,31 @@
       </div>
       <div class="card-body p-0"><div class="table-responsive" style="max-height:460px;overflow:auto">
         <table class="table table-sm table-hover mb-0 align-middle">
-          <thead class="table-light"><tr><th>รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ชื่อผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th>ประเภท</th><th>วันที่</th><th>สถานะ</th></tr></thead>
-          <tbody id="repRowsBody"><tr><td colspan="8" class="text-center text-muted py-4">— เลือกช่วงเวลาแล้วกดรีเฟรช —</td></tr></tbody>
+          <thead class="table-light"><tr><th>รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ชื่อผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th>ประเภท</th><th>ชั้นความเร็ว</th><th>วันที่</th><th>สถานะ</th></tr></thead>
+          <tbody id="repRowsBody"><tr><td colspan="9" class="text-center text-muted py-4">— เลือกช่วงเวลาแล้วกดรีเฟรช —</td></tr></tbody>
         </table>
       </div></div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header d-flex flex-wrap gap-2 align-items-center">
+        <span><i class="bi bi-shield-check me-1"></i>บันทึกการทำงานทั้งระบบ <span id="auditTotal" class="badge bg-secondary ms-1">0</span></span>
+        <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+          <input id="auditFolder" class="form-control form-control-sm" style="width:120px" placeholder="รหัสแฟ้ม (ถ้ามี)">
+          <select id="auditLimit" class="form-select form-select-sm" style="width:110px" onchange="loadAudit()">
+            <option value="100" selected>100 แถว</option><option value="300">300 แถว</option>
+            <option value="1000">1000 แถว</option><option value="all">ทั้งหมด</option>
+          </select>
+          <button class="btn btn-sm btn-outline-brand" onclick="clearCache();loadAudit()"><i class="bi bi-arrow-clockwise me-1"></i>โหลด</button>
+        </div>
+      </div>
+      <div class="card-body p-0"><div class="table-responsive" style="max-height:420px;overflow:auto">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th style="width:150px">เวลา</th><th style="width:80px">แฟ้ม</th><th style="width:140px">การกระทำ</th><th>รายละเอียด</th></tr></thead>
+          <tbody id="auditBody"><tr><td colspan="4" class="text-center text-muted py-4">— กดโหลดเพื่อดูบันทึก —</td></tr></tbody>
+        </table>
+      </div></div>
+      <div class="card-footer small text-muted">บันทึกนี้เก็บถาวร ไม่มีการลบ — ครอบคลุมการลงทะเบียน (พร้อมค่าก่อนแก้ไข), การสแกนทุกครั้ง, การแจ้งแก้ไข, การคืนแฟ้ม, การพิมพ์บาร์โค้ด และการเปลี่ยนการตั้งค่า</div>
     </div>
   </div>
 
@@ -367,7 +496,7 @@
           <div class="card-header"><i class="bi bi-upc-scan me-1"></i>สแกนเข้า-ออก</div>
           <div class="card-body">
             <label class="form-label">จุดสแกน (ธุรการ)</label>
-            <select id="scanStation" class="form-select mb-3" onchange="loadQueue()"></select>
+            <select id="scanStation" class="form-select mb-3" onchange="loadQueue();renderTrays();focusScan()"></select>
             <label class="form-label">ยิงบาร์โค้ดที่นี่</label>
             <input id="scanInput" class="form-control scan-input" placeholder="รอสแกน…" autocomplete="off">
             <div class="form-text">ยิงบาร์โค้ดแฟ้มได้เลย ระบบจะรู้เองว่าเป็นการ <b>เข้า</b> หรือ <b>ออก</b> โดยไม่ต้องเลือกทิศทาง</div>
@@ -377,7 +506,7 @@
         <div class="card mt-3">
           <div class="card-header d-flex align-items-center py-2">
             <span><i class="bi bi-inboxes text-primary me-1"></i>คิวรอสแกนเข้า <span id="queueStname" class="text-muted small"></span> <span id="queueCount" class="badge bg-primary ms-1">0</span></span>
-            <button class="btn btn-sm btn-outline-brand ms-auto" onclick="loadQueue()"><i class="bi bi-arrow-clockwise"></i></button>
+            <button class="btn btn-sm btn-outline-brand ms-auto" onclick="clearCache();loadQueue();focusScan()"><i class="bi bi-arrow-clockwise"></i></button>
           </div>
           <div class="card-body p-0"><div class="table-responsive" style="max-height:280px;overflow:auto">
             <table class="table table-sm mb-0 align-middle">
@@ -404,7 +533,7 @@
             <div class="card h-100">
               <div class="card-header d-flex align-items-center">
                 <span><i class="bi bi-box-arrow-right text-danger me-1"></i>สแกนออกแล้ว <span id="outCount" class="badge bg-danger ms-1">0</span></span>
-                <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="sessionLog=[];renderTrays()">ล้าง</button>
+                <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="sessionLog=[];renderTrays();focusScan()">ล้าง</button>
               </div>
               <div class="card-body p-0"><div class="table-responsive" style="max-height:420px;overflow:auto">
                 <table class="table table-sm table-hover mb-0 align-middle">
@@ -421,12 +550,12 @@
     <div class="card mt-3">
       <div class="card-header d-flex align-items-center">
         <span><i class="bi bi-check2-circle text-success me-1"></i>แฟ้มที่ดำเนินการเสร็จสิ้นวันนี้ <span id="doneTodayCount" class="badge bg-success ms-1">0</span></span>
-        <button class="btn btn-sm btn-outline-brand ms-auto" onclick="loadDoneToday()"><i class="bi bi-arrow-clockwise"></i></button>
+        <button class="btn btn-sm btn-outline-brand ms-auto" onclick="clearCache();loadDoneToday();focusScan()"><i class="bi bi-arrow-clockwise"></i></button>
       </div>
       <div class="card-body p-0"><div class="table-responsive" style="max-height:300px;overflow:auto">
         <table class="table table-sm table-hover mb-0 align-middle">
-          <thead class="table-light"><tr><th>เวลาเสร็จ</th><th>รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ชื่อผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th>วันที่</th></tr></thead>
-          <tbody id="doneTodayBody"><tr><td colspan="7" class="text-center text-muted py-3">ยังไม่มีแฟ้มที่เสร็จวันนี้</td></tr></tbody>
+          <thead class="table-light"><tr><th>เวลาเสร็จ</th><th>รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ชื่อผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ประเภท</th><th>ชั้นความเร็ว</th><th>ฝ่ายงาน</th><th>วันที่</th></tr></thead>
+          <tbody id="doneTodayBody"><tr><td colspan="9" class="text-center text-muted py-3">ยังไม่มีแฟ้มที่เสร็จวันนี้</td></tr></tbody>
         </table></div></div>
     </div>
 
@@ -504,7 +633,7 @@
     <div id="trackList"></div>
     <div id="trackResult"></div>
 
-    <div class="card mt-3">
+    <div class="card mt-3" id="histCard">
       <div class="card-header d-flex flex-wrap gap-2 align-items-center">
         <span><i class="bi bi-clock-history me-1"></i>ประวัติแฟ้มทั้งหมด <span id="histTotal" class="badge bg-secondary ms-1">0</span></span>
         <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
@@ -525,7 +654,7 @@
             <option value="200">200 แถว</option>
             <option value="all">ทั้งหมด</option>
           </select>
-          <button class="btn btn-sm btn-outline-brand" onclick="loadHistory()"><i class="bi bi-arrow-clockwise"></i></button>
+          <button class="btn btn-sm btn-outline-brand" onclick="clearCache();loadHistory()"><i class="bi bi-arrow-clockwise"></i></button>
         </div>
       </div>
       <div class="card-body p-0"><div id="histBody"><div class="text-muted text-center py-4">— กดโหลดหรือเลือกช่วงเวลา —</div></div></div>
@@ -569,6 +698,57 @@
       </div>
     </div>
 
+    <div class="card mb-3" id="cpWrap" style="display:none">
+      <div class="card-header d-flex align-items-center">
+        <span><i class="bi bi-key me-1"></i>เปลี่ยนรหัสผ่านของฉัน</span>
+        <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="document.getElementById('cpWrap').style.display='none'"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="card-body">
+        <div class="row g-2" style="max-width:640px">
+          <div class="col-md-4"><input id="cpOld" type="password" class="form-control" placeholder="รหัสผ่านปัจจุบัน"></div>
+          <div class="col-md-4"><input id="cpNew1" type="password" class="form-control" placeholder="รหัสผ่านใหม่"></div>
+          <div class="col-md-4"><input id="cpNew2" type="password" class="form-control" placeholder="ยืนยันรหัสผ่านใหม่"></div>
+        </div>
+        <div class="form-text">อย่างน้อย 8 ตัวอักษร ประกอบด้วยตัวอักษรและตัวเลข · เปลี่ยนแล้วต้องเข้าสู่ระบบใหม่</div>
+        <button class="btn btn-brand mt-2" onclick="doChangePw('cp')"><i class="bi bi-save me-1"></i>บันทึกรหัสผ่านใหม่</button>
+        <div id="cpMsg" class="mt-2"></div>
+      </div>
+    </div>
+
+    <div class="card mb-3" data-perm="MANAGE_USER" style="display:none">
+      <div class="card-header d-flex align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-people me-1"></i>จัดการผู้ใช้งาน <span id="userCount" class="badge bg-secondary ms-1">0</span></span>
+        <button class="btn btn-sm btn-outline-brand ms-auto" onclick="loadUsers()"><i class="bi bi-arrow-clockwise"></i></button>
+        <button class="btn btn-sm btn-brand" onclick="document.getElementById('newUserBox').style.display='block'"><i class="bi bi-person-plus me-1"></i>เพิ่มผู้ใช้</button>
+      </div>
+      <div class="card-body">
+        <div id="newUserBox" style="display:none" class="border rounded p-3 mb-3 bg-light">
+          <div class="fw-semibold mb-2">เพิ่มผู้ใช้ใหม่</div>
+          <div class="row g-2">
+            <div class="col-md-3"><label class="form-label small mb-1">อีเมล (@up.ac.th)</label><input id="nuEmail" class="form-control form-control-sm" placeholder="name@up.ac.th"></div>
+            <div class="col-md-3"><label class="form-label small mb-1">ชื่อ-นามสกุล</label><input id="nuName" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small mb-1">ตำแหน่ง</label><input id="nuPos" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small mb-1">ฝ่ายงาน</label><input id="nuDept" class="form-control form-control-sm"></div>
+            <div class="col-md-1"><label class="form-label small mb-1">บทบาท</label><select id="nuRole" class="form-select form-select-sm"></select></div>
+            <div class="col-md-1"><label class="form-label small mb-1">จุดสแกน</label>
+              <select id="nuStation" class="form-select form-select-sm"><option value="">—</option><option value="S1">1</option><option value="S2">2</option><option value="S3">3</option><option value="S4">4</option></select></div>
+          </div>
+          <div class="mt-2 d-flex gap-2">
+            <button class="btn btn-sm btn-brand" onclick="createUser()"><i class="bi bi-check2 me-1"></i>สร้างบัญชี</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('newUserBox').style.display='none'">ยกเลิก</button>
+          </div>
+          <div class="form-text">ระบบจะส่งรหัสผ่านชั่วคราวไปยังอีเมล และบังคับให้เปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งแรก</div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0">
+            <thead class="table-light"><tr><th>ชื่อ-นามสกุล</th><th>อีเมล</th><th>ตำแหน่ง</th><th>ฝ่ายงาน</th><th>บทบาท</th><th>จุดสแกน</th><th>สถานะ</th><th>เข้าใช้ล่าสุด</th><th></th></tr></thead>
+            <tbody id="usersBody"><tr><td colspan="9" class="text-center text-muted py-3">—</td></tr></tbody>
+          </table>
+        </div>
+        <div id="userMsg" class="mt-2"></div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-header"><i class="bi bi-gear me-1"></i>การเชื่อมต่อ / ติดตั้งระบบ</div>
       <div class="card-body">
@@ -606,20 +786,198 @@ let sessionLog = [];
 const TOTAL_FOLDERS = 200;
 
 /* ---------- ตัวเรียก API แบบ JSONP (ไม่ติด CORS บน GitHub Pages) ---------- */
+/* ================= ระบบเข้าสู่ระบบ / สิทธิ์ ================= */
+const TOKEN_KEY='uph_token';
+let AUTH_TOKEN = localStorage.getItem(TOKEN_KEY) || '';
+let ME = null, MY_PERMS = [];
+function can(perm){ return MY_PERMS.indexOf(perm) >= 0; }
+
+/* ส่งคำขอแบบ POST (ข้อมูลอยู่ใน body ไม่ติดไปกับ URL — ใช้กับรหัสผ่าน) */
+function apiPost(action, params){
+  const body = Object.assign({action}, params||{});
+  if(AUTH_TOKEN && !body.token) body.token = AUTH_TOKEN;
+  return fetch(WEBAPP_URL, {
+    method:'POST', redirect:'follow',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(body)
+  }).then(r=>r.json());
+}
+/* คำสั่งที่มีรหัสผ่าน ต้องส่งแบบ POST เท่านั้น */
+const SECRET_ACTIONS=['login','changePassword','resetPassword','forgotPassword','createUser','updateUser','resetUserPassword','listUsers','listRoles'];
+
 function api(action, params){
+  const p = Object.assign({}, params||{});
+  if(AUTH_TOKEN && !p.token) p.token = AUTH_TOKEN;
+  if(SECRET_ACTIONS.indexOf(action)>=0) return apiPost(action, p).then(handleAuthError);
   return new Promise((resolve, reject)=>{
     if(!WEBAPP_URL || WEBAPP_URL.indexOf("PASTE_YOUR")===0){ reject(new Error("ยังไม่ได้ตั้งค่า WEBAPP_URL")); return; }
     const cb = 'jsonp_' + Math.random().toString(36).slice(2);
     const s = document.createElement('script');
     const t = setTimeout(()=>{ cleanup(); reject(new Error("หมดเวลาเชื่อมต่อ")); }, 30000);
     function cleanup(){ try{delete window[cb];}catch(e){} s.remove(); clearTimeout(t); }
-    window[cb] = (data)=>{ cleanup(); resolve(data); };
-    const q = new URLSearchParams(Object.assign({action, callback:cb}, params||{}));
+    window[cb] = (data)=>{ cleanup(); resolve(handleAuthError(data)); };
+    const q = new URLSearchParams(Object.assign({action, callback:cb}, p));
     s.src = WEBAPP_URL + '?' + q.toString();
     s.onerror = ()=>{ cleanup(); reject(new Error("เชื่อมต่อไม่สำเร็จ")); };
     document.body.appendChild(s);
   });
 }
+/* หมดอายุ/ไม่มีสิทธิ์ -> กลับไปหน้าเข้าสู่ระบบ */
+function handleAuthError(d){
+  if(d && d.code==='NO_AUTH'){ AUTH_TOKEN=''; localStorage.removeItem(TOKEN_KEY); showAuthGate('Login','เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง'); }
+  if(d && d.code==='MUST_CHANGE_PW'){ showAuthGate('MustChange',''); }
+  return d;
+}
+function showPane(name){
+  ['Login','Forgot','Reset','MustChange'].forEach(x=>{
+    const el=document.getElementById('pane'+x); if(el) el.style.display=(x===name)?'block':'none';
+  });
+}
+function showAuthGate(pane, msg){
+  document.getElementById('authGate').style.display='flex';
+  document.getElementById('layout').style.display='none';
+  showPane(pane||'Login');
+  if(msg) toast(document.getElementById('loginMsg'),'warning',msg);
+}
+function enterApp(){
+  document.getElementById('authGate').style.display='none';
+  document.getElementById('layout').style.display='flex';
+}
+function applyPermissions(){
+  const map={dashboard:'VIEW_DASHBOARD', report:'VIEW_REPORT', register:'CREATE_FILE',
+             scan:'RECEIVE_FILE', barcode:'PRINT_DOCUMENT', track:'VIEW_FILE', settings:'MANAGE_CONFIG'};
+  let firstVisible='';
+  document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
+    const need=map[a.dataset.page];
+    const ok=!need || can(need);
+    a.style.display = ok ? '' : 'none';
+    if(ok && !firstVisible) firstVisible=a.dataset.page;
+  });
+  // ปุ่มเฉพาะสิทธิ์
+  document.querySelectorAll('[data-perm]').forEach(el=>{ el.style.display = can(el.dataset.perm) ? '' : 'none'; });
+  // ถ้าหน้าที่เปิดอยู่ไม่มีสิทธิ์ ให้ย้ายไปหน้าแรกที่มีสิทธิ์
+  const active=document.querySelector('.nav-link[data-page].active');
+  if(active && active.style.display==='none' && firstVisible){
+    const t=document.querySelector(`.nav-link[data-page="${firstVisible}"]`); if(t) t.click();
+  }
+  // ธุรการ: ล็อกจุดสแกนของตัวเอง
+  const st=document.getElementById('scanStation');
+  if(st && ME && ME.roleId==='CLERK' && ME.stationKey){
+    st.value=ME.stationKey; st.disabled=true;
+    st.insertAdjacentHTML('afterend','<div class="form-text">จุดสแกนถูกกำหนดตามบัญชีของคุณ</div>');
+  }
+}
+function showMe(){
+  if(!ME) return;
+  const nm=ME.displayName||ME.email;
+  document.getElementById('uName').textContent=nm;
+  document.getElementById('uRole').textContent=(ME.position||ME.roleId||'')+(ME.stationKey?(' · '+stationName(ME.stationKey)):'');
+  document.getElementById('uAva').textContent=(nm.trim()[0]||'?').toUpperCase();
+}
+async function doLogin(){
+  const el=document.getElementById('loginMsg');
+  const email=(document.getElementById('loginEmail').value||'').trim();
+  const pw=document.getElementById('loginPw').value||'';
+  if(!/@up\.ac\.th$/i.test(email)){ toast(el,'danger','อนุญาตเฉพาะอีเมล @up.ac.th เท่านั้น'); return; }
+  if(!pw){ toast(el,'danger','กรุณากรอกรหัสผ่าน'); return; }
+  const btn=document.getElementById('btnLogin'); btn.disabled=true;
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังเข้าสู่ระบบ…</div>';
+  try{
+    const d=await apiPost('login',{email,password:pw});
+    if(!d.ok){ toast(el,'danger',d.error||'เข้าสู่ระบบไม่สำเร็จ'); return; }
+    AUTH_TOKEN=d.token; localStorage.setItem(TOKEN_KEY,AUTH_TOKEN);
+    ME=d.user; MY_PERMS=d.permissions||[];
+    document.getElementById('loginPw').value='';
+    if(d.mustChangePassword){ showAuthGate('MustChange',''); return; }
+    el.innerHTML='';
+    await startApp();
+  }catch(err){ toast(el,'danger','เชื่อมต่อไม่สำเร็จ: '+err.message); }
+  finally{ btn.disabled=false; }
+}
+async function doForgot(){
+  const el=document.getElementById('fgMsg');
+  const email=(document.getElementById('fgEmail').value||'').trim();
+  if(!/@up\.ac\.th$/i.test(email)){ toast(el,'danger','อนุญาตเฉพาะอีเมล @up.ac.th เท่านั้น'); return; }
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังส่ง…</div>';
+  try{ const d=await apiPost('forgotPassword',{email}); toast(el, d.ok?'success':'danger', d.message||d.error); }
+  catch(err){ toast(el,'danger',err.message); }
+}
+async function doReset(){
+  const el=document.getElementById('rsMsg');
+  const p1=document.getElementById('rsPw1').value, p2=document.getElementById('rsPw2').value;
+  const token=new URLSearchParams(location.search).get('reset')||'';
+  if(p1!==p2){ toast(el,'danger','รหัสผ่านใหม่และการยืนยันไม่ตรงกัน'); return; }
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
+  try{
+    const d=await apiPost('resetPassword',{token,newPassword:p1,confirmPassword:p2});
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    toast(el,'success',d.message);
+    setTimeout(()=>{ history.replaceState(null,'',location.pathname); showPane('Login'); },1500);
+  }catch(err){ toast(el,'danger',err.message); }
+}
+async function doChangePw(pfx){
+  const el=document.getElementById(pfx==='mc'?'mcMsg':'cpMsg');
+  const o=document.getElementById(pfx==='mc'?'mcOld':'cpOld').value;
+  const n1=document.getElementById(pfx==='mc'?'mcNew1':'cpNew1').value;
+  const n2=document.getElementById(pfx==='mc'?'mcNew2':'cpNew2').value;
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
+  try{
+    const d=await apiPost('changePassword',{oldPassword:o,newPassword:n1,confirmPassword:n2});
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    toast(el,'success',d.message);
+    AUTH_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
+    setTimeout(()=>{ showAuthGate('Login','เปลี่ยนรหัสผ่านแล้ว กรุณาเข้าสู่ระบบใหม่'); },1200);
+  }catch(err){ toast(el,'danger',err.message); }
+}
+function openChangePw(){
+  const w=document.getElementById('cpWrap');
+  if(w){ w.style.display='block'; w.scrollIntoView({behavior:'smooth',block:'center'}); }
+  else { document.querySelector('.nav-link[data-page="settings"]').click(); setTimeout(()=>{const x=document.getElementById('cpWrap'); if(x){x.style.display='block'; x.scrollIntoView({behavior:'smooth',block:'center'});}},300); }
+}
+async function doLogout(){
+  try{ await apiPost('logout',{}); }catch(e){}
+  AUTH_TOKEN=''; localStorage.removeItem(TOKEN_KEY); ME=null; MY_PERMS=[]; clearCache();
+  showAuthGate('Login','ออกจากระบบแล้ว');
+}
+
+
+
+/* ---------- ป้องกันการเปิดเครื่องมือนักพัฒนา (ตัวกันเบื้องต้น) ---------- */
+(function(){
+  const block=(e)=>{ e.preventDefault(); e.stopPropagation(); return false; };
+  document.addEventListener('contextmenu', block);                       // คลิกขวา
+  document.addEventListener('keydown', function(e){
+    const k=(e.key||'').toUpperCase();
+    if(k==='F12') return block(e);                                        // F12
+    if(e.ctrlKey && e.shiftKey && ['I','J','C','K'].includes(k)) return block(e);  // Ctrl+Shift+I/J/C/K
+    if(e.ctrlKey && k==='U') return block(e);                             // Ctrl+U (ดูซอร์ส)
+    if(e.ctrlKey && k==='S') return block(e);                             // Ctrl+S (บันทึกหน้า)
+    if(e.metaKey && e.altKey && ['I','J','C'].includes(k)) return block(e);        // macOS
+  }, true);
+  // ปิดการลากข้อความ/รูปออกไป
+  document.addEventListener('dragstart', block);
+})();
+
+/* ---------- แคชข้อมูล: เปิดหน้า/ค้นหาซ้ำให้แสดงทันที ไม่ต้องรอโหลดใหม่ ----------
+   - เก็บผลลัพธ์ตาม action+พารามิเตอร์ พร้อมอายุ (TTL)
+   - ถ้ามีคำขอเดิมกำลังวิ่งอยู่ จะใช้ผลร่วมกัน (ไม่ยิงซ้ำ)
+   - ล้างแคชทันทีเมื่อมีการเปลี่ยนแปลงข้อมูล (สแกน/ลงทะเบียน/แก้ไข/คืนแฟ้ม) */
+const API_CACHE=new Map(), API_INFLIGHT=new Map();
+const CACHE_TTL=60000;
+function cacheKey(a,p){ return a+'|'+JSON.stringify(p||{}); }
+function apiCached(action, params, ttl){
+  const key=cacheKey(action,params), now=Date.now(), life=(ttl===undefined?CACHE_TTL:ttl);
+  const hit=API_CACHE.get(key);
+  if(hit && (now-hit.t)<life) return Promise.resolve(hit.v);       // ใช้ของเดิมทันที
+  if(API_INFLIGHT.has(key)) return API_INFLIGHT.get(key);           // มีคำขอเดิมวิ่งอยู่ ใช้ร่วมกัน
+  const pr=api(action,params).then(d=>{
+    if(d && d.ok) API_CACHE.set(key,{t:Date.now(), v:d});
+    API_INFLIGHT.delete(key); return d;
+  }).catch(e=>{ API_INFLIGHT.delete(key); throw e; });
+  API_INFLIGHT.set(key,pr);
+  return pr;
+}
+function clearCache(){ API_CACHE.clear(); }
 
 /* ---------- ตัวช่วยทั่วไป ---------- */
 function pad4(c){ const n=parseInt(String(c).replace(/[^0-9]/g,''),10); return isNaN(n)?String(c):String(n).padStart(4,'0'); }
@@ -760,6 +1118,7 @@ async function saveEdit(code, pfx){
   try{
     const d=await api('setEdit',{folderCode:code, hasEdit:has, station, note, returnMode});
     if(!d.ok) throw new Error(d.error||'error');
+    clearCache();
     toast(el,'success',d.message);
     ALL_FOLDERS=[];
     if(pfx==='track') openFolder(code);
@@ -798,12 +1157,12 @@ document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
     document.getElementById('pageSub').textContent=meta[1];
     toggleSidebar(false);
     if(p==='dashboard') loadDashboard();
-    if(p==='report') loadReport();
+    if(p==='report'){ loadReport(); loadAudit(); }
     if(p==='register') loadRegister();
     if(p==='scan'){ fillStationSelect(); loadQueue(); loadDoneToday(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
     if(p==='barcode'){ PRINTED_LOADED=false; loadPrinted(); }
     if(p==='track'){ fillTrackDept(); loadHistory(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
-    if(p==='settings') loadConfigForm();
+    if(p==='settings'){ loadConfigForm(); loadUsers(); }
   });
 });
 
@@ -816,12 +1175,12 @@ function fillDashDept(){
 }
 async function loadDashboard(){
   const body=document.getElementById('dashBody');
-  body.innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">กำลังโหลด…</td></tr>';
+  body.innerHTML='<tr><td colspan="9" class="text-center text-muted py-4">กำลังโหลด…</td></tr>';
   try{
-    const d = await api('dashboard');
+    const d = await apiCached('dashboard', {}, 15000);
     if(!d.ok) throw new Error(d.error||'error');
     applyDashboard(d);
-  }catch(err){ body.innerHTML=`<tr><td colspan="8" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+  }catch(err){ body.innerHTML=`<tr><td colspan="9" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
 }
 function applyDashboard(d){
   fillDashDept();
@@ -834,9 +1193,9 @@ function applyDashboard(d){
 let REPORT_DATA = null;
 async function loadReport(){
   const period=document.getElementById('repPeriod').value;
-  document.getElementById('repRowsBody').innerHTML='<tr><td colspan="8" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดรายงาน…</td></tr>';
+  document.getElementById('repRowsBody').innerHTML='<tr><td colspan="9" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดรายงาน…</td></tr>';
   try{
-    const d=await api('getReport',{period});
+    const d=await apiCached('getReport',{period});
     if(!d.ok) throw new Error(d.error||'error');
     REPORT_DATA=d;
     // การ์ดสรุป
@@ -868,7 +1227,53 @@ async function loadReport(){
     document.getElementById('repFastBody').innerHTML=rankRows(d.top10Fast);
     // รายการทั้งหมด
     renderRepRows();
-  }catch(err){ document.getElementById('repRowsBody').innerHTML=`<tr><td colspan="8" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+  }catch(err){ document.getElementById('repRowsBody').innerHTML=`<tr><td colspan="9" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+}
+/* บันทึกการทำงานทั้งระบบ */
+const AUDIT_LABEL={
+  'registerFolder':'ลงทะเบียนแฟ้ม','registerFolder:overwrite':'แก้ไขข้อมูลแฟ้ม','scan':'สแกน',
+  'setEdit':'แจ้งแก้ไข','setEdit:clear':'ปิดสถานะแก้ไข','resetFolder':'คืนแฟ้ม',
+  'archive':'เก็บประวัติ','setPrinted':'พิมพ์บาร์โค้ด','saveConfig':'แก้ไขตั้งค่า'
+};
+function auditDetailHTML(r){
+  const d=r.detail; if(!d) return '';
+  const parts=[];
+  if(d.owner!==undefined) parts.push('เจ้าของ: <b>'+esc(d.owner||'—')+'</b>');
+  if(d.department) parts.push('ฝ่ายงาน: '+esc(d.department));
+  if(d.timeline) parts.push('เสนอ: '+esc(d.timeline));
+  if(d.note) parts.push('หมายเหตุ: '+esc(d.note));
+  if(d.returnMode) parts.push('คืนที่: '+(d.returnMode==='restart'?'ธุรการ 1 (เริ่มใหม่)':'จุดเดิม'));
+  let html=parts.join(' &middot; ');
+  if(Array.isArray(d.records)&&d.records.length){
+    html+='<div class="small mt-1">'+d.records.map(x=>`• <b>${esc(x.docNumber)||'—'}</b> ${esc(x.subject)||''}${safeType(x.docType)?(' <span class="text-muted">('+esc(safeType(x.docType))+')</span>'):''}${x.urgency&&x.urgency!=='ปกติ'?urgencyBadge(x.urgency):''}`).join('<br>')+'</div>';
+  }
+  if(d.previous&&Array.isArray(d.previous.records)){
+    html+='<div class="small mt-1 text-danger-emphasis">ค่าเดิมก่อนแก้: '+d.previous.records.map(x=>`${esc(x.docNumber)||'—'} ${esc(x.subject)||''}`).join(' / ')+'</div>';
+  }
+  if(d.changes){
+    html+='<div class="small mt-1">'+Object.keys(d.changes).map(k=>`${esc(k)}: <span class="text-muted">${esc(d.changes[k].from)}</span> → <b>${esc(d.changes[k].to)}</b>`).join('<br>')+'</div>';
+  }
+  return html;
+}
+async function loadAudit(){
+  const limit=document.getElementById('auditLimit').value;
+  const folderCode=(document.getElementById('auditFolder').value||'').trim();
+  const period=document.getElementById('repPeriod').value;
+  const body=document.getElementById('auditBody');
+  body.innerHTML='<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</td></tr>';
+  try{
+    const prm={period, limit}; if(folderCode) prm.folderCode=folderCode;
+    const d=await apiCached('getAudit', prm, 15000);
+    if(!d.ok) throw new Error(d.error||'error');
+    const rows=d.rows||[];
+    document.getElementById('auditTotal').textContent=(d.total>rows.length)?(rows.length+' / '+d.total):rows.length;
+    if(!rows.length){ body.innerHTML='<tr><td colspan="4" class="text-center text-muted py-4">ไม่พบบันทึกในช่วงเวลานี้</td></tr>'; return; }
+    body.innerHTML=rows.map(r=>`<tr>
+      <td class="small text-muted">${thaiDateTime(r.timestamp)}</td>
+      <td><b>${esc(r.folderCode)||'—'}</b></td>
+      <td class="small">${esc(AUDIT_LABEL[r.action]||r.action)}${r.station?(' <span class="text-muted">@'+esc(stationName(r.station))+'</span>'):''}</td>
+      <td class="small">${esc(r.summary)}${auditDetailHTML(r)}</td></tr>`).join('');
+  }catch(err){ body.innerHTML=`<tr><td colspan="4" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
 }
 function renderRepRows(){
   if(!REPORT_DATA) return;
@@ -877,10 +1282,11 @@ function renderRepRows(){
   if(q) rows=rows.filter(r=>[r.folderCode,r.docNumber,r.owner,r.subject,r.department,r.docType].map(x=>(x||'').toString().toLowerCase()).join(' | ').indexOf(q)>=0);
   document.getElementById('repRowCount').textContent=rows.length;
   const body=document.getElementById('repRowsBody');
-  if(!rows.length){ body.innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>'; return; }
+  if(!rows.length){ body.innerHTML='<tr><td colspan="9" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>'; return; }
   body.innerHTML=rows.slice(0,1000).map(r=>`<tr>
     <td><b>${pad4(r.folderCode)}</b></td><td class="small">${esc(r.docNumber)||'—'}</td><td>${esc(r.owner)||'—'}</td>
-    <td class="small">${esc(r.subject)||'—'}</td><td>${esc(r.department)||'—'}</td><td class="small">${esc(r.docType)||'—'}</td>
+    <td class="small">${esc(r.subject)||'—'}</td><td>${esc(r.department)||'—'}</td><td class="small">${esc(safeType(r.docType))||'—'}</td>
+    <td class="small">${r.urgency&&r.urgency!=='ปกติ'?urgencyBadge(r.urgency).replace(' ms-1',''):'<span class="text-muted">ปกติ</span>'}</td>
     <td class="small">${thaiDate(r.docDate)||'—'}</td><td>${statusBadge(r.status)}</td></tr>`).join('');
 }
 async function exportReportExcel(){
@@ -889,10 +1295,10 @@ async function exportReportExcel(){
   if(!rows.length){ alert('ไม่มีข้อมูลให้ส่งออก'); return; }
   const data=rows.map((r,i)=>({
     'ลำดับ':i+1,'รหัสแฟ้ม':pad4(r.folderCode),'เลขที่ อว':r.docNumber||'','ชื่อผู้เสนอ':r.owner||'',
-    'ชื่อเรื่อง':r.subject||'','ฝ่ายงาน':r.department||'','ประเภท':r.docType||'','วันที่':thaiDate(r.docDate),'สถานะ':r.status||''
+    'ชื่อเรื่อง':r.subject||'','ฝ่ายงาน':r.department||'','ประเภท':safeType(r.docType),'ชั้นความเร็ว':r.urgency||'ปกติ','วันที่':thaiDate(r.docDate),'สถานะ':r.status||''
   }));
   const ws=XLSX.utils.json_to_sheet(data);
-  ws['!cols']=[{wch:6},{wch:10},{wch:18},{wch:22},{wch:40},{wch:16},{wch:20},{wch:14},{wch:12}];
+  ws['!cols']=[{wch:6},{wch:10},{wch:18},{wch:22},{wch:40},{wch:16},{wch:20},{wch:12},{wch:14},{wch:12}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'รายงาน');
   XLSX.writeFile(wb,'รายงานแฟ้ม_'+dateStamp()+'.xlsx');
 }
@@ -904,7 +1310,7 @@ function exportReportPDF(){
   const periodLabel=periodSel.options[periodSel.selectedIndex].text;
   let logoUri=''; try{ logoUri=document.querySelector('.sidebar .logo img').src; }catch(e){}
 
-  const body=rows.map((r,i)=>`<tr><td class="c">${i+1}</td><td class="c">${pad4(r.folderCode)}</td><td>${esc(r.docNumber)||'-'}</td><td>${esc(r.owner)||'-'}</td><td>${esc(r.subject)||'-'}</td><td>${esc(r.department)||'-'}</td><td class="c">${esc(r.docType)||'-'}</td><td class="c">${thaiDate(r.docDate)||'-'}</td><td class="c">${esc(r.status)}</td></tr>`).join('');
+  const body=rows.map((r,i)=>`<tr><td class="c">${i+1}</td><td class="c">${pad4(r.folderCode)}</td><td>${esc(r.docNumber)||'-'}</td><td>${esc(r.owner)||'-'}</td><td>${esc(r.subject)||'-'}</td><td>${esc(r.department)||'-'}</td><td class="c">${esc(safeType(r.docType))||'-'}</td><td class="c">${esc(r.urgency)||'ปกติ'}</td><td class="c">${thaiDate(r.docDate)||'-'}</td><td class="c">${esc(r.status)}</td></tr>`).join('');
   const dep=(R.byDepartment||[]).map(x=>`<tr><td>${esc(x.department)}</td><td class="c">${x.folders}</td><td class="c">${x.records}</td></tr>`).join('') || '<tr><td colspan="3" class="c muted">ไม่มีข้อมูล</td></tr>';
   const slowKey=R.slowestStation?R.slowestStation.station:'';
   const st=(R.stationStats||[]).map(s=>{const hot=s.station===slowKey&&s.avgMs>0;return `<tr${hot?' class="hot"':''}><td>${esc(s.name)}${hot?' <b>(ใช้เวลามากสุด)</b>':''}</td><td class="c">${s.avgMs?fmtDuration(s.avgMs):'—'}</td><td class="c">${s.count}</td></tr>`;}).join('');
@@ -977,7 +1383,7 @@ function exportReportPDF(){
     </div>
 
     <div class="sec">รายการทั้งหมด (${rows.length} รายการ)</div>
-    <table><thead><tr><th class="c">ลำดับ</th><th class="c">รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th class="c">ประเภท</th><th class="c">วันที่</th><th class="c">สถานะ</th></tr></thead><tbody>${body}</tbody></table>
+    <table><thead><tr><th class="c">ลำดับ</th><th class="c">รหัสแฟ้ม</th><th>เลขที่ อว</th><th>ผู้เสนอ</th><th>ชื่อเรื่อง</th><th>ฝ่ายงาน</th><th class="c">ประเภท</th><th class="c">ชั้นความเร็ว</th><th class="c">วันที่</th><th class="c">สถานะ</th></tr></thead><tbody>${body}</tbody></table>
 
     <div class="foot"><span>ระบบติดตามแฟ้มเสนอผู้บริหาร — โรงพยาบาลมหาวิทยาลัยพะเยา</span><span>เอกสารสร้างอัตโนมัติจากระบบ</span></div>
   </body></html>`;
@@ -995,13 +1401,14 @@ function renderDash(){
     return true;
   });
   const cnt=document.getElementById('dashCount'); if(cnt) cnt.textContent=rows.length;
-  if(!rows.length){ body.innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>'; return; }
+  if(!rows.length){ body.innerHTML='<tr><td colspan="9" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>'; return; }
   body.innerHTML=rows.map(x=>{
     const pos = x.currentStation ? `${esc(stationName(x.currentStation))} <span class="text-muted small">(${esc(x.lastDirection||'')})</span>` : '<span class="text-muted">—</span>';
     return `<tr>
       <td><b>${pad4(x.folderCode)}</b></td>
       <td>${esc(x.owner)||'<span class="text-muted">—</span>'}${x.department?`<div class="small text-muted">${esc(x.department)}</div>`:''}</td>
-      <td>${esc(x.docType)||'<span class="text-muted">—</span>'}</td>
+      <td class="small">${esc(safeType(x.docType))||'<span class="text-muted">—</span>'}</td>
+      <td class="small">${x.urgency&&x.urgency!=='ปกติ'?urgencyBadge(x.urgency).replace(' ms-1',''):'<span class="text-muted">ปกติ</span>'}</td>
       <td>${statusBadge(x.status)}${editBadge(x)}</td>
       <td>${pos}</td>
       <td>${waitCell(x)}</td>
@@ -1031,14 +1438,14 @@ async function exportExcel(){
     if(!rows.length){ alert('ไม่มีข้อมูลสำหรับส่งออก'); return; }
     const data = rows.map((r,i)=>({
       'ลำดับ': i+1, 'รหัสแฟ้ม': pad4(r.folderCode), 'เลขที่หนังสือ': r.docNumber||'',
-      'ชื่อเรื่อง': r.subject||'', 'เจ้าของแฟ้ม': r.owner||'', 'ฝ่ายงาน': r.department||'', 'ประเภท': r.docType||'',
+      'ชื่อเรื่อง': r.subject||'', 'เจ้าของแฟ้ม': r.owner||'', 'ฝ่ายงาน': r.department||'', 'ประเภท': safeType(r.docType), 'ชั้นความเร็ว': r.urgency||'ปกติ',
       'วันที่': thaiDate(r.docDate), 'สถานะ': r.status||'ว่าง',
       'ตำแหน่งปัจจุบัน': (stationName(r.currentStation)||'') + (r.lastDirection?(' ('+r.lastDirection+')'):''),
       'การแก้ไข': r.editStatus==='มีแก้ไข' ? ('มีแก้ไข @'+(stationName(r.editStation)||'')+(r.editNote?(' — '+r.editNote):'')) : '',
       'ผู้ที่ต้องเสนอ': r.timeline||''
     }));
     const ws = XLSX.utils.json_to_sheet(data);
-    ws['!cols'] = [{wch:6},{wch:10},{wch:20},{wch:42},{wch:22},{wch:16},{wch:12},{wch:16},{wch:12},{wch:24},{wch:28},{wch:30}];
+    ws['!cols'] = [{wch:6},{wch:10},{wch:20},{wch:42},{wch:22},{wch:16},{wch:18},{wch:12},{wch:16},{wch:12},{wch:24},{wch:28},{wch:30}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'รายงานแฟ้ม');
     XLSX.writeFile(wb, 'รายงานติดตามแฟ้ม_'+dateStamp()+'.xlsx');
@@ -1050,7 +1457,7 @@ async function exportPDF(){
     if(!rows.length){ alert('ไม่มีข้อมูลสำหรับส่งออก'); return; }
     const body = rows.map((r,i)=>`<tr>
       <td class="c">${i+1}</td><td class="c">${pad4(r.folderCode)}</td><td>${esc(r.docNumber)}</td>
-      <td>${esc(r.subject)}</td><td>${esc(r.owner)}</td><td>${esc(r.department)}</td><td class="c">${esc(r.docType)}</td>
+      <td>${esc(r.subject)}</td><td>${esc(r.owner)}</td><td>${esc(r.department)}</td><td class="c">${esc(safeType(r.docType))}</td><td class="c">${esc(r.urgency)||'ปกติ'}</td>
       <td class="c">${thaiDate(r.docDate)}</td><td class="c">${esc(r.status)}</td>
       <td>${esc(stationName(r.currentStation))}${r.lastDirection?(' ('+esc(r.lastDirection)+')'):''}</td>
       <td>${r.editStatus==='มีแก้ไข'?('มีแก้ไข @'+esc(stationName(r.editStation))+(r.editNote?(' — '+esc(r.editNote)):'')):''}</td></tr>`).join('');
@@ -1068,7 +1475,7 @@ async function exportPDF(){
       '</head><body>'+
       '<h2>ระบบติดตามแฟ้มเสนอผู้บริหาร</h2>'+
       '<div class="sub">รายงานการติดตามแฟ้ม &middot; พิมพ์เมื่อ '+esc(thaiDateTime(new Date().toISOString()))+' &middot; ทั้งหมด '+rows.length+' รายการ</div>'+
-      '<table><thead><tr><th>ลำดับ</th><th>รหัสแฟ้ม</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>เจ้าของแฟ้ม</th><th>ฝ่ายงาน</th><th>ประเภท</th><th>วันที่</th><th>สถานะ</th><th>ตำแหน่งปัจจุบัน</th><th>การแก้ไข</th></tr></thead>'+
+      '<table><thead><tr><th>ลำดับ</th><th>รหัสแฟ้ม</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>เจ้าของแฟ้ม</th><th>ฝ่ายงาน</th><th>ประเภท</th><th>ชั้นความเร็ว</th><th>วันที่</th><th>สถานะ</th><th>ตำแหน่งปัจจุบัน</th><th>การแก้ไข</th></tr></thead>'+
       '<tbody>'+body+'</tbody></table>'+
       '<div class="noprint"><button onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button></div>'+
       '</body></html>'
@@ -1154,7 +1561,7 @@ async function loadExistingFolder(code){
     document.querySelectorAll('.tl').forEach(c=>{ c.checked=tl.indexOf(c.value)>=0; });
     document.getElementById('recordRows').innerHTML='';
     const recs=f.records||[];
-    if(recs.length){ recs.forEach(r=>{ const aunum=((r.docNumber||'').split('/')[1]||''); addRecordRow({aunum, subject:r.subject, docDate:r.docDate, docType:r.docType}); }); }
+    if(recs.length){ recs.forEach(r=>{ const aunum=((r.docNumber||'').split('/')[1]||''); addRecordRow({aunum, subject:r.subject, docDate:r.docDate, docType:r.docType, urgency:r.urgency}); }); }
     else { addRecordRow(); }
     info.innerHTML=`<div class="alert alert-info py-2 mb-0"><i class="bi bi-info-circle me-1"></i>โหลดข้อมูลเดิมของแฟ้ม <b>${fc}</b> มาแล้ว — แก้ไขแล้วกด “บันทึกข้อมูลแฟ้ม” จะเขียนทับของเดิม</div>`;
   }catch(err){ toast(info,'danger',err.message); }
@@ -1191,26 +1598,47 @@ document.getElementById('regFolder').addEventListener('change', function(){ if(t
 function addRecordRow(data){
   data=data||{};
   const dt=esc(data.docType||'');
+  const ug=esc(data.urgency||'ปกติ');
   const opt=(v)=>`<option value="${esc(v)}" ${dt===v?'selected':''}>${esc(v)}</option>`;
+  const uopt=(v,label)=>`<option value="${esc(v)}" ${ug===v?'selected':''}>${esc(label||v)}</option>`;
   const div=document.createElement('div');
   div.className='row g-2 align-items-end mb-2 record-row';
   div.innerHTML=`
-    <div class="col-md-3"><label class="form-label small mb-1">เลขที่หนังสือ</label>
+    <div class="col-md-2"><label class="form-label small mb-1">เลขที่หนังสือ</label>
       <div class="input-group"><span class="input-group-text fixed-prefix">อว 7332.02/</span>
       <input class="form-control rec-aunum" maxlength="6" inputmode="numeric" placeholder="01234" value="${esc(data.aunum||'')}"></div></div>
     <div class="col-md-3"><label class="form-label small mb-1">ชื่อเรื่อง</label>
       <input class="form-control rec-subject" placeholder="กรอกชื่อเรื่องเอกสาร" value="${esc(data.subject||'')}"></div>
     <div class="col-md-2"><label class="form-label small mb-1">วันที่</label>
       <input type="date" class="form-control rec-date" value="${esc(data.docDate||'')}"></div>
-    <div class="col-md-3"><label class="form-label small mb-1">ประเภท</label>
+    <div class="col-md-2"><label class="form-label small mb-1">ประเภท</label>
       <select class="form-select rec-type">
         <option value="">— เลือกประเภท —</option>
         <optgroup label="หนังสือส่ง">${opt('หนังสือส่ง (ภายใน)')}${opt('หนังสือส่ง (ภายนอก)')}</optgroup>
         <optgroup label="หนังสือรับ">${opt('หนังสือรับ (ภายใน)')}${opt('หนังสือรับ (ภายนอก)')}</optgroup>
       </select></div>
+    <div class="col-md-2"><label class="form-label small mb-1">ชั้นความเร็ว</label>
+      <select class="form-select rec-urgency">
+        ${uopt('ปกติ')}${uopt('ด่วน')}${uopt('ด่วนมาก')}${uopt('ด่วนที่สุด')}
+      </select></div>
     <div class="col-md-1 text-end">
       <button class="btn btn-outline-danger" onclick="this.closest('.record-row').remove()"><i class="bi bi-trash"></i></button></div>`;
   document.getElementById('recordRows').appendChild(div);
+}
+/* ชั้นความเร็วสูงสุดของชุดเอกสาร */
+const URGENCY_ORDER=['ด่วนที่สุด','ด่วนมาก','ด่วน','ปกติ'];
+function topUrgencyOf(recs){
+  let best='ปกติ';
+  (recs||[]).forEach(r=>{ const i=URGENCY_ORDER.indexOf(r.urgency); if(i>=0 && i<URGENCY_ORDER.indexOf(best)) best=r.urgency; });
+  return best;
+}
+/* แสดงเฉพาะประเภทหนังสือที่ถูกต้อง (กันค่าขยะที่เคยลงผิดช่อง) */
+function safeType(v){ const t=(v==null)?'':String(v); return t.indexOf('หนังสือ')===0 ? t : ''; }
+/* ป้ายชั้นความเร็ว */
+function urgencyBadge(u){
+  if(!u || u==='ปกติ') return '';
+  const c = u==='ด่วนที่สุด' ? 'bg-danger' : (u==='ด่วนมาก' ? 'bg-warning text-dark' : 'bg-info text-dark');
+  return `<span class="badge ${c} ms-1">${esc(u)}</span>`;
 }
 async function saveRegister(){
   const el=document.getElementById('regResult');
@@ -1223,7 +1651,8 @@ async function saveRegister(){
     aunum:r.querySelector('.rec-aunum').value.trim(),
     subject:r.querySelector('.rec-subject').value.trim(),
     docDate:r.querySelector('.rec-date').value,
-    docType:r.querySelector('.rec-type').value
+    docType:r.querySelector('.rec-type').value,
+    urgency:r.querySelector('.rec-urgency').value
   })).filter(r=>r.aunum||r.subject||r.docDate||r.docType);
   if(!owner){ toast(el,'danger','กรุณากรอกเจ้าของแฟ้ม'); return; }
   if(!department){ toast(el,'danger','กรุณาเลือกฝ่ายงาน'); return; }
@@ -1233,6 +1662,7 @@ async function saveRegister(){
   try{
     const d=await api('registerFolder',{folderCode, owner, department, timeline, records:JSON.stringify(records)});
     if(!d.ok) throw new Error(d.error||'error');
+    clearCache();
     el.innerHTML=`<div class="alert alert-success mb-0"><i class="bi bi-check-circle me-1"></i>${esc(d.message)}
       <div class="mt-2"><button class="btn btn-sm btn-outline-brand" onclick="gotoTrack('${pad4(folderCode)}')"><i class="bi bi-search me-1"></i>ดูแฟ้มนี้</button></div></div>`;
     document.getElementById('regScanInfo').innerHTML='';
@@ -1262,78 +1692,122 @@ scanInput.addEventListener('blur', ()=>{ setTimeout(()=>{
   const a=document.activeElement;
   if(!a || !['INPUT','SELECT','TEXTAREA','BUTTON','A'].includes(a.tagName)) scanInput.focus();
 }, 60); });
-async function doScan(code){
+/* ---------- สแกน: ออกแบบให้ยิงต่อเนื่องได้ทันที ไม่ต้องรอผลก่อนหน้า ---------- */
+let QUEUE_ROWS=[];            // คิวปัจจุบัน (เก็บไว้ในหน้าเว็บ เพื่ออัปเดตทันทีโดยไม่ต้องโหลดใหม่)
+const RECENT_SCAN={};         // กันสแกนซ้ำฝั่งหน้าเว็บ (ไม่ต้องวิ่งไป server)
+const LOCAL_GAP_MS=4000;
+let refreshTimer=null;
+function scheduleRefresh(){   // รีเฟรชคิว/รายการเสร็จวันนี้ หลังหยุดสแกนแล้ว (กันยิง request ถี่)
+  clearTimeout(refreshTimer);
+  refreshTimer=setTimeout(()=>{ loadQueue(); loadDoneToday(); }, 2500);
+}
+function scanNote(html, cls){
+  document.getElementById('scanResult').innerHTML=`<div class="alert ${cls} mb-0 py-2">${html}</div>`;
+}
+function doScan(code){
   const raw=(code||'').trim();
   scanInput.value='';
+  focusScan();                                   // คืนเคอร์เซอร์ทันที พร้อมรับแฟ้มถัดไป
   if(!raw) return;
-  const station=document.getElementById('scanStation').value;   // คีย์ S1-S4
-  const el=document.getElementById('scanResult');
+  const station=document.getElementById('scanStation').value;
   const norm=normalizeScan(raw);
-  if(norm.warn){
-    beep(false);
-    showScanModal('สแกนในโหมดภาษาไทย', norm.warn, true);
-    return;
-  }
+  if(norm.warn){ beep(false); showScanModal('สแกนในโหมดภาษาไทย', norm.warn, true); return; }
   const folderCode=pad4(norm.code);
-  let d;
-  try{ d=await api('scan',{folderCode, station, direction:'auto'}); }   // ทิศทาง auto: ระบบกำหนดเอง
-  catch(err){
+
+  // กันสแกนซ้ำฝั่งหน้าเว็บ (ตอบทันที ไม่ต้องรอ server)
+  const last=RECENT_SCAN[folderCode]||0, now=Date.now();
+  if(now-last < LOCAL_GAP_MS){
     beep(false);
-    showScanModal('เชื่อมต่อไม่สำเร็จ', err.message, true);
+    const sec=Math.ceil((LOCAL_GAP_MS-(now-last))/1000);
+    scanNote(`<i class="bi bi-exclamation-triangle-fill me-1"></i>แฟ้ม <b>${folderCode}</b> เพิ่งสแกนไปเมื่อสักครู่ — รออีก ${sec} วินาทีเพื่อป้องกันการสแกนซ้ำ`,'alert-warning');
     return;
   }
-  if(!d.ok){
-    beep(false);
-    showScanModal('สแกนไม่สำเร็จ', d.error||'เกิดข้อผิดพลาด', true);
-    return;
-  }
-  // สแกนสำเร็จ
-  beep(true);
-  const f=d.folder;
-  const dir=d.direction||f.lastDirection||'';
-  const recs=f.records||[];
-  const auStr = recs.length ? recs.map(r=>r.docNumber||'').filter(Boolean).join(', ') : '';
-  const subjStr = recs.length ? recs.map(r=>r.subject||'').filter(Boolean).join(' / ') : '';
-  const dirColor = dir==='เข้า' ? 'text-success':'text-danger';
-  if(d.completed){
-    // ออกจากจุดสุดท้าย: เสร็จสิ้น + คืนว่างอัตโนมัติ
-    el.innerHTML=`<div class="alert alert-success mb-0">
-      <div class="fw-bold"><i class="bi bi-check2-circle me-1"></i>แฟ้ม ${pad4(f.folderCode)} เสร็จสิ้นครบทุกจุด</div>
-      <div class="small mt-1"><i class="bi bi-arrow-counterclockwise me-1"></i>คืนเป็น “ว่าง” อัตโนมัติแล้ว พร้อมใช้งานใหม่ (ข้อมูลถูกเก็บในประวัติ)</div></div>`;
-    sessionLog.unshift({time:new Date(), folderCode:pad4(f.folderCode), station, direction:dir, ok:true, au:auStr, subject:subjStr});
-    renderTrays(); loadDoneToday(); loadQueue(); focusScan(); return;
-  }
-  el.innerHTML=`<div class="alert alert-success mb-0">
-    <div class="fw-bold"><i class="bi bi-check-circle me-1"></i>สแกนสำเร็จ — แฟ้ม ${pad4(f.folderCode)} <span class="${dirColor}">(${esc(dir)})</span> ${editBadge(f)}</div>
-    <div class="small">เจ้าของ: ${esc(f.owner)||'—'} &middot; ${esc(stationName(station))} &middot; สถานะ: ${esc(f.status)}</div>
-    ${d.nextHint?`<div class="small mt-1 text-primary"><i class="bi bi-arrow-right-circle me-1"></i>${esc(d.nextHint)}</div>`:''}</div>`;
-  sessionLog.unshift({time:new Date(), folderCode:pad4(f.folderCode), station, direction:dir, ok:true, au:auStr, subject:subjStr});
+  RECENT_SCAN[folderCode]=now;
+
+  // แสดงผลทันทีแบบ "กำลังบันทึก" แล้วค่อยอัปเดตเมื่อได้ผลจริง (ไม่หน่วงการสแกนถัดไป)
+  const entry={time:new Date(), folderCode, station, direction:'', ok:true, pending:true, au:'', subject:'', urgency:''};
+  sessionLog.unshift(entry);
+  const qi=QUEUE_ROWS.findIndex(x=>pad4(x.folderCode)===folderCode);
+  if(qi>=0){ QUEUE_ROWS.splice(qi,1); renderQueue(); }
   renderTrays();
-  loadQueue();
-  focusScan();
+  scanNote(`<span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึกแฟ้ม <b>${folderCode}</b> … (ยิงแฟ้มถัดไปได้เลย)`,'alert-secondary');
+
+  clearCache();
+  const sendScan=(retry)=> api('scan',{folderCode, station, direction:'auto'}).then(d=>{
+    // ระบบกำลังบันทึกของผู้ใช้อื่นอยู่ -> ลองใหม่ให้อัตโนมัติ (ไม่ต้องยิงซ้ำเอง)
+    if(d && !d.ok && d.code==='BUSY' && retry>0){
+      scanNote(`<span class="spinner-border spinner-border-sm me-1"></span>ระบบกำลังบันทึกของผู้ใช้อื่น — กำลังลองใหม่ให้อัตโนมัติ…`,'alert-secondary');
+      return new Promise(r=>setTimeout(r,1200)).then(()=>sendScan(retry-1));
+    }
+    return d;
+  });
+  sendScan(3).then(d=>{
+    if(!d || !d.ok){
+      beep(false);
+      entry.ok=false; entry.pending=false; entry.msg=(d&&d.error)?d.error.split('\n')[0]:'ผิดพลาด';
+      sessionLog.splice(sessionLog.indexOf(entry),1);   // ไม่สำเร็จ ไม่ต้องอยู่ในถาด
+      renderTrays();
+      delete RECENT_SCAN[folderCode];
+      showScanModal('สแกนไม่สำเร็จ', (d&&d.error)||'เกิดข้อผิดพลาด', true);
+      scheduleRefresh(); return;
+    }
+    beep(true);
+    const f=d.folder, dir=d.direction||f.lastDirection||'';
+    const recs=f.records||[];
+    entry.pending=false; entry.direction=dir;
+    entry.au=recs.map(r=>r.docNumber||'').filter(Boolean).join(', ');
+    entry.subject=recs.map(r=>r.subject||'').filter(Boolean).join(' / ');
+    entry.urgency=f.urgency||'';
+    entry.docType=recs.map(r=>safeType(r.docType)).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' / ');
+    renderTrays();
+    if(d.completed){
+      scanNote(`<div class="fw-bold"><i class="bi bi-check2-circle me-1"></i>แฟ้ม ${pad4(f.folderCode)} เสร็จสิ้นครบทุกจุด</div>
+        <div class="small mt-1"><i class="bi bi-arrow-counterclockwise me-1"></i>คืนเป็น “ว่าง” อัตโนมัติแล้ว (ข้อมูลเก็บในประวัติ)</div>`,'alert-success');
+    }else{
+      const dirColor = dir==='เข้า' ? 'text-success':'text-danger';
+      scanNote(`<div class="fw-bold"><i class="bi bi-check-circle me-1"></i>แฟ้ม ${pad4(f.folderCode)} <span class="${dirColor}">(${esc(dir)})</span> ${urgencyBadge(f.urgency)} ${editBadge(f)}</div>
+        <div class="small">เจ้าของ: ${esc(f.owner)||'—'} &middot; ${esc(stationName(station))}</div>
+        ${d.nextHint?`<div class="small mt-1 text-primary"><i class="bi bi-arrow-right-circle me-1"></i>${esc(d.nextHint)}</div>`:''}`,'alert-success');
+    }
+    scheduleRefresh();
+  }).catch(err=>{
+    beep(false);
+    sessionLog.splice(sessionLog.indexOf(entry),1); renderTrays();
+    delete RECENT_SCAN[folderCode];
+    showScanModal('เชื่อมต่อไม่สำเร็จ', err.message, true);
+  });
 }
-/* ถาดเข้า/ออก: จัดตามสถานะล่าสุดของแต่ละแฟ้มในรอบนี้ (เข้า=รออยู่, ออก=ส่งต่อแล้ว) */
+/* ถาดเข้า/ออก: เฉพาะจุดที่เลือกอยู่ (ของใครของมัน) */
 function renderTrays(){
+  const cur=document.getElementById('scanStation').value;
   const latest={};
-  sessionLog.forEach(x=>{ if(x.ok && !latest[x.folderCode]) latest[x.folderCode]=x; }); // sessionLog ใหม่สุดอยู่บน
+  sessionLog.forEach(x=>{ if(x.ok && x.station===cur && !latest[x.folderCode]) latest[x.folderCode]=x; });
   const inList=[], outList=[];
-  Object.keys(latest).forEach(c=>{ const x=latest[c]; (x.direction==='เข้า'?inList:outList).push(x); });
+  Object.keys(latest).forEach(c=>{
+    const x=latest[c];
+    if(x.pending || x.direction==='เข้า') inList.push(x); else outList.push(x);
+  });
   const byTime=(a,b)=>b.time-a.time; inList.sort(byTime); outList.sort(byTime);
-  renderTray('inBody', inList); renderTray('outBody', outList);
+  renderTray('inBody', inList, true); renderTray('outBody', outList, false);
   document.getElementById('inCount').textContent=inList.length;
   document.getElementById('outCount').textContent=outList.length;
 }
-function renderTray(bodyId, list){
+function renderTray(bodyId, list, clickable){
   const b=document.getElementById(bodyId);
   if(!list.length){ b.innerHTML='<tr><td colspan="2" class="text-center text-muted py-4">ยังไม่มีแฟ้ม</td></tr>'; return; }
   const p=n=>String(n).padStart(2,'0');
   b.innerHTML=list.map(x=>{
     const t=x.time; const tt=`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`;
+    if(x.pending){
+      return `<tr class="text-muted"><td><b>${esc(x.folderCode)}</b><div class="small">${tt}</div></td>
+        <td class="small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</td></tr>`;
+    }
     const au = x.au ? esc(x.au) : '<span class="text-muted">—</span>';
     const subj = x.subject ? `<div class="text-muted">${esc(x.subject)}</div>` : '';
-    return `<tr style="cursor:pointer" onclick="openScanEdit('${esc(x.folderCode)}')">
-      <td><b>${esc(x.folderCode)}</b><div class="small text-muted">${tt}</div></td>
-      <td class="small">${au}${subj}</td></tr>`;
+    const dt = x.docType ? `<div class="text-muted" style="font-size:.76rem">${esc(x.docType)}</div>` : '';
+    const clickAttr = clickable ? ` style="cursor:pointer" onclick="openScanEdit('${esc(x.folderCode)}')" title="คลิกเพื่อบันทึกสถานะการแก้ไขแฟ้มนี้"` : '';
+    return `<tr${clickAttr}><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}<div class="small text-muted">${tt}</div></td>
+      <td class="small">${au}${subj}${dt}</td></tr>`;
   }).join('');
 }
 /* คลิกแฟ้ม -> แสดงแผงสถานะแก้ไข (เลื่อนลงมาให้เห็น) */
@@ -1354,42 +1828,59 @@ async function openScanEdit(code){
 function closeScanEdit(){ document.getElementById('scanEditWrap').style.display='none'; focusScan(); }
 /* เอาเคอร์เซอร์ไว้ที่ช่องสแกนเสมอ (เมื่ออยู่หน้าสแกน) */
 function focusScan(){ const s=document.getElementById('scanInput'); if(s) setTimeout(()=>s.focus(),50); }
+/* หลังคลิก/ทำรายการใด ๆ ในหน้าสแกน ให้เคอร์เซอร์กลับมาที่ช่องสแกนเสมอ */
+document.addEventListener('click', e=>{
+  const pg=document.getElementById('page-scan');
+  if(!pg || !pg.classList.contains('active')) return;
+  const t=e.target.closest('input,select,textarea');
+  if(t) return;                                  // ตั้งใจคลิกช่องกรอกอื่น ไม่ต้องแย่งโฟกัส
+  focusScan();
+});
 /* คิวรอสแกนเข้าของจุดที่เลือก */
 async function loadQueue(){
   const station=document.getElementById('scanStation').value;
   document.getElementById('queueStname').textContent = station?('('+stationName(station)+')'):'';
-  const body=document.getElementById('queueBody');
-  if(!station){ body.innerHTML='<tr><td colspan="2" class="text-center text-muted py-3">—</td></tr>'; return; }
+  if(!station){ QUEUE_ROWS=[]; renderQueue(); return; }
   try{
-    const d=await api('getStationQueue',{station});
+    const d=await apiCached('getStationQueue',{station}, 8000);
     if(!d.ok) throw new Error(d.error||'error');
-    const rows=d.rows||[];
-    document.getElementById('queueCount').textContent=rows.length;
-    if(!rows.length){ body.innerHTML='<tr><td colspan="2" class="text-center text-muted py-3">ไม่มีแฟ้มรอสแกนเข้า</td></tr>'; return; }
-    body.innerHTML=rows.map(x=>{
-      const editTag = x.editStatus==='มีแก้ไข' ? `<span class="badge bg-warning text-dark ms-1" title="${x.editReturn==='restart'?'เริ่มธุรการ 1 ใหม่':'คืนจุดเดิม'}"><i class="bi bi-pencil-fill"></i> แก้ไข</span>` : '';
-      const au = x.docNumbers ? esc(x.docNumbers) : '<span class="text-muted">—</span>';
-      const subj = x.subjects ? `<div class="text-muted">${esc(x.subjects)}</div>` : '';
-      return `<tr><td><b>${esc(x.folderCode)}</b>${editTag}<div class="small text-muted">${esc(x.owner)||''}</div></td>
-        <td class="small">${au}${subj}</td></tr>`;
-    }).join('');
-  }catch(err){ body.innerHTML=`<tr><td colspan="2" class="text-center text-danger py-3">${esc(err.message)}</td></tr>`; }
+    QUEUE_ROWS=d.rows||[];
+    renderQueue();
+  }catch(err){ document.getElementById('queueBody').innerHTML=`<tr><td colspan="2" class="text-center text-danger py-3">${esc(err.message)}</td></tr>`; }
+}
+function renderQueue(){
+  const body=document.getElementById('queueBody');
+  const rows=QUEUE_ROWS||[];
+  document.getElementById('queueCount').textContent=rows.length;
+  if(!rows.length){ body.innerHTML='<tr><td colspan="2" class="text-center text-muted py-3">ไม่มีแฟ้มรอสแกนเข้า</td></tr>'; return; }
+  body.innerHTML=rows.map(x=>{
+    const editTag = x.editStatus==='มีแก้ไข' ? `<span class="badge bg-warning text-dark ms-1" title="${x.editReturn==='restart'?'เริ่มธุรการ 1 ใหม่':'คืนจุดเดิม'}"><i class="bi bi-pencil-fill"></i> แก้ไข</span>` : '';
+    const au = x.docNumbers ? esc(x.docNumbers) : '<span class="text-muted">—</span>';
+    const subj = x.subjects ? `<div class="text-muted">${esc(x.subjects)}</div>` : '';
+    const dt = x.docTypes ? `<div class="text-muted" style="font-size:.76rem">${esc(x.docTypes)}</div>` : '';
+    return `<tr><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}${editTag}<div class="small text-muted">${esc(x.owner)||''}</div></td>
+      <td class="small">${au}${subj}${dt}</td></tr>`;
+  }).join('');
 }
 /* แฟ้มที่เสร็จสิ้นวันนี้ (จากประวัติ) */
 async function loadDoneToday(){
   const body=document.getElementById('doneTodayBody');
   try{
-    const d=await api('getHistory',{period:'today', onlyCompleted:'1', limit:'50'});
+    const d=await apiCached('getHistory',{period:'today', onlyCompleted:'1', limit:'50'}, 20000);
     if(!d.ok) throw new Error(d.error||'error');
     const rows=d.rows||[];
     document.getElementById('doneTodayCount').textContent=rows.length;
-    if(!rows.length){ body.innerHTML='<tr><td colspan="7" class="text-center text-muted py-3">ยังไม่มีแฟ้มที่เสร็จวันนี้</td></tr>'; return; }
+    if(!rows.length){ body.innerHTML='<tr><td colspan="9" class="text-center text-muted py-3">ยังไม่มีแฟ้มที่เสร็จวันนี้</td></tr>'; return; }
     body.innerHTML=rows.map(x=>{
       const au=(x.records||[]).map(r=>r.docNumber||'').filter(Boolean).join(', ')||'—';
       const subj=(x.records||[]).map(r=>r.subject||'').filter(Boolean).join(' / ')||'—';
       const dd=(x.records||[]).map(r=>thaiDate(r.docDate)).filter(Boolean).join(', ')||'—';
+      const dt=(x.records||[]).map(r=>safeType(r.docType)).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' / ')||'—';
+      const ug=topUrgencyOf(x.records);
       return `<tr><td class="small">${thaiDateTime(x.completedAt)}</td><td><b>${esc(x.folderCode)}</b></td>
         <td class="small">${esc(au)}</td><td>${esc(x.owner)||'—'}</td><td class="small">${esc(subj)}</td>
+        <td class="small">${esc(dt)}</td>
+        <td class="small">${ug&&ug!=='ปกติ'?urgencyBadge(ug).replace(' ms-1',''):'<span class="text-muted">ปกติ</span>'}</td>
         <td>${esc(x.department)||'—'}</td><td class="small">${esc(dd)}</td></tr>`;
     }).join('');
   }catch(err){ body.innerHTML=`<tr><td colspan="7" class="text-center text-danger py-3">${esc(err.message)}</td></tr>`; }
@@ -1455,6 +1946,7 @@ async function markPrintedRange(printed){
   try{
     const d=await api('setPrinted',{codes:LAST_BC_CODES.join(','), printed:printed?'1':'0'});
     if(!d.ok) throw new Error(d.error||'error');
+    clearCache();
     LAST_BC_CODES.forEach(c=>{ if(printed) PRINTED.add(c); else PRINTED.delete(c); });
     await renderBarcodes();
     const t=document.createElement('div'); t.className='alert alert-success py-2 small mb-2';
@@ -1471,12 +1963,14 @@ function fillTrackDept(){
   sel.innerHTML='<option value="">ทุกฝ่ายงาน</option>'+deptList().map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
   if(cur) sel.value=cur;
 }
+function showHistCard(show){ const c=document.getElementById('histCard'); if(c) c.style.display=show?'':'none'; }
 function clearTrack(){
   document.getElementById('trackInput').value='';
   document.getElementById('trackDept').value='';
   document.getElementById('trackDate').value='';
   document.getElementById('trackList').innerHTML='';
   document.getElementById('trackResult').innerHTML='';
+  showHistCard(true);
   document.getElementById('trackInput').focus();
 }
 function gotoTrack(code){
@@ -1485,6 +1979,7 @@ function gotoTrack(code){
   document.getElementById('trackDept').value='';
   document.getElementById('trackDate').value='';
   document.getElementById('trackList').innerHTML='';
+  showHistCard(false);
   openFolder(pad4(code));
 }
 /* เปิดรายละเอียดแฟ้มเดียว */
@@ -1501,7 +1996,6 @@ async function openFolder(code){
 /* ค้นหา/กรองหลายเงื่อนไข */
 async function doTrack(){
   let kw=(document.getElementById('trackInput').value||'').trim();
-  // ถ้าเป็นการยิงบาร์โค้ดในโหมดไทยที่แปลงได้เป็นเลขล้วน ให้แปลงก่อน (ไม่แตะการค้นหาคำไทยทั่วไป)
   // ถ้าเป็นการยิงบาร์โค้ด (ตัวอักษร/พยัญชนะไทย/เลขเก่าโหมดไทย) ให้ถอดเป็นเลขก่อน — ไม่แตะการค้นหาคำไทยทั่วไป
   { const n=normalizeScan(kw); if(n.code && /^\d{3,4}$/.test(n.code) && n.code!==kw) kw=n.code; }
   const dept=document.getElementById('trackDept').value;
@@ -1510,66 +2004,55 @@ async function doTrack(){
   const resEl=document.getElementById('trackResult');
   resEl.innerHTML='';
 
-  // ทางลัด: รหัสแฟ้มล้วน (1–200) และไม่ได้กรองอย่างอื่น -> เปิดแฟ้มนั้นเลย (รองรับการยิงบาร์โค้ด)
+  // ทางลัด: ยิงบาร์โค้ด/พิมพ์รหัสแฟ้มล้วน และไม่ได้กรองอย่างอื่น -> เปิดแฟ้มนั้นเลย (ถ้ายังใช้งานอยู่)
   if(!dept && !date && /^\d{1,4}$/.test(kw)){
     const n=parseInt(kw,10);
-    if(n>=1 && n<=TOTAL_FOLDERS){ listEl.innerHTML=''; return openFolder(pad4(kw)); }
+    if(n>=1 && n<=TOTAL_FOLDERS){
+      listEl.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังค้นหา…</div>';
+      try{
+        const d=await api('getFolder',{folderCode:pad4(kw)});
+        if(d.ok && d.folder && (d.folder.status||'ว่าง')!=='ว่าง'){ listEl.innerHTML=''; showHistCard(false); return renderTrack(d.folder); }
+      }catch(e){}
+      // แฟ้มนี้ว่างอยู่ (เคยใช้แล้วคืนไป) -> ไปค้นในประวัติแทน
+    }
   }
-  if(!kw && !dept && !date){ listEl.innerHTML=''; return; }
+  if(!kw && !dept && !date){ listEl.innerHTML=''; showHistCard(true); return; }
 
+  showHistCard(false);                                   // ค้นหาแล้ว: ซ่อนประวัติทั้งหมด ดูเฉพาะผลค้นหา
   listEl.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังค้นหา…</div>';
-  let rows;
-  try{ const d=await api('getExportData'); if(!d.ok) throw new Error(d.error||'error'); rows=d.rows||[]; }
+  let entries;
+  // ค้นจากประวัติทั้งหมด (รวมแฟ้มที่กำลังดำเนินการ + แฟ้มที่เสร็จ/คืนไปแล้ว)
+  try{ const d=await apiCached('getHistory',{period:'all', limit:'all'}); if(!d.ok) throw new Error(d.error||'error'); entries=d.rows||[]; }
   catch(err){ toast(listEl,'danger',err.message); return; }
 
   const q=kw.toLowerCase();
   const qDigits=kw.replace(/[^0-9]/g,'');
-  const matched=rows.filter(r=>{
-    if(dept && (r.department||'')!==dept) return false;
-    if(date && (r.docDate||'')!==date) return false;
+  const matched=entries.filter(x=>{
+    if(dept && (x.department||'')!==dept) return false;
+    if(date && !(x.records||[]).some(r=>(r.docDate||'')===date)) return false;
     if(!q) return true;
-    const auAfter=((r.docNumber||'').split('/')[1]||'');
-    const hay=[pad4(r.folderCode), r.owner, r.department, r.docNumber, auAfter, r.subject, r.docDate, thaiDate(r.docDate)]
-      .map(x=>(x||'').toString().toLowerCase()).join(' | ');
+    const parts=[pad4(x.folderCode), x.owner, x.department, x.timeline, x.status];
+    (x.records||[]).forEach(r=>{
+      parts.push(r.docNumber, (r.docNumber||'').split('/')[1]||'', r.subject, r.docType, r.urgency, r.docDate, thaiDate(r.docDate));
+    });
+    const hay=parts.map(v=>(v||'').toString().toLowerCase()).join(' | ');
     if(hay.indexOf(q)>=0) return true;
-    if(qDigits && ((r.docNumber||'').replace(/[^0-9]/g,'').indexOf(qDigits)>=0)) return true;
+    if(qDigits && (x.records||[]).some(r=>(r.docNumber||'').replace(/[^0-9]/g,'').indexOf(qDigits)>=0)) return true;
     return false;
   });
 
-  // จัดกลุ่มตามแฟ้ม
-  const byFolder={};
-  matched.forEach(r=>{
-    const c=pad4(r.folderCode);
-    if(!byFolder[c]) byFolder[c]={folder:r, recs:[]};
-    if(r.docNumber||r.subject) byFolder[c].recs.push(r);
-  });
-  const codes=Object.keys(byFolder).sort();
-
-  if(codes.length===0){
+  if(!matched.length){
     listEl.innerHTML='<div class="card"><div class="card-body text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>ไม่พบแฟ้มที่ตรงกับเงื่อนไข</div></div>';
     return;
   }
-  if(codes.length===1){ listEl.innerHTML=''; return openFolder(codes[0]); }
+  // เจอแฟ้มเดียวและเป็นแฟ้มที่กำลังดำเนินการ + ค้นด้วยคำค้นหา -> เปิดรายละเอียดเลย
+  if(matched.length===1 && matched[0].live && kw && !dept && !date){ listEl.innerHTML=''; return openFolder(matched[0].folderCode); }
 
-  const rowsHtml=codes.map(c=>{
-    const g=byFolder[c]; const f=g.folder;
-    const docs=g.recs.length ? g.recs.map(r=>`${esc(r.docNumber||'')}${r.subject?(' <span class="text-muted">· '+esc(r.subject)+'</span>'):''}`).join('<br>') : '<span class="text-muted">—</span>';
-    return `<tr style="cursor:pointer" onclick="openFolder('${c}')">
-      <td><b>${c}</b></td>
-      <td>${esc(f.owner)||'—'}</td>
-      <td>${esc(f.department)||'—'}</td>
-      <td class="small">${docs}</td>
-      <td>${statusBadge(f.status)}${editBadge(f)}</td>
-      <td class="text-end"><button class="btn btn-sm btn-outline-brand" onclick="event.stopPropagation();openFolder('${c}')"><i class="bi bi-eye me-1"></i>ดู</button></td>
-    </tr>`;
-  }).join('');
+  const liveN=matched.filter(x=>x.live).length, doneN=matched.length-liveN;
   listEl.innerHTML=`<div class="card mb-3">
-    <div class="card-header"><i class="bi bi-list-ul me-1"></i>ผลการค้นหา — พบ ${codes.length} แฟ้ม</div>
-    <div class="card-body p-0"><div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light"><tr><th>รหัสแฟ้ม</th><th>ผู้เสนอ (เจ้าของ)</th><th>ฝ่ายงาน</th><th>เอกสารที่ตรงเงื่อนไข</th><th>สถานะ</th><th></th></tr></thead>
-        <tbody>${rowsHtml}</tbody>
-      </table></div></div></div>`;
+    <div class="card-header"><i class="bi bi-list-ul me-1"></i>ผลการค้นหา — พบ ${matched.length} รายการ
+      <span class="small text-muted ms-2">(กำลังดำเนินการ ${liveN} &middot; เสร็จ/คืนแล้ว ${doneN}) — คลิกเพื่อดูไทม์ไลน์</span></div>
+    <div class="card-body p-0">${histHeaderHTML()}${matched.map(histEntryHTML).join('')}</div></div>`;
 }
 /* ---------- ประวัติแฟ้มทั้งหมด (ไทม์ไลน์) ---------- */
 /* จำแนกชื่อผู้บริหารในไทม์ไลน์ว่าเป็น รอง / ผอ. / คณบดี (อิงจากชื่อที่ตั้งค่าไว้) */
@@ -1630,43 +2113,70 @@ function toggleHist(head){
   det.style.display=open?'block':'none';
   item.classList.toggle('open', open);
 }
+/* ประวัติการแก้ไขของแฟ้ม (แสดงใต้ไทม์ไลน์) */
+function editLogsHTML(logs){
+  if(!logs||!logs.length) return '';
+  return `<div class="small mt-2 p-2 rounded" style="background:#fff8e6;border:1px solid #f5d98b">
+    <div class="fw-semibold mb-1"><i class="bi bi-pencil-square me-1"></i>ประวัติการแก้ไข (${logs.length} ครั้ง)</div>
+    ${logs.map(l=>`<div>• <span class="text-muted">${thaiDateTime(l.timestamp)}</span> — ${esc(l.action)}${l.station?(' @'+esc(stationName(l.station))):''}${l.note?(' : '+esc(l.note)):''}</div>`).join('')}
+  </div>`;
+}
+/* หัวคอลัมน์ของรายการประวัติ/ผลค้นหา */
+function histHeaderHTML(){
+  return `<div class="hist-row hist-colhead">
+    <div></div><div>เลขที่ อว</div><div class="col-docdate">วันที่เสนอแฟ้ม</div><div>ชื่อเรื่อง</div>
+    <div>ผู้เสนอ</div><div class="col-dept">ฝ่ายงาน</div><div class="col-type">ประเภทหนังสือ</div>
+    <div class="col-urg">ชั้นความเร็ว</div><div>สถานะ</div>
+    <div class="col-time text-end">วันที่/เวลาแฟ้มออก</div><div></div></div>`;
+}
+/* การ์ดประวัติ 1 รายการ (ใช้ทั้งหน้าประวัติและผลการค้นหา) */
+function histEntryHTML(x){
+  const when = thaiDateTime(x.live ? x.archivedAt : x.completedAt);
+  const recs=x.records||[];
+  const first=recs[0]||{};
+  const shortDoc = recs.length ? (`${esc(first.docNumber)||''}${first.subject?(' · '+esc(first.subject)):''}`+(recs.length>1?` <span class="text-muted">(+${recs.length-1})</span>`:'')) : '<span class="text-muted">—</span>';
+  const recsHtml=recs.length ? recs.map(r=>
+    `<div>• <b>${esc(r.docNumber)||'—'}</b> ${safeType(r.docType)?('<span class="text-muted">('+esc(safeType(r.docType))+')</span>'):''} ${esc(r.subject)||''}${urgencyBadge(r.urgency)}${r.docDate?(' <span class="text-muted">· '+thaiDate(r.docDate)+'</span>'):''}</div>`
+  ).join('') : '<span class="text-muted">— ไม่มีรายการเอกสาร —</span>';
+  const viewBtn = x.live ? `<button class="btn btn-sm btn-outline-brand py-0 px-2" onclick="event.stopPropagation();openFolder('${esc(x.folderCode)}')" title="ดูรายละเอียด"><i class="bi bi-eye"></i></button>` : '';
+  const auNo = first.docNumber || '—';
+  const moreTag = recs.length>1 ? ` <span class="text-muted fw-normal">(+${recs.length-1})</span>` : '';
+  const docDate = thaiDate(first.docDate) || '—';
+  const subject = first.subject || '';
+  const docType = safeType(first.docType);
+  return `<div class="hist-item border-bottom">
+    <div class="hist-head hist-row" style="cursor:pointer" onclick="toggleHist(this)">
+      <div><i class="bi bi-chevron-right hist-caret"></i></div>
+      <div class="hist-cell num" title="แฟ้ม ${esc(x.folderCode)}">${esc(auNo)}${moreTag}</div>
+      <div class="hist-cell col-docdate small">${esc(docDate)}</div>
+      <div class="hist-cell" title="${esc(subject)}">${esc(subject)||'<span class="text-muted">—</span>'}</div>
+      <div class="hist-cell" title="${esc(x.owner)}">${esc(x.owner)||'<span class="text-muted">—</span>'}</div>
+      <div class="hist-cell col-dept text-muted" title="${esc(x.department)}">${esc(x.department)||'—'}</div>
+      <div class="hist-cell col-type small" title="${esc(docType)}">${esc(docType)||'<span class="text-muted">—</span>'}</div>
+      <div class="hist-cell col-urg">${x.urgency&&x.urgency!=='ปกติ'?urgencyBadge(x.urgency).replace(' ms-1',''):'<span class="text-muted small">ปกติ</span>'}</div>
+      <div class="hist-cell">${statusBadge(x.status)}</div>
+      <div class="hist-cell col-time time">${when}</div>
+      <div class="text-end">${viewBtn}</div>
+    </div>
+    <div class="hist-detail px-3 pb-3" style="display:none">
+      ${histTimeline(x.logs, x.timeline)}
+      <div class="small mt-2">${recsHtml}</div>
+      ${editLogsHTML(x.editLogs)}
+    </div>
+  </div>`;
+}
 async function loadHistory(){
   const period=document.getElementById('histPeriod').value;
   const limit=document.getElementById('histLimit').value;
   const body=document.getElementById('histBody');
   body.innerHTML='<div class="text-muted text-center py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดประวัติ…</div>';
   try{
-    const d=await api('getHistory',{period, limit});
+    const d=await apiCached('getHistory',{period, limit});
     if(!d.ok) throw new Error(d.error||'error');
     const rows=d.rows||[];
     document.getElementById('histTotal').textContent = (d.total>rows.length)? (rows.length+' / '+d.total) : rows.length;
     if(!rows.length){ body.innerHTML='<div class="text-muted text-center py-4">ไม่พบประวัติในช่วงเวลานี้</div>'; return; }
-    body.innerHTML=rows.map(x=>{
-      const when = x.live ? ('อัปเดต '+thaiDateTime(x.archivedAt)) : ('เสร็จ '+thaiDateTime(x.completedAt));
-      const recs=x.records||[];
-      const first=recs[0]||{};
-      const shortDoc = recs.length ? (`${esc(first.docNumber)||''}${first.subject?(' · '+esc(first.subject)):''}`+(recs.length>1?` <span class="text-muted">(+${recs.length-1})</span>`:'')) : '<span class="text-muted">—</span>';
-      const recsHtml=recs.length ? recs.map(r=>
-        `<div>• <b>${esc(r.docNumber)||'—'}</b> ${r.docType?('<span class="text-muted">('+esc(r.docType)+')</span>'):''} ${esc(r.subject)||''}${r.docDate?(' <span class="text-muted">· '+thaiDate(r.docDate)+'</span>'):''}</div>`
-      ).join('') : '<span class="text-muted">— ไม่มีรายการเอกสาร —</span>';
-      const liveBadge = x.live ? '<span class="badge bg-info text-dark">กำลังดำเนินการ</span>' : '';
-      const viewBtn = x.live ? `<button class="btn btn-sm btn-outline-brand" onclick="event.stopPropagation();openFolder('${esc(x.folderCode)}')"><i class="bi bi-eye me-1"></i>ดู</button>` : '';
-      return `<div class="hist-item border-bottom">
-        <div class="hist-head p-2 px-3 d-flex flex-wrap gap-2 align-items-center" style="cursor:pointer" onclick="toggleHist(this)">
-          <i class="bi bi-chevron-right hist-caret"></i>
-          <b>แฟ้ม ${esc(x.folderCode)}</b> ${statusBadge(x.status)} ${liveBadge}
-          <span class="small">ผู้เสนอ: <b>${esc(x.owner)||'—'}</b></span>
-          <span class="small text-muted d-none d-lg-inline">· ฝ่ายงาน: ${esc(x.department)||'—'}</span>
-          <span class="small text-muted d-none d-md-inline text-truncate" style="max-width:340px">· ${shortDoc}</span>
-          <span class="small text-muted ms-auto">${when}</span>
-          ${viewBtn}
-        </div>
-        <div class="hist-detail px-3 pb-3" style="display:none">
-          ${histTimeline(x.logs, x.timeline)}
-          <div class="small mt-2">${recsHtml}</div>
-        </div>
-      </div>`;
-    }).join('');
+    body.innerHTML=histHeaderHTML()+rows.map(histEntryHTML).join('');
   }catch(err){ body.innerHTML=`<div class="alert alert-danger m-3">${esc(err.message)}</div>`; }
 }
 function renderTrack(f){
@@ -1684,8 +2194,8 @@ function renderTrack(f){
     idx++;
   });});
   const recs=(f.records||[]);
-  const recRows = recs.length ? recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.docNumber)||'—'}</td><td>${esc(r.subject)||'—'}</td><td>${esc(r.docType)||'—'}</td><td>${thaiDate(r.docDate)}</td></tr>`).join('')
-    : '<tr><td colspan="5" class="text-center text-muted">ไม่มีรายการเอกสาร</td></tr>';
+  const recRows = recs.length ? recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.docNumber)||'—'}</td><td>${esc(r.subject)||'—'}</td><td>${esc(safeType(r.docType))||'—'}</td><td>${r.urgency&&r.urgency!=='ปกติ'?urgencyBadge(r.urgency).replace(' ms-1',''):'<span class="text-muted">ปกติ</span>'}</td><td>${thaiDate(r.docDate)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="text-center text-muted">ไม่มีรายการเอกสาร</td></tr>';
   const tl=(f.timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
   const tlBadges = tl.length ? tl.map(t=>`<span class="badge bg-secondary me-1 mb-1">${esc(t)}</span>`).join('') : '<span class="text-muted">— ยังไม่ระบุ —</span>';
   const logRows=(f.logs||[]).length ? (f.logs||[]).map(l=>{
@@ -1780,7 +2290,7 @@ function renderTrack(f){
       <div class="col-lg-6"><div class="card h-100">
         <div class="card-header"><i class="bi bi-list-ol me-1"></i>รายการเอกสารในแฟ้ม</div>
         <div class="card-body p-0"><div class="table-responsive">
-          <table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>ประเภท</th><th>วันที่</th></tr></thead>
+          <table class="table table-sm mb-0"><thead class="table-light"><tr><th>#</th><th>เลขที่หนังสือ</th><th>ชื่อเรื่อง</th><th>ประเภท</th><th>ชั้นความเร็ว</th><th>วันที่</th></tr></thead>
           <tbody>${recRows}</tbody></table></div></div></div></div>
       <div class="col-lg-6"><div class="card h-100">
         <div class="card-header"><i class="bi bi-clock-history me-1"></i>ประวัติการสแกน</div>
@@ -1791,7 +2301,7 @@ function renderTrack(f){
 }
 async function resetFolder(code){
   if(!confirm('ยืนยันคืนแฟ้ม '+code+' ให้เป็นสถานะว่าง? (ข้อมูลรายการเอกสารในแฟ้มจะถูกล้าง)')) return;
-  try{ const d=await api('resetFolder',{folderCode:code}); if(!d.ok) throw new Error(d.error||'error'); ALL_FOLDERS=[]; openFolder(pad4(code)); }
+  try{ const d=await api('resetFolder',{folderCode:code}); if(!d.ok) throw new Error(d.error||'error'); clearCache(); ALL_FOLDERS=[]; openFolder(pad4(code)); }
   catch(err){ alert(err.message); }
 }
 
@@ -1838,29 +2348,128 @@ function setConn(ok){
 }
 
 /* ========================= เริ่มต้น ========================= */
-(async function init(){
-  document.getElementById('urlShow').textContent = WEBAPP_URL;
-  try{ document.getElementById('todayChip').textContent = 'วันนี้ · '+thaiDate(new Date().toISOString()); }catch(e){}
-  if(!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_YOUR')===0){
-    document.getElementById('urlWarn').classList.remove('d-none');
-    return;
-  }
-  // โหลดครั้งเดียว: config + dashboard + สถานะเชื่อมต่อ (เร็วกว่าเรียกทีละอัน)
+/* ---------- จัดการผู้ใช้งาน ---------- */
+let ROLE_LIST=[];
+async function loadUsers(){
+  if(!can('MANAGE_USER')) return;
+  const body=document.getElementById('usersBody');
+  body.innerHTML='<tr><td colspan="9" class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</td></tr>';
+  try{
+    const d=await api('listUsers');
+    if(!d.ok) throw new Error(d.error||'error');
+    ROLE_LIST=d.roles||[];
+    const sel=document.getElementById('nuRole');
+    if(sel) sel.innerHTML=ROLE_LIST.map(r=>`<option value="${esc(r.roleId)}">${esc(r.roleName)}</option>`).join('');
+    const users=d.users||[];
+    document.getElementById('userCount').textContent=users.length;
+    if(!users.length){ body.innerHTML='<tr><td colspan="9" class="text-center text-muted py-3">ยังไม่มีผู้ใช้</td></tr>'; return; }
+    const roleName=id=>{const r=ROLE_LIST.find(x=>x.roleId===id); return r?r.roleName:id;};
+    body.innerHTML=users.map(u=>{
+      const roleOpts=ROLE_LIST.map(r=>`<option value="${esc(r.roleId)}" ${r.roleId===u.roleId?'selected':''}>${esc(r.roleName)}</option>`).join('');
+      const stOpts=['','S1','S2','S3','S4'].map(k=>`<option value="${k}" ${k===(u.stationKey||'')?'selected':''}>${k?stationName(k):'—'}</option>`).join('');
+      const act=u.status==='ACTIVE';
+      return `<tr>
+        <td>${esc(u.displayName)||'—'}</td>
+        <td class="small">${esc(u.email)}</td>
+        <td class="small">${esc(u.position)||'—'}</td>
+        <td class="small">${esc(u.department)||'—'}</td>
+        <td><select class="form-select form-select-sm" style="width:130px" onchange="updateUser('${esc(u.userId)}','roleId',this.value)">${roleOpts}</select></td>
+        <td><select class="form-select form-select-sm" style="width:110px" onchange="updateUser('${esc(u.userId)}','stationKey',this.value)">${stOpts}</select></td>
+        <td><span class="badge ${act?'bg-success':'bg-secondary'}">${act?'ใช้งาน':'ระงับ'}</span></td>
+        <td class="small text-muted">${u.lastLoginAt?thaiDateTime(u.lastLoginAt):'—'}</td>
+        <td class="text-end text-nowrap">
+          <button class="btn btn-sm btn-outline-secondary py-0 px-2" title="${act?'ระงับบัญชี':'เปิดใช้งาน'}" onclick="updateUser('${esc(u.userId)}','status','${act?'DISABLED':'ACTIVE'}')"><i class="bi ${act?'bi-lock':'bi-unlock'}"></i></button>
+          <button class="btn btn-sm btn-outline-warning py-0 px-2" title="ตั้งรหัสผ่านชั่วคราว" onclick="resetUserPw('${esc(u.userId)}','${esc(u.email)}')"><i class="bi bi-key"></i></button>
+        </td></tr>`;
+    }).join('');
+  }catch(err){ body.innerHTML=`<tr><td colspan="9" class="text-center text-danger py-3">${esc(err.message)}</td></tr>`; }
+}
+async function createUser(){
+  const el=document.getElementById('userMsg');
+  const p={email:(document.getElementById('nuEmail').value||'').trim(),
+    displayName:document.getElementById('nuName').value.trim(),
+    position:document.getElementById('nuPos').value.trim(),
+    department:document.getElementById('nuDept').value.trim(),
+    roleId:document.getElementById('nuRole').value,
+    stationKey:document.getElementById('nuStation').value};
+  if(!/@up\.ac\.th$/i.test(p.email)){ toast(el,'danger','อนุญาตเฉพาะอีเมล @up.ac.th เท่านั้น'); return; }
+  if(!p.displayName){ toast(el,'danger','กรุณากรอกชื่อ-นามสกุล'); return; }
+  try{
+    const d=await api('createUser',p);
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    toast(el,'success',d.message+(d.tempPassword?(' · รหัสผ่านชั่วคราว: '+d.tempPassword):''));
+    ['nuEmail','nuName','nuPos','nuDept'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('newUserBox').style.display='none';
+    clearCache(); loadUsers();
+  }catch(err){ toast(el,'danger',err.message); }
+}
+async function updateUser(userId, field, value){
+  const el=document.getElementById('userMsg');
+  const p={userId}; p[field]=value;
+  try{
+    const d=await api('updateUser',p);
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    toast(el,'success',d.message); clearCache(); loadUsers();
+  }catch(err){ toast(el,'danger',err.message); }
+}
+async function resetUserPw(userId, email){
+  if(!confirm('ตั้งรหัสผ่านชั่วคราวใหม่ให้ '+email+' ?\nผู้ใช้จะต้องเปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งถัดไป')) return;
+  const el=document.getElementById('userMsg');
+  try{
+    const d=await api('resetUserPassword',{userId});
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    toast(el,'success',d.message+(d.tempPassword?(' · รหัสผ่านชั่วคราว: '+d.tempPassword):''));
+  }catch(err){ toast(el,'danger',err.message); }
+}
+
+/* โหลดแอปหลังจากล็อกอินแล้ว */
+async function startApp(){
+  enterApp();
+  showMe();
+  applyPermissions();
   try{
     const d = await api('getBootstrap');
     if(d && d.ok){
       if(d.config) CONFIG = Object.assign({}, DEFAULTS, d.config);
       setConn(true);
       fillStationSelect();
+      applyPermissions();
       if(d.dashboard && d.dashboard.ok) applyDashboard(d.dashboard); else loadDashboard();
       return;
     }
   }catch(e){}
-  // สำรอง (เผื่อ backend เวอร์ชันเก่ายังไม่มี getBootstrap)
   await loadConfig();
   fillStationSelect();
+  applyPermissions();
   testConnection();
   loadDashboard();
+}
+
+(async function init(){
+  document.getElementById('urlShow').textContent = WEBAPP_URL;
+  try{ document.getElementById('todayChip').textContent = 'วันนี้ · '+thaiDate(new Date().toISOString()); }catch(e){}
+  try{ document.getElementById('authLogo').src = document.querySelector('.sidebar .logo img').src; }catch(e){}
+  if(!WEBAPP_URL || WEBAPP_URL.indexOf('PASTE_YOUR')===0){
+    document.getElementById('layout').style.display='flex';
+    document.getElementById('authGate').style.display='none';
+    document.getElementById('urlWarn').classList.remove('d-none');
+    return;
+  }
+  // มาจากลิงก์ตั้งรหัสผ่านใหม่ในอีเมล
+  if(new URLSearchParams(location.search).get('reset')){ showAuthGate('Reset',''); return; }
+  // มี token เดิมอยู่ -> ตรวจว่ายังใช้ได้ไหม
+  if(AUTH_TOKEN){
+    try{
+      const d = await apiPost('getMe',{});
+      if(d && d.ok){
+        ME=d.user; MY_PERMS=d.permissions||[];
+        if(d.mustChangePassword){ showAuthGate('MustChange',''); return; }
+        await startApp(); return;
+      }
+    }catch(e){}
+    AUTH_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
+  }
+  showAuthGate('Login','');
 })();
 </script>
 
