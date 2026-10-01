@@ -44,6 +44,17 @@
   .user-chip .nm{ font-size:.85rem; color:#fff; font-weight:600; line-height:1.1; }
   .user-chip .rl{ font-size:.72rem; color:#7fb2ad; }
 
+  /* ---------- รายการแนะนำผู้เสนอ ---------- */
+  .owner-ac{ position:relative; }
+  .owner-suggest{ position:absolute; z-index:1060; left:0; right:0; top:calc(100% + 4px); background:#fff;
+    border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 34px -14px rgba(16,36,42,.4); max-height:300px; overflow:auto; }
+  .owner-suggest .it{ padding:8px 12px; cursor:pointer; border-bottom:1px solid #f1f4f5; }
+  .owner-suggest .it:last-child{ border-bottom:0; }
+  .owner-suggest .it.on, .owner-suggest .it:hover{ background:#eef8f6; }
+  .owner-suggest .nm{ font-weight:600; }
+  .owner-suggest .sub{ font-size:.78rem; color:var(--muted); }
+  .owner-suggest mark{ background:#fff3c4; padding:0; }
+
   /* ---------- Layout ---------- */
   .layout{ display:flex; min-height:100vh; }
   .sidebar{ width:264px; flex-shrink:0; background:linear-gradient(180deg,var(--sidebar),var(--sidebar-2));
@@ -336,6 +347,7 @@
           <select id="dashDept" class="form-select form-select-sm" style="width:150px"><option value="">ทุกฝ่ายงาน</option></select>
           <select id="dashFilter" class="form-select form-select-sm" style="width:130px">
             <option value="">ทุกสถานะ</option><option>ว่าง</option><option>กำลังใช้งาน</option><option>เสร็จสิ้น</option>
+            <option value="__OVERDUE">⚠ เกินกำหนด</option><option value="__NEAR">ใกล้ครบกำหนด</option>
           </select>
           <button class="btn btn-sm btn-success" onclick="exportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
           <button class="btn btn-sm btn-danger" onclick="exportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
@@ -344,11 +356,12 @@
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
+          <div id="overdueBar"></div>
           <table class="table table-hover align-middle mb-0">
             <thead class="table-light"><tr>
-              <th>รหัสแฟ้ม</th><th>เจ้าของแฟ้ม</th><th>ประเภท</th><th>ชั้นความเร็ว</th><th>สถานะ</th><th>ตำแหน่งปัจจุบัน</th><th>ระยะเวลารอ</th><th>อัปเดตล่าสุด</th><th></th>
+              <th>รหัสแฟ้ม</th><th>เจ้าของแฟ้ม</th><th>ประเภท</th><th>ชั้นความเร็ว</th><th>สถานะ</th><th>ตำแหน่งปัจจุบัน</th><th>ระยะเวลารอ</th><th>กำหนดเสร็จ</th><th>อัปเดตล่าสุด</th><th></th>
             </tr></thead>
-            <tbody id="dashBody"><tr><td colspan="9" class="text-center text-muted py-4">กำลังโหลด…</td></tr></tbody>
+            <tbody id="dashBody"><tr><td colspan="10" class="text-center text-muted py-4">กำลังโหลด…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -396,6 +409,20 @@
         <div class="card-header"><i class="bi bi-stopwatch me-1"></i>เวลาเฉลี่ยที่แต่ละจุดสแกน (จุดที่ใช้เวลามากสุดจะเน้นสี)</div>
         <div class="card-body"><div id="repStation"><div class="text-muted text-center py-4">—</div></div></div>
       </div></div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header d-flex align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-speedometer2 me-1"></i>การทำงานทันกำหนดตามชั้นความเร็ว</span>
+        <span id="repLiveOverdue" class="ms-auto"></span>
+      </div>
+      <div class="card-body p-0"><div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light"><tr><th>ชั้นความเร็ว</th><th class="text-end">เกณฑ์เวลา</th><th class="text-end">แฟ้มที่เสร็จ</th>
+            <th class="text-end">ทันกำหนด</th><th class="text-end">เกินกำหนด</th><th class="text-end">เวลาเฉลี่ย</th><th style="width:28%">อัตราทันกำหนด</th></tr></thead>
+          <tbody id="repSlaBody"><tr><td colspan="7" class="text-center text-muted py-4">—</td></tr></tbody>
+        </table></div></div>
+      <div class="card-footer small text-muted">นับจากเวลาลงทะเบียนจนออกจากจุดสุดท้าย · ปรับเกณฑ์เวลาได้ที่เมนูตั้งค่า</div>
     </div>
 
     <div class="row g-3 mt-1">
@@ -466,7 +493,21 @@
           </div>
           <div class="col-md-4">
             <label class="form-label">เจ้าของแฟ้ม (ชื่อ-นามสกุล)</label>
-            <input id="regOwner" class="form-control" placeholder="เช่น นายสมชาย ใจดี">
+            <div class="owner-ac">
+              <input id="regOwner" class="form-control" placeholder="พิมพ์ชื่อ 2 ตัวอักษรขึ้นไป ระบบจะแนะนำผู้เสนอเดิม" autocomplete="off">
+              <div id="ownerSuggest" class="owner-suggest" style="display:none"></div>
+            </div>
+            <div class="form-check form-switch mt-2 mb-1">
+              <input class="form-check-input" type="checkbox" id="regNotify" onchange="toggleNotifyBox()">
+              <label class="form-check-label small" for="regNotify">แจ้งเตือนผู้เสนอทางอีเมล <span class="text-muted">(ไม่บังคับ)</span></label>
+            </div>
+            <div id="regEmailBox" style="display:none">
+              <div class="input-group input-group-sm">
+                <input id="regOwnerEmail" class="form-control" placeholder="ชื่ออีเมล เช่น somchai" autocomplete="off">
+                <span class="input-group-text" id="regEmailSuffix">@up.ac.th</span>
+              </div>
+              <div class="form-text">ระบบจะแจ้งเมื่อแฟ้มถูกส่งกลับแก้ไข และเมื่อแฟ้มเสร็จสิ้น</div>
+            </div>
           </div>
           <div class="col-md-4">
             <label class="form-label">ฝ่ายงาน</label>
@@ -707,6 +748,70 @@
       </div>
     </div>
 
+    <div class="card mb-3" data-perm="MANAGE_CONFIG" style="display:none">
+      <div class="card-header d-flex align-items-center">
+        <span><i class="bi bi-tools me-1"></i>บำรุงรักษาระบบ</span>
+        <button class="btn btn-sm btn-outline-brand ms-auto" onclick="clearCache();loadMaintenance()"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <!-- จำนวนแฟ้ม -->
+          <div class="col-lg-6"><div class="border rounded p-3 h-100">
+            <div class="fw-semibold mb-1"><i class="bi bi-folder-plus me-1"></i>จำนวนแฟ้มในระบบ</div>
+            <div class="small text-muted mb-2">ปัจจุบันมี <b id="mtTotal">–</b> แฟ้ม · เพิ่มได้โดยไม่กระทบข้อมูลแฟ้มเดิม</div>
+            <div class="input-group input-group-sm" style="max-width:320px">
+              <span class="input-group-text">เพิ่มให้ครบ</span>
+              <input id="mtTarget" type="number" min="1" max="9999" class="form-control" placeholder="เช่น 300">
+              <span class="input-group-text">แฟ้ม</span>
+              <button class="btn btn-brand" onclick="fillFoldersUI()">เติมแฟ้ม</button>
+            </div>
+            <div class="form-text">แฟ้มใหม่จะได้รหัสต่อจากเดิม (เช่น 0201–0300) อย่าลืมพิมพ์บาร์โค้ดของแฟ้มใหม่</div>
+            <div id="mtFillMsg" class="mt-2"></div>
+          </div></div>
+
+          <!-- สำรองข้อมูล -->
+          <div class="col-lg-6"><div class="border rounded p-3 h-100">
+            <div class="fw-semibold mb-1"><i class="bi bi-cloud-arrow-up me-1"></i>สำรองข้อมูล</div>
+            <div class="small text-muted mb-2">คัดลอกทั้งไฟล์ไปเก็บใน Google Drive เก็บไว้ 8 ชุดล่าสุด (ชุดเก่าย้ายไปถังขยะอัตโนมัติ)</div>
+            <button class="btn btn-sm btn-brand" onclick="backupUI()"><i class="bi bi-cloud-arrow-up me-1"></i>สำรองข้อมูลตอนนี้</button>
+            <a id="mtFolderLink" class="btn btn-sm btn-outline-secondary ms-1" target="_blank" style="display:none"><i class="bi bi-folder2-open me-1"></i>เปิดโฟลเดอร์สำรอง</a>
+            <div id="mtBackupMsg" class="mt-2"></div>
+            <div id="mtBackups" class="small mt-2"></div>
+          </div></div>
+
+          <!-- ทำงานอัตโนมัติ -->
+          <div class="col-lg-6"><div class="border rounded p-3 h-100">
+            <div class="fw-semibold mb-1"><i class="bi bi-alarm me-1"></i>ทำงานอัตโนมัติ</div>
+            <div class="small mb-2" id="mtAuto">–</div>
+            <button class="btn btn-sm btn-brand" onclick="triggersUI(true)"><i class="bi bi-play-circle me-1"></i>เปิดใช้งาน</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="triggersUI(false)"><i class="bi bi-stop-circle me-1"></i>ปิด</button>
+            <button class="btn btn-sm btn-outline-brand" onclick="digestUI()"><i class="bi bi-envelope me-1"></i>ทดลองส่งสรุปตอนนี้</button>
+            <div class="form-text">สำรองข้อมูลทุกวันจันทร์ 02:00 น. · ส่งสรุปแฟ้มค้าง/เกินกำหนดทุกวัน 17:00 น. ถึงผู้ดูแลทุกคน</div>
+            <div id="mtAutoMsg" class="mt-2"></div>
+          </div></div>
+
+          <!-- เกณฑ์เวลา + แจ้งเตือน -->
+          <div class="col-lg-6"><div class="border rounded p-3 h-100">
+            <div class="fw-semibold mb-1"><i class="bi bi-speedometer2 me-1"></i>เกณฑ์เวลาตามชั้นความเร็ว (ชั่วโมง)</div>
+            <div class="row g-2 mb-2">
+              <div class="col-3"><label class="form-label small mb-0">ด่วนที่สุด</label><input id="cfg_sla_most" type="number" min="1" class="form-control form-control-sm"></div>
+              <div class="col-3"><label class="form-label small mb-0">ด่วนมาก</label><input id="cfg_sla_very" type="number" min="1" class="form-control form-control-sm"></div>
+              <div class="col-3"><label class="form-label small mb-0">ด่วน</label><input id="cfg_sla_urgent" type="number" min="1" class="form-control form-control-sm"></div>
+              <div class="col-3"><label class="form-label small mb-0">ปกติ</label><input id="cfg_sla_normal" type="number" min="1" class="form-control form-control-sm"></div>
+            </div>
+            <div class="form-check form-switch mb-1">
+              <input class="form-check-input" type="checkbox" id="cfg_notifyOwner">
+              <label class="form-check-label small" for="cfg_notifyOwner">ส่งอีเมลแจ้งผู้เสนอเมื่อแฟ้มถูกส่งกลับแก้ไข / เสร็จสิ้น</label>
+            </div>
+            <label class="form-label small mb-0">อีเมลเพิ่มเติมที่รับสรุปรายวัน (คั่นด้วย , )</label>
+            <input id="cfg_digestEmails" class="form-control form-control-sm mb-2" placeholder="เช่น head@up.ac.th, director@up.ac.th">
+            <button class="btn btn-sm btn-brand" onclick="saveSlaUI()"><i class="bi bi-save me-1"></i>บันทึกเกณฑ์และการแจ้งเตือน</button>
+            <div id="mtSlaMsg" class="mt-2"></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card mb-3" id="cpWrap" style="display:none">
       <div class="card-header d-flex align-items-center">
         <span><i class="bi bi-key me-1"></i>เปลี่ยนรหัสผ่านของฉัน</span>
@@ -792,7 +897,7 @@ const DEFAULTS = {
 let CONFIG = Object.assign({}, DEFAULTS);
 let ALL_FOLDERS = [];
 let sessionLog = [];
-const TOTAL_FOLDERS = 200;
+let TOTAL_FOLDERS = 200;      // อัปเดตจากจำนวนแฟ้มจริงเมื่อโหลดแดชบอร์ด
 
 /* ---------- ตัวเรียก API แบบ JSONP (ไม่ติด CORS บน GitHub Pages) ---------- */
 /* ================= ระบบเข้าสู่ระบบ / สิทธิ์ ================= */
@@ -1218,7 +1323,7 @@ document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
     if(p==='scan'){ fillStationSelect(); loadQueue(); loadDoneToday(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
     if(p==='barcode'){ PRINTED_LOADED=false; loadPrinted(); }
     if(p==='track'){ fillTrackDept(); loadHistory(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
-    if(p==='settings'){ loadConfigForm(); loadUsers(); }
+    if(p==='settings'){ loadConfigForm(); loadUsers(); loadMaintenance(); }
   });
 });
 
@@ -1231,16 +1336,18 @@ function fillDashDept(){
 }
 async function loadDashboard(){
   const body=document.getElementById('dashBody');
-  body.innerHTML='<tr><td colspan="9" class="text-center text-muted py-4">กำลังโหลด…</td></tr>';
+  body.innerHTML='<tr><td colspan="10" class="text-center text-muted py-4">กำลังโหลด…</td></tr>';
   try{
     const d = await apiCached('dashboard', {}, 15000);
     if(!d.ok) throw new Error(d.error||'error');
     applyDashboard(d);
-  }catch(err){ body.innerHTML=`<tr><td colspan="9" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+  }catch(err){ body.innerHTML=`<tr><td colspan="10" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
 }
 function applyDashboard(d){
   fillDashDept();
   ALL_FOLDERS = d.folders||[];
+  if(d.total) TOTAL_FOLDERS = d.total;
+  renderOverdueBar(d);
   stTotal.textContent=d.total; stVang.textContent=d.available; stUsing.textContent=d.inUse; stDone.textContent=d.done;
   renderDash();
 }
@@ -1277,6 +1384,21 @@ async function loadReport(){
         <div class="progress" style="height:9px"><div class="progress-bar" style="width:${pct}%;background:${isSlow?'#c0392b':'var(--brand)'}"></div></div>
       </div>`;
     }).join('');
+    // อัตราทันกำหนด
+    const slaB=document.getElementById('repSlaBody');
+    if(slaB){
+      slaB.innerHTML=(d.slaStats||[]).map(x=>{
+        const r=x.rate, col=r==null?'#cbd5dc':(r>=90?'#1e7145':(r>=70?'#b45309':'#c0392b'));
+        return `<tr><td>${x.urgency==='ปกติ'?'ปกติ':urgencyBadge(x.urgency).replace(' ms-1','')}</td>
+          <td class="text-end small">${hrsText(x.limitH)}</td><td class="text-end">${x.total}</td>
+          <td class="text-end text-success">${x.onTime}</td><td class="text-end text-danger">${x.overdue}</td>
+          <td class="text-end small">${x.avgH!=null?hrsText(x.avgH):'—'}</td>
+          <td>${r==null?'<span class="text-muted small">ยังไม่มีข้อมูล</span>':
+            `<div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:9px"><div class="progress-bar" style="width:${r}%;background:${col}"></div></div><b style="color:${col};min-width:46px;text-align:right">${r}%</b></div>`}</td></tr>`;
+      }).join('');
+      const lo=document.getElementById('repLiveOverdue');
+      if(lo) lo.innerHTML=d.liveOverdue?`<span class="badge bg-danger">ขณะนี้เกินกำหนด ${d.liveOverdue} แฟ้ม</span>`:'<span class="badge bg-success">ขณะนี้ไม่มีแฟ้มเกินกำหนด</span>';
+    }
     // top10
     const rankRows=(arr)=> arr.length ? arr.map((t,i)=>`<tr><td>${i+1}</td><td><b>${esc(t.folderCode)}</b></td><td>${esc(t.owner)||'—'}</td><td>${esc(t.department)||'—'}</td><td class="text-end">${fmtDuration(t.totalMs)||'—'}</td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีแฟ้มที่เดินครบ</td></tr>';
     document.getElementById('repSlowBody').innerHTML=rankRows(d.top10Slow);
@@ -1451,13 +1573,15 @@ function renderDash(){
   const dept=document.getElementById('dashDept').value;
   const body=document.getElementById('dashBody');
   let rows=ALL_FOLDERS.filter(x=>{
-    if(f && (x.status||'ว่าง')!==f) return false;
+    if(f==='__OVERDUE'){ if(!x.sla || x.sla.status!=='OVERDUE') return false; }
+    else if(f==='__NEAR'){ if(!x.sla || x.sla.status!=='NEAR') return false; }
+    else if(f && (x.status||'ว่าง')!==f) return false;
     if(dept && (x.department||'')!==dept) return false;
     if(q){ const s=(pad4(x.folderCode)+' '+(x.owner||'')+' '+(x.department||'')).toLowerCase(); if(s.indexOf(q)<0) return false; }
     return true;
   });
   const cnt=document.getElementById('dashCount'); if(cnt) cnt.textContent=rows.length;
-  if(!rows.length){ body.innerHTML='<tr><td colspan="9" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>'; return; }
+  if(!rows.length){ body.innerHTML='<tr><td colspan="10" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>'; return; }
   body.innerHTML=rows.map(x=>{
     const pos = x.currentStation ? `${esc(stationName(x.currentStation))} <span class="text-muted small">(${esc(x.lastDirection||'')})</span>` : '<span class="text-muted">—</span>';
     return `<tr>
@@ -1468,6 +1592,7 @@ function renderDash(){
       <td>${statusBadge(x.status)}${editBadge(x)}</td>
       <td>${pos}</td>
       <td>${waitCell(x)}</td>
+      <td>${slaCell(x.sla)}</td>
       <td class="small text-muted">${thaiDateTime(x.updatedAt)}</td>
       <td><button class="btn btn-sm btn-outline-brand" onclick="gotoTrack('${pad4(x.folderCode)}')"><i class="bi bi-search"></i></button></td>
     </tr>`;
@@ -1546,9 +1671,10 @@ async function loadRegister(){
   document.getElementById('regResult').innerHTML='';
   document.getElementById('regScanInfo').innerHTML='';
   document.getElementById('regScanInput').value='';
-  document.getElementById('regOwner').value='';
+  resetOwnerFields();
   document.getElementById('recordRows').innerHTML='';
   addRecordRow();
+  loadOwnerDir();
   if(!CONFIG || !CONFIG.rong1) await loadConfig();
   renderTimeline();
   fillDeptSelect();
@@ -1612,6 +1738,7 @@ async function loadExistingFolder(code){
     document.getElementById('regShowAll').checked=true; fillFolderSelect();
     setSelectValue(document.getElementById('regFolder'), fc);
     document.getElementById('regOwner').value=f.owner||'';
+    setNotify(!!f.ownerEmail, f.ownerEmail||'');
     fillDeptSelect(); setSelectValue(document.getElementById('regDept'), f.department||'');
     const tl=(f.timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
     document.querySelectorAll('.tl').forEach(c=>{ c.checked=tl.indexOf(c.value)>=0; });
@@ -1660,7 +1787,7 @@ function addRecordRow(data){
   const div=document.createElement('div');
   div.className='row g-2 align-items-end mb-2 record-row';
   div.innerHTML=`
-    <div class="col-md-2"><label class="form-label small mb-1">เลขที่หนังสือ</label>
+    <div class="col-md-3"><label class="form-label small mb-1">เลขที่หนังสือ</label>
       <div class="input-group"><span class="input-group-text fixed-prefix">อว 7332.02/</span>
       <input class="form-control rec-aunum" maxlength="6" inputmode="numeric" placeholder="01234" value="${esc(data.aunum||'')}"></div></div>
     <div class="col-md-3"><label class="form-label small mb-1">ชื่อเรื่อง</label>
@@ -1674,12 +1801,32 @@ function addRecordRow(data){
         <optgroup label="หนังสือรับ">${opt('หนังสือรับ (ภายใน)')}${opt('หนังสือรับ (ภายนอก)')}</optgroup>
       </select></div>
     <div class="col-md-2"><label class="form-label small mb-1">ชั้นความเร็ว</label>
-      <select class="form-select rec-urgency">
-        ${uopt('ปกติ')}${uopt('ด่วน')}${uopt('ด่วนมาก')}${uopt('ด่วนที่สุด')}
-      </select></div>
-    <div class="col-md-1 text-end">
-      <button class="btn btn-outline-danger" onclick="this.closest('.record-row').remove()"><i class="bi bi-trash"></i></button></div>`;
+      <div class="d-flex gap-1">
+        <select class="form-select rec-urgency">
+          ${uopt('ปกติ')}${uopt('ด่วน')}${uopt('ด่วนมาก')}${uopt('ด่วนที่สุด')}
+        </select>
+        <button class="btn btn-outline-danger flex-shrink-0" title="ลบรายการนี้" onclick="this.closest('.record-row').remove()"><i class="bi bi-trash"></i></button>
+      </div></div>`;
   document.getElementById('recordRows').appendChild(div);
+}
+/* เวลาเป็นข้อความสั้น */
+function hrsText(h){ if(h==null) return ''; const a=Math.abs(h); const d=Math.floor(a/24), r=Math.round(a%24); return (d?d+' วัน ':'')+(r||!d?r+' ชม.':''); }
+/* ช่องกำหนดเสร็จตามชั้นความเร็ว */
+function slaCell(sla){
+  if(!sla) return '<span class="text-muted">—</span>';
+  if(sla.status==='OVERDUE') return `<span class="badge bg-danger">เกินกำหนด</span><div class="small text-danger">เกิน ${hrsText(sla.elapsedH-sla.limitH)}</div>`;
+  if(sla.status==='NEAR') return `<span class="badge bg-warning text-dark">ใกล้ครบ</span><div class="small text-muted">เหลือ ${hrsText(sla.limitH-sla.elapsedH)}</div>`;
+  return `<span class="badge bg-success-subtle text-success-emphasis">ตามกำหนด</span><div class="small text-muted">เหลือ ${hrsText(sla.limitH-sla.elapsedH)}</div>`;
+}
+/* แถบเตือนแฟ้มเกินกำหนดบนแดชบอร์ด */
+function renderOverdueBar(d){
+  const el=document.getElementById('overdueBar'); if(!el) return;
+  const o=d.overdue||0, n=d.near||0;
+  if(!o && !n){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="alert ${o?'alert-danger':'alert-warning'} m-2 py-2 d-flex flex-wrap align-items-center gap-2">
+    <i class="bi bi-alarm-fill"></i>
+    ${o?`<span>มีแฟ้ม <b>เกินกำหนด ${o} แฟ้ม</b></span>`:''}${o&&n?'<span class="text-muted">·</span>':''}${n?`<span>ใกล้ครบกำหนด <b>${n} แฟ้ม</b></span>`:''}
+    <button class="btn btn-sm ${o?'btn-danger':'btn-warning'} ms-auto" onclick="document.getElementById('dashFilter').value='${o?'__OVERDUE':'__NEAR'}';renderDash();">ดูรายการ</button></div>`;
 }
 /* ชั้นความเร็วสูงสุดของชุดเอกสาร */
 const URGENCY_ORDER=['ด่วนที่สุด','ด่วนมาก','ด่วน','ปกติ'];
@@ -1701,6 +1848,7 @@ async function saveRegister(){
   const folderCode=document.getElementById('regFolder').value;
   if(!folderCode){ toast(el,'danger','กรุณาเลือกแฟ้ม'); return; }
   const owner=document.getElementById('regOwner').value.trim();
+  const ownerEmail=document.getElementById('regNotify').checked ? fullEmail(document.getElementById('regOwnerEmail').value) : '';
   const department=document.getElementById('regDept').value;
   const timeline=[...document.querySelectorAll('.tl:checked')].map(c=>c.value).join(', ');
   const records=[...document.querySelectorAll('.record-row')].map(r=>({
@@ -1711,19 +1859,22 @@ async function saveRegister(){
     urgency:r.querySelector('.rec-urgency').value
   })).filter(r=>r.aunum||r.subject||r.docDate||r.docType);
   if(!owner){ toast(el,'danger','กรุณากรอกเจ้าของแฟ้ม'); return; }
+  if(document.getElementById('regNotify').checked && !ownerEmail){ toast(el,'danger','เปิดแจ้งเตือนไว้ กรุณากรอกอีเมลผู้เสนอ หรือปิดสวิตช์แจ้งเตือน'); return; }
+  if(ownerEmail && !/^[^@\s]+@up\.ac\.th$/.test(ownerEmail)){ toast(el,'danger','อีเมลผู้เสนอต้องเป็น @up.ac.th เท่านั้น'); return; }
   if(!department){ toast(el,'danger','กรุณาเลือกฝ่ายงาน'); return; }
   if(!records.length){ toast(el,'danger','กรุณาเพิ่มอย่างน้อย 1 รายการเอกสาร'); return; }
   if(records.some(r=>!r.docType)){ toast(el,'danger','กรุณาเลือก “ประเภท” ให้ครบทุกรายการเอกสาร'); return; }
   el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
   try{
-    const d=await api('registerFolder',{folderCode, owner, department, timeline, records:JSON.stringify(records)});
+    const d=await api('registerFolder',{folderCode, owner, ownerEmail, department, timeline, records:JSON.stringify(records)});
     if(!d.ok) throw new Error(d.error||'error');
     clearCache();
     el.innerHTML=`<div class="alert alert-success mb-0"><i class="bi bi-check-circle me-1"></i>${esc(d.message)}
       <div class="mt-2"><button class="btn btn-sm btn-outline-brand" onclick="gotoTrack('${pad4(folderCode)}')"><i class="bi bi-search me-1"></i>ดูแฟ้มนี้</button></div></div>`;
     document.getElementById('regScanInfo').innerHTML='';
-    document.getElementById('regOwner').value='';
+    resetOwnerFields();
     document.getElementById('regDept').value='';
+    loadOwnerDir(true);                       // อัปเดตทะเบียนผู้เสนอด้วยข้อมูลที่เพิ่งบันทึก
     document.querySelectorAll('.tl').forEach(c=>c.checked=false);
     document.getElementById('recordRows').innerHTML=''; addRecordRow();
     try{ const g=await api('getFolders'); if(g.ok) ALL_FOLDERS=g.folders||[]; }catch(e){}
@@ -1914,7 +2065,9 @@ function renderQueue(){
     const au = x.docNumbers ? esc(x.docNumbers) : '<span class="text-muted">—</span>';
     const subj = x.subjects ? `<div class="text-muted">${esc(x.subjects)}</div>` : '';
     const dt = x.docTypes ? `<div class="text-muted" style="font-size:.76rem">${esc(x.docTypes)}</div>` : '';
-    return `<tr><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}${editTag}<div class="small text-muted">${esc(x.owner)||''}</div></td>
+    const slaTag = x.sla && x.sla.status==='OVERDUE' ? '<span class="badge bg-danger ms-1">เกินกำหนด</span>'
+                 : (x.sla && x.sla.status==='NEAR' ? '<span class="badge bg-warning text-dark ms-1">ใกล้ครบ</span>' : '');
+    return `<tr${x.sla&&x.sla.status==='OVERDUE'?' style="background:#fdf2f2"':''}><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}${slaTag}${editTag}<div class="small text-muted">${esc(x.owner)||''}</div></td>
       <td class="small">${au}${subj}${dt}</td></tr>`;
   }).join('');
 }
@@ -2420,6 +2573,84 @@ function setConn(ok){
 }
 
 /* ========================= เริ่มต้น ========================= */
+/* ---------- บำรุงรักษาระบบ ---------- */
+async function loadMaintenance(){
+  if(!can('MANAGE_CONFIG')) return;
+  try{
+    const d=await api('getMaintenance');
+    if(!d.ok) throw new Error(d.error||'error');
+    document.getElementById('mtTotal').textContent=d.totalFolders;
+    document.getElementById('mtTarget').placeholder='เช่น '+(Math.ceil((d.totalFolders+1)/100)*100);
+    const c=d.config||{};
+    ['sla_most','sla_very','sla_urgent','sla_normal','digestEmails'].forEach(k=>{ const el=document.getElementById('cfg_'+k); if(el) el.value=c[k]||''; });
+    document.getElementById('cfg_notifyOwner').checked=String(c.notifyOwner||'Y')==='Y';
+    const on=(b,t)=>`<span class="badge ${b?'bg-success':'bg-secondary'} me-1">${b?'เปิด':'ปิด'}</span>${t}`;
+    document.getElementById('mtAuto').innerHTML=on(d.autoBackup,'สำรองข้อมูลรายสัปดาห์')+'<br>'+on(d.autoDigest,'สรุปรายวัน')+
+      `<div class="text-muted mt-1">ผู้รับสรุป: ${(d.recipients||[]).length?d.recipients.map(esc).join(', '):'—'}</div>`;
+    const lk=document.getElementById('mtFolderLink');
+    if(d.backupFolderUrl){ lk.href=d.backupFolderUrl; lk.style.display=''; }
+    const bl=d.backups||[];
+    document.getElementById('mtBackups').innerHTML = bl.length
+      ? '<div class="text-muted mb-1">สำเนาล่าสุด:</div>'+bl.slice(0,4).map(b=>`<div>• <a href="${esc(b.url)}" target="_blank">${esc(b.name)}</a></div>`).join('')
+      : '<span class="text-muted">ยังไม่มีสำเนาสำรอง</span>';
+  }catch(err){ toast(document.getElementById('mtBackupMsg'),'danger',err.message); }
+}
+async function fillFoldersUI(){
+  const el=document.getElementById('mtFillMsg');
+  const n=parseInt(document.getElementById('mtTarget').value,10);
+  if(!n || n<1 || n>9999){ toast(el,'danger','กรุณาระบุจำนวนแฟ้ม 1–9,999'); return; }
+  if(n<TOTAL_FOLDERS){ toast(el,'warning','ระบุจำนวนน้อยกว่าที่มีอยู่ ('+TOTAL_FOLDERS+') — ระบบไม่ลบแฟ้มที่มีอยู่'); return; }
+  if(!confirm('เพิ่มแฟ้มให้ครบ '+n+' แฟ้ม ?\n(ข้อมูลแฟ้มเดิมจะไม่ถูกแก้ไข)')) return;
+  el.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังเพิ่มแฟ้ม…</div>';
+  try{
+    const d=await api('fillFolders',{total:String(n)});
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    toast(el,'success',d.message); clearCache(); TOTAL_FOLDERS=d.total; loadMaintenance();
+  }catch(err){ toast(el,'danger',err.message); }
+}
+async function backupUI(){
+  const el=document.getElementById('mtBackupMsg');
+  el.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังสำรองข้อมูล… (อาจใช้เวลา 10–30 วินาที)</div>';
+  try{
+    const d=await api('backupNow');
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    el.innerHTML=`<div class="alert alert-success py-2 mb-0 small"><i class="bi bi-check-circle me-1"></i>${esc(d.message)} · <a href="${esc(d.url)}" target="_blank">เปิดไฟล์</a></div>`;
+    clearCache(); loadMaintenance();
+  }catch(err){ toast(el,'danger',err.message); }
+}
+async function triggersUI(on){
+  const el=document.getElementById('mtAutoMsg');
+  try{
+    const d=await api(on?'setupTriggers':'stopTriggers');
+    toast(el, d.ok?'success':'danger', d.message||d.error); clearCache(); loadMaintenance();
+  }catch(err){ toast(el,'danger',err.message); }
+}
+async function digestUI(){
+  const el=document.getElementById('mtAutoMsg');
+  el.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังส่ง…</div>';
+  try{ const d=await api('sendDigestNow'); toast(el, d.ok?'success':'danger', d.message||d.error); }
+  catch(err){ toast(el,'danger',err.message); }
+}
+async function saveSlaUI(){
+  const el=document.getElementById('mtSlaMsg');
+  const p={};
+  for(const k of ['sla_most','sla_very','sla_urgent','sla_normal']){
+    const v=parseFloat(document.getElementById('cfg_'+k).value);
+    if(!v || v<=0){ toast(el,'danger','เกณฑ์เวลาต้องเป็นตัวเลขมากกว่า 0'); return; }
+    p[k]=String(v);
+  }
+  p.notifyOwner=document.getElementById('cfg_notifyOwner').checked?'Y':'N';
+  p.digestEmails=(document.getElementById('cfg_digestEmails').value||'').trim();
+  const bad=p.digestEmails.split(/[,\s]+/).filter(e=>e && !/^[^@\s]+@up\.ac\.th$/i.test(e));
+  if(bad.length){ toast(el,'danger','อีเมลต้องเป็น @up.ac.th: '+bad.join(', ')); return; }
+  try{
+    const d=await api('saveConfig',p);
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    CONFIG=Object.assign({},DEFAULTS,d.config); clearCache();
+    toast(el,'success','บันทึกเกณฑ์เวลาและการแจ้งเตือนเรียบร้อย');
+  }catch(err){ toast(el,'danger',err.message); }
+}
+
 /* ---------- จัดการผู้ใช้งาน ---------- */
 let ROLE_LIST=[];
 async function loadUsers(){
@@ -2493,6 +2724,112 @@ async function resetUserPw(userId, email){
     toast(el,'success',d.message+(d.tempPassword?(' · รหัสผ่านชั่วคราว: '+d.tempPassword):''));
   }catch(err){ toast(el,'danger',err.message); }
 }
+
+/* ================= จำผู้เสนอ (แนะนำชื่อ/ฝ่ายงาน/อีเมล อัตโนมัติ) ================= */
+let OWNER_DIR = [];
+const NOTIFY_PREF_KEY = 'uph_notify_default';
+async function loadOwnerDir(force){
+  if(!can('CREATE_FILE')) return;
+  try{
+    const d = await apiCached('getOwnerDirectory', {}, force ? 0 : 300000);
+    if(d && d.ok) OWNER_DIR = d.owners || [];
+  }catch(e){}
+}
+/* แยกส่วนชื่อออกจากอีเมล (เก็บเฉพาะส่วนหน้า @) */
+function emailLocal(e){ return String(e||'').trim().toLowerCase().replace(/@up\.ac\.th$/,''); }
+/* รวมเป็นอีเมลเต็ม (ถ้าพิมพ์มาไม่มี @ จะเติม @up.ac.th ให้) */
+function fullEmail(v){
+  const t=String(v||'').trim().toLowerCase();
+  if(!t) return '';
+  return t.indexOf('@')>=0 ? t : (t+'@up.ac.th');
+}
+function toggleNotifyBox(){
+  const on=document.getElementById('regNotify').checked;
+  document.getElementById('regEmailBox').style.display = on ? 'block' : 'none';
+  try{ localStorage.setItem(NOTIFY_PREF_KEY, on ? '1' : '0'); }catch(e){}
+  if(on) setTimeout(()=>{ const el=document.getElementById('regOwnerEmail'); if(!el.value) el.focus(); }, 30);
+}
+function setNotify(on, email){
+  document.getElementById('regNotify').checked = !!on;
+  document.getElementById('regOwnerEmail').value = emailLocal(email);
+  document.getElementById('regEmailBox').style.display = on ? 'block' : 'none';
+}
+function resetOwnerFields(){
+  document.getElementById('regOwner').value='';
+  let pref=false; try{ pref = localStorage.getItem(NOTIFY_PREF_KEY)==='1'; }catch(e){}
+  setNotify(pref, '');
+  hideSuggest();
+}
+let SUG_LIST = [], SUG_IDX = -1;
+function hideSuggest(){ const b=document.getElementById('ownerSuggest'); if(b) b.style.display='none'; SUG_IDX=-1; }
+function markText(text, q){
+  const t=esc(text); if(!q) return t;
+  const i=String(text).toLowerCase().indexOf(q.toLowerCase());
+  if(i<0) return t;
+  return esc(text.slice(0,i))+'<mark>'+esc(text.slice(i,i+q.length))+'</mark>'+esc(text.slice(i+q.length));
+}
+function showSuggest(){
+  const inp=document.getElementById('regOwner'), box=document.getElementById('ownerSuggest');
+  const q=(inp.value||'').replace(/\s+/g,' ').trim();
+  if(q.length<2 || !OWNER_DIR.length){ hideSuggest(); return; }
+  const ql=q.toLowerCase();
+  // ตรงต้นชื่อ/ต้นคำมาก่อน แล้วค่อยที่เหลือ
+  const scored=[];
+  OWNER_DIR.forEach(o=>{
+    const n=o.name.toLowerCase(), e=(o.email||'').toLowerCase();
+    let sc=-1;
+    if(n.indexOf(ql)===0) sc=3;
+    else if((' '+n).indexOf(' '+ql)>=0) sc=2;
+    else if(n.indexOf(ql)>=0) sc=1;
+    else if(e && e.indexOf(ql)>=0) sc=0.5;
+    if(sc>=0) scored.push({o, sc});
+  });
+  scored.sort((a,b)=>(b.sc-a.sc)||(b.o.count-a.o.count));
+  SUG_LIST=scored.slice(0,8).map(x=>x.o);
+  if(!SUG_LIST.length){ hideSuggest(); return; }
+  SUG_IDX=0;
+  box.innerHTML=SUG_LIST.map((o,i)=>`<div class="it${i===0?' on':''}" data-i="${i}" onmousedown="event.preventDefault();pickOwner(${i})">
+    <div class="nm">${markText(o.name,q)}</div>
+    <div class="sub">${esc(o.department||'ไม่ระบุฝ่ายงาน')}${o.email?' · '+markText(o.email,q):' · ยังไม่มีอีเมล'}
+      <span class="ms-1">· ส่งมาแล้ว ${o.count} ครั้ง</span></div></div>`).join('');
+  box.style.display='block';
+}
+function moveSuggest(step){
+  const box=document.getElementById('ownerSuggest');
+  if(box.style.display==='none' || !SUG_LIST.length) return false;
+  SUG_IDX=(SUG_IDX+step+SUG_LIST.length)%SUG_LIST.length;
+  box.querySelectorAll('.it').forEach((el,i)=>el.classList.toggle('on', i===SUG_IDX));
+  const cur=box.querySelector('.it.on'); if(cur) cur.scrollIntoView({block:'nearest'});
+  return true;
+}
+/* เลือกผู้เสนอ -> เติมชื่อ ฝ่ายงาน อีเมล ให้ทันที */
+function pickOwner(i){
+  const o=SUG_LIST[i]; if(!o) return;
+  document.getElementById('regOwner').value=o.name;
+  if(o.department){ fillDeptSelect(); setSelectValue(document.getElementById('regDept'), o.department); }
+  if(o.email) setNotify(true, o.email);
+  hideSuggest();
+  // ไปช่องถัดไปที่ต้องกรอก (เลขที่หนังสือรายการแรก)
+  const nx=document.querySelector('.record-row .rec-aunum');
+  if(nx && !nx.value) nx.focus();
+}
+(function wireOwnerAC(){
+  const inp=document.getElementById('regOwner');
+  if(!inp) return;
+  inp.addEventListener('input', showSuggest);
+  inp.addEventListener('focus', ()=>{ if(!OWNER_DIR.length) loadOwnerDir().then(showSuggest); else showSuggest(); });
+  inp.addEventListener('blur', ()=>setTimeout(hideSuggest,120));
+  inp.addEventListener('keydown', e=>{
+    if(e.key==='ArrowDown'){ if(moveSuggest(1)) e.preventDefault(); }
+    else if(e.key==='ArrowUp'){ if(moveSuggest(-1)) e.preventDefault(); }
+    else if(e.key==='Enter'){ const box=document.getElementById('ownerSuggest');
+      if(box.style.display!=='none' && SUG_IDX>=0){ e.preventDefault(); pickOwner(SUG_IDX); } }
+    else if(e.key==='Escape'){ hideSuggest(); }
+  });
+  // อีเมล: พิมพ์อีเมลเต็มมา ให้ตัดส่วนท้ายออกเหลือชื่อ
+  const em=document.getElementById('regOwnerEmail');
+  em.addEventListener('blur', ()=>{ em.value=emailLocal(em.value); });
+})();
 
 /* โหลดแอปหลังจากล็อกอินแล้ว */
 /* โหลดข้อมูลที่ใช้บ่อยไว้ล่วงหน้าแบบเงียบ ๆ เพื่อให้สลับหน้าแล้วขึ้นทันที */
