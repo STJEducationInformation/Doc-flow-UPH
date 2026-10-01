@@ -798,20 +798,50 @@
             <div id="mtBackups" class="small mt-2"></div>
           </div></div>
 
-          <!-- ทำงานอัตโนมัติ -->
+          <!-- ทำงานอัตโนมัติ + ผู้รับสรุปรายวัน -->
           <div class="col-lg-6"><div class="border rounded p-3 h-100">
             <div class="fw-semibold mb-1"><i class="bi bi-alarm me-1"></i>ทำงานอัตโนมัติ</div>
             <div class="small mb-2" id="mtAuto">–</div>
             <button class="btn btn-sm btn-brand" onclick="triggersUI(true)"><i class="bi bi-play-circle me-1"></i>เปิดใช้งาน</button>
             <button class="btn btn-sm btn-outline-secondary" onclick="triggersUI(false)"><i class="bi bi-stop-circle me-1"></i>ปิด</button>
-            <button class="btn btn-sm btn-outline-brand" onclick="digestUI()"><i class="bi bi-envelope me-1"></i>ทดลองส่งสรุปตอนนี้</button>
-            <div class="form-text">สำรองข้อมูลทุกวันจันทร์ 02:00 น. · ส่งสรุปแฟ้มค้าง/เกินกำหนดทุกวัน 17:00 น. ถึงผู้ดูแลทุกคน</div>
+            <div class="form-text mb-2">สำรองข้อมูลทุกวันจันทร์ 02:00 น. · ส่งสรุปแฟ้มค้าง/เกินกำหนดทุกวัน 17:00 น.</div>
+
+            <div class="border-top pt-2 mt-2">
+              <div class="small fw-semibold mb-1"><i class="bi bi-people me-1"></i>ผู้รับสรุปรายวัน</div>
+              <div class="small mb-2" id="mtRecipients">–</div>
+              <label class="form-label small mb-0">อีเมลเพิ่มเติม (คั่นด้วย , )</label>
+              <div class="input-group input-group-sm mb-2">
+                <input id="cfg_digestEmails" class="form-control" placeholder="เช่น head@up.ac.th, director@up.ac.th">
+                <button class="btn btn-brand" onclick="saveDigestUI()"><i class="bi bi-save me-1"></i>บันทึก</button>
+              </div>
+              <button class="btn btn-sm btn-outline-brand" onclick="digestUI()"><i class="bi bi-envelope me-1"></i>ทดลองส่งสรุปตอนนี้</button>
+            </div>
             <div id="mtAutoMsg" class="mt-2"></div>
           </div></div>
 
-          <!-- ตรวจระบบอีเมล -->
+          <!-- เกณฑ์เวลาตามชั้นความเร็ว -->
+          <div class="col-lg-6"><div class="border rounded p-3 h-100">
+            <div class="fw-semibold mb-1"><i class="bi bi-speedometer2 me-1"></i>เกณฑ์เวลาตามชั้นความเร็ว (ชั่วโมง)</div>
+            <div class="row g-2 mb-2">
+              <div class="col-3"><label class="form-label small mb-0">ด่วนที่สุด</label><input id="cfg_sla_most" type="number" min="1" class="form-control form-control-sm"></div>
+              <div class="col-3"><label class="form-label small mb-0">ด่วนมาก</label><input id="cfg_sla_very" type="number" min="1" class="form-control form-control-sm"></div>
+              <div class="col-3"><label class="form-label small mb-0">ด่วน</label><input id="cfg_sla_urgent" type="number" min="1" class="form-control form-control-sm"></div>
+              <div class="col-3"><label class="form-label small mb-0">ปกติ</label><input id="cfg_sla_normal" type="number" min="1" class="form-control form-control-sm"></div>
+            </div>
+            <div class="small text-muted mb-2">นับจากเวลาลงทะเบียน แฟ้มที่ใช้เวลาเกิน 80% ของเกณฑ์จะขึ้นสถานะ "ใกล้ครบ"</div>
+            <button class="btn btn-sm btn-brand" onclick="saveSlaUI()"><i class="bi bi-save me-1"></i>บันทึกเกณฑ์เวลา</button>
+            <div id="mtSlaMsg" class="mt-2"></div>
+          </div></div>
+
+          <!-- อีเมลแจ้งผู้เสนอ + ตรวจระบบอีเมล -->
           <div class="col-12"><div class="border rounded p-3">
-            <div class="fw-semibold mb-1"><i class="bi bi-envelope-check me-1"></i>ตรวจระบบส่งอีเมล</div>
+            <div class="fw-semibold mb-1"><i class="bi bi-envelope-check me-1"></i>อีเมลแจ้งเตือนผู้เสนอ</div>
+            <div class="form-check form-switch mb-1">
+              <input class="form-check-input" type="checkbox" id="cfg_notifyOwner" onchange="saveNotifyUI()">
+              <label class="form-check-label small" for="cfg_notifyOwner">ส่งอีเมลแจ้งผู้เสนอเมื่อแฟ้มถูกส่งกลับแก้ไข และเมื่อแฟ้มเสร็จสิ้น <span class="text-muted">(ใช้กับแฟ้มที่ลงทะเบียนพร้อมอีเมลผู้เสนอ)</span></label>
+            </div>
+            <div id="mtNotifyMsg" class="mb-2"></div>
+            <div class="small fw-semibold mb-1 border-top pt-2">ตรวจระบบส่งอีเมล</div>
             <div class="small text-muted mb-2">ทดลองส่งอีเมล 1 ฉบับ แล้วแสดงผลจริงทุกขั้นตอน — ใช้เมื่อไม่ได้รับอีเมลแจ้งเตือน</div>
             <div class="input-group input-group-sm" style="max-width:460px">
               <span class="input-group-text">ส่งถึง</span>
@@ -821,24 +851,6 @@
             <div id="mtMailMsg" class="mt-2"></div>
           </div></div>
 
-          <!-- เกณฑ์เวลา + แจ้งเตือน -->
-          <div class="col-lg-6"><div class="border rounded p-3 h-100">
-            <div class="fw-semibold mb-1"><i class="bi bi-speedometer2 me-1"></i>เกณฑ์เวลาตามชั้นความเร็ว (ชั่วโมง)</div>
-            <div class="row g-2 mb-2">
-              <div class="col-3"><label class="form-label small mb-0">ด่วนที่สุด</label><input id="cfg_sla_most" type="number" min="1" class="form-control form-control-sm"></div>
-              <div class="col-3"><label class="form-label small mb-0">ด่วนมาก</label><input id="cfg_sla_very" type="number" min="1" class="form-control form-control-sm"></div>
-              <div class="col-3"><label class="form-label small mb-0">ด่วน</label><input id="cfg_sla_urgent" type="number" min="1" class="form-control form-control-sm"></div>
-              <div class="col-3"><label class="form-label small mb-0">ปกติ</label><input id="cfg_sla_normal" type="number" min="1" class="form-control form-control-sm"></div>
-            </div>
-            <div class="form-check form-switch mb-1">
-              <input class="form-check-input" type="checkbox" id="cfg_notifyOwner">
-              <label class="form-check-label small" for="cfg_notifyOwner">ส่งอีเมลแจ้งผู้เสนอเมื่อแฟ้มถูกส่งกลับแก้ไข / เสร็จสิ้น</label>
-            </div>
-            <label class="form-label small mb-0">อีเมลเพิ่มเติมที่รับสรุปรายวัน (คั่นด้วย , )</label>
-            <input id="cfg_digestEmails" class="form-control form-control-sm mb-2" placeholder="เช่น head@up.ac.th, director@up.ac.th">
-            <button class="btn btn-sm btn-brand" onclick="saveSlaUI()"><i class="bi bi-save me-1"></i>บันทึกเกณฑ์และการแจ้งเตือน</button>
-            <div id="mtSlaMsg" class="mt-2"></div>
-          </div></div>
         </div>
       </div>
     </div>
@@ -2685,8 +2697,19 @@ async function loadMaintenance(){
     ['sla_most','sla_very','sla_urgent','sla_normal','digestEmails'].forEach(k=>{ const el=document.getElementById('cfg_'+k); if(el) el.value=c[k]||''; });
     document.getElementById('cfg_notifyOwner').checked=String(c.notifyOwner||'Y')==='Y';
     const on=(b,t)=>`<span class="badge ${b?'bg-success':'bg-secondary'} me-1">${b?'เปิด':'ปิด'}</span>${t}`;
-    document.getElementById('mtAuto').innerHTML=on(d.autoBackup,'สำรองข้อมูลรายสัปดาห์')+'<br>'+on(d.autoDigest,'สรุปรายวัน')+
-      `<div class="text-muted mt-1">ผู้รับสรุป: ${(d.recipients||[]).length?d.recipients.map(esc).join(', '):'—'}</div>`;
+    document.getElementById('mtAuto').innerHTML=on(d.autoBackup,'สำรองข้อมูลรายสัปดาห์')+'<br>'+on(d.autoDigest,'สรุปรายวัน');
+    // ผู้รับสรุป: แยกว่ามาจากบัญชีผู้ดูแล (อัตโนมัติ) หรือเพิ่มเอง
+    const admins=d.recipientsAdmin||[], extra=d.recipientsExtra||[], all=d.recipients||[];
+    const chip=(e,cls,tip)=>`<span class="badge ${cls} fw-normal me-1 mb-1" title="${tip}">${esc(e)}</span>`;
+    let rh='';
+    if(d.recipientsAdmin){
+      rh = admins.map(e=>chip(e,'bg-secondary-subtle text-secondary-emphasis','ผู้ดูแลระบบ — รับอัตโนมัติ')).join('') +
+           extra.filter(e=>admins.indexOf(e)<0).map(e=>chip(e,'bg-success-subtle text-success-emphasis','เพิ่มเอง')).join('');
+      rh += `<div class="text-muted mt-1">รวม ${all.length} คน · สีเทา = ผู้ดูแลระบบ (รับอัตโนมัติ) · สีเขียว = เพิ่มเอง</div>`;
+    } else {
+      rh = all.length ? all.map(e=>chip(e,'bg-secondary-subtle text-secondary-emphasis','')).join('') + `<div class="text-muted mt-1">รวม ${all.length} คน</div>` : '<span class="text-muted">—</span>';
+    }
+    document.getElementById('mtRecipients').innerHTML = all.length ? rh : '<span class="text-danger">ยังไม่มีผู้รับ</span>';
     const lk=document.getElementById('mtFolderLink');
     if(d.backupFolderUrl){ lk.href=d.backupFolderUrl; lk.style.display=''; }
     const bl=d.backups||[];
@@ -2779,15 +2802,39 @@ async function saveSlaUI(){
     if(!v || v<=0){ toast(el,'danger','เกณฑ์เวลาต้องเป็นตัวเลขมากกว่า 0'); return; }
     p[k]=String(v);
   }
-  p.notifyOwner=document.getElementById('cfg_notifyOwner').checked?'Y':'N';
-  p.digestEmails=(document.getElementById('cfg_digestEmails').value||'').trim();
-  const bad=p.digestEmails.split(/[,\s]+/).filter(e=>e && !/^[^@\s]+@up\.ac\.th$/i.test(e));
-  if(bad.length){ toast(el,'danger','อีเมลต้องเป็น @up.ac.th: '+bad.join(', ')); return; }
   try{
     const d=await api('saveConfig',p);
     if(!d.ok){ toast(el,'danger',d.error); return; }
     CONFIG=Object.assign({},DEFAULTS,d.config); clearCache();
-    toast(el,'success','บันทึกเกณฑ์เวลาและการแจ้งเตือนเรียบร้อย');
+    toast(el,'success','บันทึกเกณฑ์เวลาเรียบร้อย — มีผลกับแดชบอร์ด คิวสแกน และรายงานทันที');
+  }catch(err){ toast(el,'danger',err.message); }
+}
+/* บันทึกอีเมลเพิ่มเติมที่รับสรุปรายวัน แล้วรีเฟรชรายชื่อผู้รับทันที */
+async function saveDigestUI(){
+  const el=document.getElementById('mtAutoMsg');
+  const raw=(document.getElementById('cfg_digestEmails').value||'');
+  const list=raw.split(/[,\s]+/).map(e=>fullEmail(e)).filter(Boolean);
+  const bad=list.filter(e=>!/^[^@\s]+@up\.ac\.th$/i.test(e));
+  if(bad.length){ toast(el,'danger','อีเมลต้องเป็น @up.ac.th: '+bad.join(', ')); return; }
+  const uniq=[...new Set(list)];
+  document.getElementById('cfg_digestEmails').value=uniq.join(', ');
+  try{
+    const d=await api('saveConfig',{digestEmails:uniq.join(', ')});
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    CONFIG=Object.assign({},DEFAULTS,d.config); clearCache();
+    toast(el,'success','บันทึกผู้รับสรุปรายวันเรียบร้อย');
+    loadMaintenance();
+  }catch(err){ toast(el,'danger',err.message); }
+}
+/* เปิด/ปิดอีเมลแจ้งผู้เสนอ (บันทึกทันทีเมื่อกดสวิตช์) */
+async function saveNotifyUI(){
+  const el=document.getElementById('mtNotifyMsg');
+  const on=document.getElementById('cfg_notifyOwner').checked;
+  try{
+    const d=await api('saveConfig',{notifyOwner:on?'Y':'N'});
+    if(!d.ok){ toast(el,'danger',d.error); return; }
+    CONFIG=Object.assign({},DEFAULTS,d.config); clearCache();
+    toast(el,'success', on?'เปิดการแจ้งเตือนผู้เสนอแล้ว':'ปิดการแจ้งเตือนผู้เสนอแล้ว — ระบบจะไม่ส่งอีเมลถึงผู้เสนอ');
   }catch(err){ toast(el,'danger',err.message); }
 }
 
