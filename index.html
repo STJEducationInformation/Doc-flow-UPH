@@ -809,6 +809,18 @@
             <div id="mtAutoMsg" class="mt-2"></div>
           </div></div>
 
+          <!-- ตรวจระบบอีเมล -->
+          <div class="col-12"><div class="border rounded p-3">
+            <div class="fw-semibold mb-1"><i class="bi bi-envelope-check me-1"></i>ตรวจระบบส่งอีเมล</div>
+            <div class="small text-muted mb-2">ทดลองส่งอีเมล 1 ฉบับ แล้วแสดงผลจริงทุกขั้นตอน — ใช้เมื่อไม่ได้รับอีเมลแจ้งเตือน</div>
+            <div class="input-group input-group-sm" style="max-width:460px">
+              <span class="input-group-text">ส่งถึง</span>
+              <input id="mtTestTo" class="form-control" placeholder="name@up.ac.th">
+              <button class="btn btn-brand" onclick="testMailUI()"><i class="bi bi-send me-1"></i>ทดสอบส่งอีเมล</button>
+            </div>
+            <div id="mtMailMsg" class="mt-2"></div>
+          </div></div>
+
           <!-- เกณฑ์เวลา + แจ้งเตือน -->
           <div class="col-lg-6"><div class="border rounded p-3 h-100">
             <div class="fw-semibold mb-1"><i class="bi bi-speedometer2 me-1"></i>เกณฑ์เวลาตามชั้นความเร็ว (ชั่วโมง)</div>
@@ -2663,6 +2675,7 @@ function setConn(ok){
 /* ---------- บำรุงรักษาระบบ ---------- */
 async function loadMaintenance(){
   if(!can('MANAGE_CONFIG')) return;
+  const tt=document.getElementById('mtTestTo'); if(tt && !tt.value && ME) tt.value=ME.email||'';
   try{
     const d=await api('getMaintenance');
     if(!d.ok) throw new Error(d.error||'error');
@@ -2715,8 +2728,48 @@ async function triggersUI(on){
 async function digestUI(){
   const el=document.getElementById('mtAutoMsg');
   el.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังส่ง…</div>';
-  try{ const d=await api('sendDigestNow'); toast(el, d.ok?'success':'danger', d.message||d.error); }
+  try{ const d=await api('sendDigestNow');
+    if(d.ok) toast(el,'success',d.message);
+    else el.innerHTML=`<div class="alert alert-danger py-2 small mb-0">${esc(d.error||'ส่งไม่สำเร็จ')}<div class="mt-1"><b>วิธีแก้:</b> ${mailErrorHelp(d.error)}</div></div>`; }
   catch(err){ toast(el,'danger',err.message); }
+}
+/* อธิบายสาเหตุจากข้อความ error ของ Google */
+function mailErrorHelp(err){
+  const e=String(err||'').toLowerCase();
+  if(/permission|authoriz|scope|ไม่มีสิทธิ์/.test(e))
+    return 'สคริปต์ยังไม่ได้รับอนุญาตให้ส่งอีเมล → เปิดหน้า Apps Script เลือกฟังก์ชัน <b>testMailFromEditor</b> กด <b>Run</b> → Review permissions → Allow แล้ว Deploy ใหม่ (New version)';
+  if(/too many|quota|limit|invoked/.test(e))
+    return 'โควตาส่งอีเมลของวันนี้หมดแล้ว (นับใหม่ทุก 24 ชั่วโมง) — รอวันพรุ่งนี้';
+  if(/invalid email|recipient/.test(e))
+    return 'อีเมลผู้รับไม่ถูกต้อง ตรวจการสะกดอีกครั้ง';
+  return 'ข้อผิดพลาดจาก Google — ดูรายละเอียดเพิ่มเติมได้ที่ Apps Script › Executions';
+}
+async function testMailUI(){
+  const el=document.getElementById('mtMailMsg');
+  const to=fullEmail(document.getElementById('mtTestTo').value)||(ME&&ME.email)||'';
+  document.getElementById('mtTestTo').value=to;
+  el.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังทดสอบส่งอีเมล…</div>';
+  try{
+    const d=await api('testMail',{to});
+    if(!d.ok){ toast(el,'danger',d.error||'ทดสอบไม่สำเร็จ'); return; }
+    const row=(k,v,cls)=>`<tr><td class="text-muted pe-3 text-nowrap">${k}</td><td class="${cls||''}">${v}</td></tr>`;
+    let html='<table class="small mb-2">'+
+      row('ส่งจากบัญชี', esc(d.from||'—'))+
+      row('ส่งถึง', esc(d.to))+
+      row('โควตาคงเหลือวันนี้', d.quota!=null ? (d.quota+' ฉบับ'+(d.quota<10?' <span class="text-danger">(ใกล้หมด)</span>':'')) : ('อ่านไม่ได้ '+esc(d.quotaError||'')))+
+      row('ผลการส่ง', d.sent?'<b class="text-success"><i class="bi bi-check-circle me-1"></i>Google รับส่งสำเร็จ</b>':'<b class="text-danger"><i class="bi bi-x-circle me-1"></i>ส่งไม่สำเร็จ</b>')+
+      (d.error?row('ข้อผิดพลาด','<code>'+esc(d.error)+'</code>'):'')+'</table>';
+    if(d.sent){
+      html+=`<div class="alert alert-info py-2 small mb-0"><b>Google ส่งออกไปแล้ว</b> — ถ้ายังไม่เห็นในกล่องจดหมาย ให้ค้นหาหัวข้อ
+        <code>${esc(d.subject||'ทดสอบการส่งอีเมล')}</code> ในที่เหล่านี้:<br>
+        • <b>Gmail</b>: แท็บ Inbox, <b>Sent (ส่งแล้ว)</b>, All Mail และ Spam<br>
+        • <b>Outlook</b>: Inbox, Other, <b>Junk Email</b><br>
+        <span class="text-muted">อีเมลที่ส่งถึงตัวเอง (บัญชีเดียวกับที่ Deploy) Gmail มักเก็บไว้ในหมวด <b>Sent</b> แทน Inbox — ลองทดสอบด้วยอีเมลของคนอื่นเพื่อดูว่าเข้ากล่องปกติไหม</span></div>`;
+    } else {
+      html+=`<div class="alert alert-danger py-2 small mb-0"><b>วิธีแก้:</b> ${mailErrorHelp(d.error)}</div>`;
+    }
+    el.innerHTML=html;
+  }catch(err){ toast(el,'danger',err.message); }
 }
 async function saveSlaUI(){
   const el=document.getElementById('mtSlaMsg');
