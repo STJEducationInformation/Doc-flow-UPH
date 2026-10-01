@@ -209,6 +209,15 @@
       <div class="auth-sub">โรงพยาบาลมหาวิทยาลัยพะเยา</div>
     </div>
 
+    <!-- ติดตั้งครั้งแรก (แสดงเมื่อยังไม่มีบัญชีผู้ใช้ในระบบ) -->
+    <div id="setupBox" class="alert alert-warning py-2 small" style="display:none">
+      <div class="fw-semibold mb-1"><i class="bi bi-box-seam me-1"></i>ยังไม่ได้ติดตั้งระบบ</div>
+      <div class="mb-2">ยังไม่มีบัญชีผู้ใช้ในระบบ กดปุ่มด้านล่างเพื่อติดตั้งและสร้างบัญชีผู้ดูแลคนแรก</div>
+      <button class="btn btn-sm btn-warning w-100" id="btnSetup" onclick="doFirstSetup()">
+        <i class="bi bi-database-add me-1"></i>ติดตั้งระบบครั้งแรก</button>
+      <div id="setupMsg" class="mt-2"></div>
+    </div>
+
     <!-- เข้าสู่ระบบ -->
     <div id="paneLogin">
       <label class="form-label small mb-1">อีเมล (@up.ac.th)</label>
@@ -793,14 +802,38 @@ let ME = null, MY_PERMS = [];
 function can(perm){ return MY_PERMS.indexOf(perm) >= 0; }
 
 /* ส่งคำขอแบบ POST (ข้อมูลอยู่ใน body ไม่ติดไปกับ URL — ใช้กับรหัสผ่าน) */
+let POST_OK = true;                 // ถ้า backend ยังไม่รองรับ POST จะสลับไปใช้ JSONP อัตโนมัติ
 function apiPost(action, params){
   const body = Object.assign({action}, params||{});
   if(AUTH_TOKEN && !body.token) body.token = AUTH_TOKEN;
+  if(!POST_OK) return apiJsonp(action, body);
   return fetch(WEBAPP_URL, {
     method:'POST', redirect:'follow',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify(body)
-  }).then(r=>r.json());
+  }).then(r=>r.json()).then(d=>{
+    // backend เวอร์ชันเก่าอ่าน body ไม่ได้ -> ใช้วิธีเดิมแทน
+    if(d && d.ok===false && /ไม่รู้จัก action/.test(d.error||'')){
+      POST_OK=false; console.warn('POST ใช้ไม่ได้ สลับไปใช้ JSONP');
+      return apiJsonp(action, body);
+    }
+    return d;
+  }).catch(()=>{ POST_OK=false; return apiJsonp(action, body); });
+}
+/* ส่งคำขอแบบ JSONP (วิธีเดิม) */
+function apiJsonp(action, params){
+  return new Promise((resolve, reject)=>{
+    if(!WEBAPP_URL || WEBAPP_URL.indexOf("PASTE_YOUR")===0){ reject(new Error("ยังไม่ได้ตั้งค่า WEBAPP_URL")); return; }
+    const cb = 'jsonp_' + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    const t = setTimeout(()=>{ cleanup(); reject(new Error("หมดเวลาเชื่อมต่อ")); }, 30000);
+    function cleanup(){ try{delete window[cb];}catch(e){} s.remove(); clearTimeout(t); }
+    window[cb] = (data)=>{ cleanup(); resolve(handleAuthError(data)); };
+    const q = new URLSearchParams(Object.assign({action, callback:cb}, params||{}));
+    s.src = WEBAPP_URL + '?' + q.toString();
+    s.onerror = ()=>{ cleanup(); reject(new Error("เชื่อมต่อไม่สำเร็จ")); };
+    document.body.appendChild(s);
+  });
 }
 /* คำสั่งที่มีรหัสผ่าน ต้องส่งแบบ POST เท่านั้น */
 const SECRET_ACTIONS=['login','changePassword','resetPassword','forgotPassword','createUser','updateUser','resetUserPassword','listUsers','listRoles'];
@@ -809,18 +842,7 @@ function api(action, params){
   const p = Object.assign({}, params||{});
   if(AUTH_TOKEN && !p.token) p.token = AUTH_TOKEN;
   if(SECRET_ACTIONS.indexOf(action)>=0) return apiPost(action, p).then(handleAuthError);
-  return new Promise((resolve, reject)=>{
-    if(!WEBAPP_URL || WEBAPP_URL.indexOf("PASTE_YOUR")===0){ reject(new Error("ยังไม่ได้ตั้งค่า WEBAPP_URL")); return; }
-    const cb = 'jsonp_' + Math.random().toString(36).slice(2);
-    const s = document.createElement('script');
-    const t = setTimeout(()=>{ cleanup(); reject(new Error("หมดเวลาเชื่อมต่อ")); }, 30000);
-    function cleanup(){ try{delete window[cb];}catch(e){} s.remove(); clearTimeout(t); }
-    window[cb] = (data)=>{ cleanup(); resolve(handleAuthError(data)); };
-    const q = new URLSearchParams(Object.assign({action, callback:cb}, p));
-    s.src = WEBAPP_URL + '?' + q.toString();
-    s.onerror = ()=>{ cleanup(); reject(new Error("เชื่อมต่อไม่สำเร็จ")); };
-    document.body.appendChild(s);
-  });
+  return apiJsonp(action, p);
 }
 /* หมดอายุ/ไม่มีสิทธิ์ -> กลับไปหน้าเข้าสู่ระบบ */
 function handleAuthError(d){
@@ -873,6 +895,40 @@ function showMe(){
   document.getElementById('uName').textContent=nm;
   document.getElementById('uRole').textContent=(ME.position||ME.roleId||'')+(ME.stationKey?(' · '+stationName(ME.stationKey)):'');
   document.getElementById('uAva').textContent=(nm.trim()[0]||'?').toUpperCase();
+}
+/* ตรวจว่าระบบติดตั้งแล้วหรือยัง (แสดงปุ่มติดตั้งเมื่อยังไม่มีบัญชีผู้ใช้) */
+async function checkSetup(){
+  try{
+    const d=await api('authStatus');
+    const box=document.getElementById('setupBox');
+    if(d && d.ok && d.needSetup){ box.style.display='block'; }
+    else { box.style.display='none'; }
+    if(d && d.authLoaded===undefined){
+      toast(document.getElementById('loginMsg'),'warning','เซิร์ฟเวอร์ยังเป็นโค้ดเวอร์ชันเก่า กรุณา Deploy ใหม่');
+    }
+  }catch(e){}
+}
+async function doFirstSetup(){
+  const el=document.getElementById('setupMsg'); const btn=document.getElementById('btnSetup');
+  btn.disabled=true;
+  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังติดตั้ง… (อาจใช้เวลาสักครู่)</div>';
+  try{
+    const d=await api('init');
+    if(!d.ok){ toast(el,'danger',d.error||'ติดตั้งไม่สำเร็จ'); return; }
+    if(d.firstAdmin){
+      el.innerHTML=`<div class="alert alert-success py-2 mb-0">
+        <div class="fw-bold mb-1"><i class="bi bi-check-circle me-1"></i>ติดตั้งสำเร็จ</div>
+        <div>บัญชีผู้ดูแลคนแรก:</div>
+        <div class="mt-1">อีเมล: <b>${esc(d.firstAdmin.email)}</b></div>
+        <div>รหัสผ่าน: <b style="font-size:1.1rem;letter-spacing:1px">${esc(d.firstAdmin.password)}</b></div>
+        <div class="text-danger mt-2">⚠ จดรหัสผ่านนี้ไว้ทันที ระบบแสดงเพียงครั้งเดียว</div></div>`;
+      document.getElementById('loginEmail').value=d.firstAdmin.email;
+    } else {
+      toast(el,'info',d.message||'ระบบติดตั้งอยู่แล้ว กรุณาเข้าสู่ระบบ');
+      document.getElementById('setupBox').style.display='none';
+    }
+  }catch(err){ toast(el,'danger',err.message); }
+  finally{ btn.disabled=false; }
 }
 async function doLogin(){
   const el=document.getElementById('loginMsg');
@@ -2470,6 +2526,7 @@ async function startApp(){
     AUTH_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
   }
   showAuthGate('Login','');
+  checkSetup();
 })();
 </script>
 
