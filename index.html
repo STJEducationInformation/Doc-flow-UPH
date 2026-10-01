@@ -2760,11 +2760,11 @@ async function testMailUI(){
       row('ผลการส่ง', d.sent?'<b class="text-success"><i class="bi bi-check-circle me-1"></i>Google รับส่งสำเร็จ</b>':'<b class="text-danger"><i class="bi bi-x-circle me-1"></i>ส่งไม่สำเร็จ</b>')+
       (d.error?row('ข้อผิดพลาด','<code>'+esc(d.error)+'</code>'):'')+'</table>';
     if(d.sent){
-      html+=`<div class="alert alert-info py-2 small mb-0"><b>Google ส่งออกไปแล้ว</b> — ถ้ายังไม่เห็นในกล่องจดหมาย ให้ค้นหาหัวข้อ
-        <code>${esc(d.subject||'ทดสอบการส่งอีเมล')}</code> ในที่เหล่านี้:<br>
-        • <b>Gmail</b>: แท็บ Inbox, <b>Sent (ส่งแล้ว)</b>, All Mail และ Spam<br>
-        • <b>Outlook</b>: Inbox, Other, <b>Junk Email</b><br>
-        <span class="text-muted">อีเมลที่ส่งถึงตัวเอง (บัญชีเดียวกับที่ Deploy) Gmail มักเก็บไว้ในหมวด <b>Sent</b> แทน Inbox — ลองทดสอบด้วยอีเมลของคนอื่นเพื่อดูว่าเข้ากล่องปกติไหม</span></div>`;
+      html+=`<div class="alert alert-info py-2 small mb-0"><b>Google ส่งออกไปแล้ว</b> — ค้นหาหัวข้อ <code>${esc(d.subject||'ทดสอบการส่งอีเมล')}</code> ในกล่องของผู้รับ<br>
+        <b>อีเมล @up.ac.th ถูกส่งไปที่ Microsoft Outlook ไม่ใช่ Gmail</b> — เปิด <a href="https://outlook.office.com/mail/" target="_blank">outlook.office.com</a>
+        แล้วดูที่ Inbox, แท็บ <b>Other</b> และโฟลเดอร์ <b>Junk Email</b><br>
+        <span class="text-muted">ถ้าเจอใน Junk ให้กด "Not junk" และเพิ่มผู้ส่งเป็น Safe sender · ถ้าไม่เจอที่ไหนเลย แปลว่าถูกกักไว้ที่ห้องกักกันของ Microsoft ต้องให้ผู้ดูแลอีเมลของมหาวิทยาลัยปล่อยให้
+        · สำเนาที่เห็นใน Gmail ของผู้ส่ง (ขึ้นว่า to ผู้รับ) คือสำเนาที่ส่งออก ไม่ใช่อีเมลที่ได้รับ</span></div>`;
     } else {
       html+=`<div class="alert alert-danger py-2 small mb-0"><b>วิธีแก้:</b> ${mailErrorHelp(d.error)}</div>`;
     }
