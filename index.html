@@ -650,16 +650,16 @@
           <select id="histPeriod" class="form-select form-select-sm" style="width:130px" onchange="loadHistory()">
             <option value="today">วันนี้</option>
             <option value="week">7 วัน</option>
-            <option value="month">1 เดือน</option>
+            <option value="month" selected>1 เดือน</option>
             <option value="quarter">ไตรมาส (3 เดือน)</option>
             <option value="half">6 เดือน</option>
             <option value="year">1 ปี</option>
-            <option value="all" selected>ทั้งหมด</option>
+            <option value="all">ทั้งหมด</option>
           </select>
           <label class="small text-muted mb-0">แสดง</label>
           <select id="histLimit" class="form-select form-select-sm" style="width:110px" onchange="loadHistory()">
-            <option value="50">50 แถว</option>
-            <option value="100" selected>100 แถว</option>
+            <option value="50" selected>50 แถว</option>
+            <option value="100">100 แถว</option>
             <option value="200">200 แถว</option>
             <option value="all">ทั้งหมด</option>
           </select>
@@ -1251,7 +1251,7 @@ async function loadReport(){
   const period=document.getElementById('repPeriod').value;
   document.getElementById('repRowsBody').innerHTML='<tr><td colspan="9" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดรายงาน…</td></tr>';
   try{
-    const d=await apiCached('getReport',{period});
+    const d=await apiCached('getReport',{period}, 120000);
     if(!d.ok) throw new Error(d.error||'error');
     REPORT_DATA=d;
     // การ์ดสรุป
@@ -2078,7 +2078,7 @@ async function doTrack(){
   listEl.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังค้นหา…</div>';
   let entries;
   // ค้นจากประวัติทั้งหมด (รวมแฟ้มที่กำลังดำเนินการ + แฟ้มที่เสร็จ/คืนไปแล้ว)
-  try{ const d=await apiCached('getHistory',{period:'all', limit:'all'}); if(!d.ok) throw new Error(d.error||'error'); entries=d.rows||[]; }
+  try{ const d=await apiCached('getHistory',{period:'all', limit:'all', light:'1'}); if(!d.ok) throw new Error(d.error||'error'); entries=d.rows||[]; }
   catch(err){ toast(listEl,'danger',err.message); return; }
 
   const q=kw.toLowerCase();
@@ -2168,6 +2168,19 @@ function toggleHist(head){
   const open=det.style.display==='none';
   det.style.display=open?'block':'none';
   item.classList.toggle('open', open);
+  if(open) ensureTimeline(item);
+}
+/* โหลดไทม์ไลน์เมื่อกางดูครั้งแรก (ไม่โหลดมาพร้อมรายการ เพื่อให้หน้าขึ้นไว) */
+async function ensureTimeline(item){
+  const hid=item.dataset.hid; const x=HIST_ROWS[hid];
+  if(!x || !x.logsPending) return;
+  const box=item.querySelector('.hist-tl-box');
+  try{
+    const d=await apiCached('getHistoryLogs', x.historyId?{historyId:x.historyId}:{folderCode:x.folderCode}, 300000);
+    x.logs=(d&&d.ok)?(d.logs||[]):[];
+    x.logsPending=false;
+    box.innerHTML=histTimeline(x.logs, x.timeline);
+  }catch(err){ box.innerHTML='<div class="text-danger small py-2">โหลดไทม์ไลน์ไม่สำเร็จ</div>'; }
 }
 /* ประวัติการแก้ไขของแฟ้ม (แสดงใต้ไทม์ไลน์) */
 function editLogsHTML(logs){
@@ -2177,6 +2190,8 @@ function editLogsHTML(logs){
     ${logs.map(l=>`<div>• <span class="text-muted">${thaiDateTime(l.timestamp)}</span> — ${esc(l.action)}${l.station?(' @'+esc(stationName(l.station))):''}${l.note?(' : '+esc(l.note)):''}</div>`).join('')}
   </div>`;
 }
+const HIST_ROWS={};           // เก็บข้อมูลแต่ละแถวไว้ใช้ตอนกางดูไทม์ไลน์
+let HIST_SEQ=0;
 /* หัวคอลัมน์ของรายการประวัติ/ผลค้นหา */
 function histHeaderHTML(){
   return `<div class="hist-row hist-colhead">
@@ -2187,6 +2202,7 @@ function histHeaderHTML(){
 }
 /* การ์ดประวัติ 1 รายการ (ใช้ทั้งหน้าประวัติและผลการค้นหา) */
 function histEntryHTML(x){
+  const hid='h'+(++HIST_SEQ); HIST_ROWS[hid]=x;
   const when = thaiDateTime(x.live ? x.archivedAt : x.completedAt);
   const recs=x.records||[];
   const first=recs[0]||{};
@@ -2200,7 +2216,7 @@ function histEntryHTML(x){
   const docDate = thaiDate(first.docDate) || '—';
   const subject = first.subject || '';
   const docType = safeType(first.docType);
-  return `<div class="hist-item border-bottom">
+  return `<div class="hist-item border-bottom" data-hid="${hid}">
     <div class="hist-head hist-row" style="cursor:pointer" onclick="toggleHist(this)">
       <div><i class="bi bi-chevron-right hist-caret"></i></div>
       <div class="hist-cell num" title="แฟ้ม ${esc(x.folderCode)}">${esc(auNo)}${moreTag}</div>
@@ -2215,7 +2231,7 @@ function histEntryHTML(x){
       <div class="text-end">${viewBtn}</div>
     </div>
     <div class="hist-detail px-3 pb-3" style="display:none">
-      ${histTimeline(x.logs, x.timeline)}
+      <div class="hist-tl-box">${x.logsPending?'<div class="text-muted small py-2"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดไทม์ไลน์…</div>':histTimeline(x.logs, x.timeline)}</div>
       <div class="small mt-2">${recsHtml}</div>
       ${editLogsHTML(x.editLogs)}
     </div>
@@ -2227,7 +2243,7 @@ async function loadHistory(){
   const body=document.getElementById('histBody');
   body.innerHTML='<div class="text-muted text-center py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดประวัติ…</div>';
   try{
-    const d=await apiCached('getHistory',{period, limit});
+    const d=await apiCached('getHistory',{period, limit, light:'1'}, 120000);
     if(!d.ok) throw new Error(d.error||'error');
     const rows=d.rows||[];
     document.getElementById('histTotal').textContent = (d.total>rows.length)? (rows.length+' / '+d.total) : rows.length;
@@ -2479,6 +2495,19 @@ async function resetUserPw(userId, email){
 }
 
 /* โหลดแอปหลังจากล็อกอินแล้ว */
+/* โหลดข้อมูลที่ใช้บ่อยไว้ล่วงหน้าแบบเงียบ ๆ เพื่อให้สลับหน้าแล้วขึ้นทันที */
+function prewarm(){
+  setTimeout(()=>{
+    try{
+      if(can('RECEIVE_FILE')){
+        const st=(ME&&ME.stationKey)?ME.stationKey:(document.getElementById('scanStation').value||'S1');
+        apiCached('getStationQueue',{station:st}, 8000).catch(()=>{});
+        apiCached('getHistory',{period:'today', onlyCompleted:'1', limit:'50'}, 20000).catch(()=>{});
+      }
+      if(can('VIEW_FILE')) apiCached('getHistory',{period:'month', limit:'50', light:'1'}, 120000).catch(()=>{});
+    }catch(e){}
+  }, 600);
+}
 async function startApp(){
   enterApp();
   showMe();
@@ -2491,6 +2520,7 @@ async function startApp(){
       fillStationSelect();
       applyPermissions();
       if(d.dashboard && d.dashboard.ok) applyDashboard(d.dashboard); else loadDashboard();
+      prewarm();
       return;
     }
   }catch(e){}
