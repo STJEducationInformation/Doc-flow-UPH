@@ -371,21 +371,40 @@
   <!-- ================= REPORT ================= -->
   <div class="page" id="page-report">
     <div class="card mb-3">
-      <div class="card-body d-flex flex-wrap gap-2 align-items-center">
-        <span class="fw-semibold"><i class="bi bi-funnel me-1"></i>ช่วงเวลารายงาน</span>
-        <select id="repPeriod" class="form-select form-select-sm" style="width:170px" onchange="loadReport()">
-          <option value="today">วันนี้</option>
-          <option value="week">7 วัน</option>
-          <option value="month">1 เดือน</option>
-          <option value="quarter">ไตรมาส (3 เดือน)</option>
-          <option value="half">6 เดือน</option>
-          <option value="year">1 ปี</option>
-          <option value="all" selected>ทั้งหมด</option>
-        </select>
-        <button class="btn btn-sm btn-outline-brand" onclick="clearCache();loadReport()"><i class="bi bi-arrow-clockwise me-1"></i>รีเฟรช</button>
-        <div class="ms-auto d-flex gap-2">
-          <button class="btn btn-sm btn-success" onclick="exportReportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</button>
-          <button class="btn btn-sm btn-danger" onclick="exportReportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</button>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <span class="fw-semibold"><i class="bi bi-funnel me-1"></i>ช่วงเวลารายงาน</span>
+          <select id="repPeriod" class="form-select form-select-sm" style="width:200px" onchange="onRepPeriodChange()">
+            <option value="today">วันนี้</option>
+            <option value="week">7 วัน</option>
+            <option value="month">1 เดือน</option>
+            <option value="quarter">ไตรมาส (3 เดือน)</option>
+            <option value="half">6 เดือน</option>
+            <option value="year">1 ปี</option>
+            <option value="all" selected>ทั้งหมด</option>
+            <option value="custom">📅 กำหนดช่วงวันที่เอง…</option>
+          </select>
+          <button class="btn btn-sm btn-outline-brand" onclick="clearCache();loadReport();loadAudit()"><i class="bi bi-arrow-clockwise me-1"></i>รีเฟรช</button>
+          <div class="ms-auto d-flex gap-2">
+            <button class="btn btn-sm btn-success" onclick="exportReportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</button>
+            <button class="btn btn-sm btn-danger" onclick="exportReportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</button>
+          </div>
+        </div>
+        <!-- ช่วงวันที่กำหนดเอง (แสดงเมื่อเลือก "กำหนดช่วงวันที่เอง") -->
+        <div id="repCustom" class="flex-wrap align-items-center gap-2 mt-3 pt-3 border-top" style="display:none!important">
+          <div class="input-group input-group-sm" style="width:auto">
+            <span class="input-group-text"><i class="bi bi-calendar3 me-1"></i>ตั้งแต่</span>
+            <input id="repFrom" type="date" class="form-control" style="width:155px" onchange="onRepDateChange()">
+            <span class="input-group-text">ถึง</span>
+            <input id="repTo" type="date" class="form-control" style="width:155px" onchange="onRepDateChange()">
+          </div>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" onclick="setRepPreset('thisMonth')">เดือนนี้</button>
+            <button class="btn btn-outline-secondary" onclick="setRepPreset('lastMonth')">เดือนที่แล้ว</button>
+            <button class="btn btn-outline-secondary" onclick="setRepPreset('fiscal')">ปีงบประมาณนี้</button>
+            <button class="btn btn-outline-secondary" onclick="setRepPreset('lastFiscal')">ปีงบฯ ที่แล้ว</button>
+          </div>
+          <span id="repRangeLabel" class="small fw-semibold" style="color:var(--brand-700)"></span>
         </div>
       </div>
     </div>
@@ -1353,12 +1372,73 @@ function applyDashboard(d){
 }
 
 /* ========================= แดชบอร์ดรายงาน ========================= */
+/* ---------- ช่วงเวลารายงาน (รวมแบบกำหนดเอง) ---------- */
+function ymd(d){ const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function repPeriodParams(){
+  const period=document.getElementById('repPeriod').value;
+  if(period!=='custom') return {period};
+  return {period, from:document.getElementById('repFrom').value||'', to:document.getElementById('repTo').value||''};
+}
+/* ข้อความช่วงเวลาสำหรับแสดงผล/รายงาน */
+function repPeriodLabel(){
+  const sel=document.getElementById('repPeriod');
+  if(sel.value!=='custom') return sel.options[sel.selectedIndex].text;
+  const f=document.getElementById('repFrom').value, t=document.getElementById('repTo').value;
+  if(f && t) return thaiDate(f)+' – '+thaiDate(t);
+  if(f) return 'ตั้งแต่ '+thaiDate(f);
+  if(t) return 'ถึง '+thaiDate(t);
+  return 'กำหนดเอง';
+}
+function showRepCustom(on){
+  const box=document.getElementById('repCustom');
+  box.style.setProperty('display', on?'flex':'none', 'important');
+}
+function onRepPeriodChange(){
+  const custom=document.getElementById('repPeriod').value==='custom';
+  showRepCustom(custom);
+  if(custom){
+    // ค่าเริ่มต้น: ตั้งแต่ต้นเดือนนี้ถึงวันนี้
+    if(!document.getElementById('repFrom').value){ setRepPreset('thisMonth'); return; }
+    onRepDateChange(); return;
+  }
+  loadReport(); loadAudit();
+}
+function onRepDateChange(){
+  const f=document.getElementById('repFrom'), t=document.getElementById('repTo');
+  const lb=document.getElementById('repRangeLabel');
+  if(f.value && t.value && f.value>t.value){
+    lb.innerHTML='<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>วันเริ่มต้องไม่เกินวันสิ้นสุด</span>';
+    return;
+  }
+  if(!f.value && !t.value){ lb.textContent='กรุณาเลือกวันที่'; return; }
+  const days = (f.value && t.value) ? Math.round((new Date(t.value)-new Date(f.value))/86400000)+1 : null;
+  lb.innerHTML=`<i class="bi bi-calendar-range me-1"></i>${esc(repPeriodLabel())}${days?` <span class="text-muted">(${days} วัน)</span>`:''}`;
+  loadReport(); loadAudit();
+}
+/* ปุ่มลัด — ปีงบประมาณไทยเริ่ม 1 ต.ค. สิ้นสุด 30 ก.ย. */
+function setRepPreset(kind){
+  const now=new Date(); let a,b;
+  const y=now.getFullYear(), m=now.getMonth();
+  if(kind==='thisMonth'){ a=new Date(y,m,1); b=now; }
+  else if(kind==='lastMonth'){ a=new Date(y,m-1,1); b=new Date(y,m,0); }
+  else {
+    const fyStartYear = (m>=9) ? y : y-1;              // ต.ค. (index 9) ขึ้นปีงบใหม่
+    const sy = kind==='fiscal' ? fyStartYear : fyStartYear-1;
+    a=new Date(sy,9,1); b=(kind==='fiscal') ? now : new Date(sy+1,8,30);
+  }
+  document.getElementById('repPeriod').value='custom'; showRepCustom(true);
+  document.getElementById('repFrom').value=ymd(a);
+  document.getElementById('repTo').value=ymd(b);
+  onRepDateChange();
+}
+
 let REPORT_DATA = null;
 async function loadReport(){
-  const period=document.getElementById('repPeriod').value;
+  const prm=repPeriodParams();
+  if(prm.period==='custom' && prm.from && prm.to && prm.from>prm.to) return;
   document.getElementById('repRowsBody').innerHTML='<tr><td colspan="9" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดรายงาน…</td></tr>';
   try{
-    const d=await apiCached('getReport',{period}, 120000);
+    const d=await apiCached('getReport',prm, 120000);
     if(!d.ok) throw new Error(d.error||'error');
     REPORT_DATA=d;
     // การ์ดสรุป
@@ -1436,11 +1516,12 @@ function auditDetailHTML(r){
 async function loadAudit(){
   const limit=document.getElementById('auditLimit').value;
   const folderCode=(document.getElementById('auditFolder').value||'').trim();
-  const period=document.getElementById('repPeriod').value;
+  const rp=repPeriodParams();
+  if(rp.period==='custom' && rp.from && rp.to && rp.from>rp.to) return;
   const body=document.getElementById('auditBody');
   body.innerHTML='<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</td></tr>';
   try{
-    const prm={period, limit}; if(folderCode) prm.folderCode=folderCode;
+    const prm=Object.assign({limit}, rp); if(folderCode) prm.folderCode=folderCode;
     const d=await apiCached('getAudit', prm, 15000);
     if(!d.ok) throw new Error(d.error||'error');
     const rows=d.rows||[];
@@ -1478,14 +1559,20 @@ async function exportReportExcel(){
   const ws=XLSX.utils.json_to_sheet(data);
   ws['!cols']=[{wch:6},{wch:10},{wch:18},{wch:22},{wch:40},{wch:16},{wch:20},{wch:12},{wch:14},{wch:12}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'รายงาน');
-  XLSX.writeFile(wb,'รายงานแฟ้ม_'+dateStamp()+'.xlsx');
+  // ชื่อไฟล์บอกช่วงเวลา เช่น รายงานแฟ้ม_2026-10-01_ถึง_2026-10-31.xlsx
+  const rp=repPeriodParams();
+  const tag = rp.period==='custom' ? ((rp.from||'ต้น')+'_ถึง_'+(rp.to||'ปัจจุบัน')) : dateStamp();
+  // แผ่นข้อมูลรายงาน ระบุช่วงเวลา
+  const info=XLSX.utils.aoa_to_sheet([['รายงานระบบติดตามแฟ้มเสนอผู้บริหาร'],['ช่วงเวลา', repPeriodLabel()],['ออกรายงานเมื่อ', thaiDateTime(new Date().toISOString())],['จำนวนรายการ', rows.length]]);
+  info['!cols']=[{wch:18},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,info,'ข้อมูลรายงาน');
+  XLSX.writeFile(wb,'รายงานแฟ้ม_'+tag+'.xlsx');
 }
 function exportReportPDF(){
   if(!REPORT_DATA){ alert('กรุณากดรีเฟรชรายงานก่อน'); return; }
   const R=REPORT_DATA;
   const rows=R.rows||[];
-  const periodSel=document.getElementById('repPeriod');
-  const periodLabel=periodSel.options[periodSel.selectedIndex].text;
+  const periodLabel=repPeriodLabel();
   let logoUri=''; try{ logoUri=document.querySelector('.sidebar .logo img').src; }catch(e){}
 
   const body=rows.map((r,i)=>`<tr><td class="c">${i+1}</td><td class="c">${pad4(r.folderCode)}</td><td>${esc(r.docNumber)||'-'}</td><td>${esc(r.owner)||'-'}</td><td>${esc(r.subject)||'-'}</td><td>${esc(r.department)||'-'}</td><td class="c">${esc(safeType(r.docType))||'-'}</td><td class="c">${esc(r.urgency)||'ปกติ'}</td><td class="c">${thaiDate(r.docDate)||'-'}</td><td class="c">${esc(r.status)}</td></tr>`).join('');
