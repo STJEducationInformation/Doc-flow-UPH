@@ -547,6 +547,7 @@
         <h6><i class="bi bi-diagram-3 me-1"></i>เลือกไทม์ไลน์แฟ้ม (ผู้ที่ต้องเสนอ)</h6>
         <div class="small text-muted mb-2">ทุกแฟ้มจะผ่าน “หัวหน้าสำนักงาน” อยู่แล้ว &middot; เลือกได้มากกว่า 1 &middot; แก้ไขชื่อได้ที่เมนู “ตั้งค่า”</div>
         <div id="timelineBox"></div>
+        <div id="routePreview" class="mt-2"></div>
 
         <div class="d-flex gap-2 mt-4">
           <button class="btn btn-brand" onclick="saveRegister()"><i class="bi bi-save me-1"></i>บันทึกข้อมูลแฟ้ม</button>
@@ -944,8 +945,11 @@ let TOTAL_FOLDERS = 200;      // อัปเดตจากจำนวนแ�
 
 /* ---------- ตัวเรียก API แบบ JSONP (ไม่ติด CORS บน GitHub Pages) ---------- */
 /* ================= ระบบเข้าสู่ระบบ / สิทธิ์ ================= */
-const TOKEN_KEY='uph_token';
+const TOKEN_KEY='uph_token', ME_KEY='uph_me';
 let AUTH_TOKEN = localStorage.getItem(TOKEN_KEY) || '';
+function saveMe(){ try{ localStorage.setItem(ME_KEY, JSON.stringify({user:ME, perms:MY_PERMS})); }catch(e){} }
+function loadSavedMe(){ try{ const x=JSON.parse(localStorage.getItem(ME_KEY)||'null'); if(x&&x.user){ ME=x.user; MY_PERMS=x.perms||[]; return true; } }catch(e){} return false; }
+function forgetMe(){ AUTH_TOKEN=''; try{ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(ME_KEY); }catch(e){} ME=null; MY_PERMS=[]; clearCache(true); }
 let ME = null, MY_PERMS = [];
 function can(perm){ return MY_PERMS.indexOf(perm) >= 0; }
 
@@ -994,7 +998,7 @@ function api(action, params){
 }
 /* หมดอายุ/ไม่มีสิทธิ์ -> กลับไปหน้าเข้าสู่ระบบ */
 function handleAuthError(d){
-  if(d && d.code==='NO_AUTH'){ AUTH_TOKEN=''; localStorage.removeItem(TOKEN_KEY); showAuthGate('Login','เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง'); }
+  if(d && d.code==='NO_AUTH' && AUTH_TOKEN){ forgetMe(); showAuthGate('Login','เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง'); }
   if(d && d.code==='MUST_CHANGE_PW'){ showAuthGate('MustChange',''); }
   return d;
 }
@@ -1090,7 +1094,7 @@ async function doLogin(){
     const d=await apiPost('login',{email,password:pw});
     if(!d.ok){ toast(el,'danger',d.error||'เข้าสู่ระบบไม่สำเร็จ'); return; }
     AUTH_TOKEN=d.token; localStorage.setItem(TOKEN_KEY,AUTH_TOKEN);
-    ME=d.user; MY_PERMS=d.permissions||[];
+    ME=d.user; MY_PERMS=d.permissions||[]; saveMe();
     document.getElementById('loginPw').value='';
     if(d.mustChangePassword){ showAuthGate('MustChange',''); return; }
     el.innerHTML='';
@@ -1129,7 +1133,7 @@ async function doChangePw(pfx){
     const d=await apiPost('changePassword',{oldPassword:o,newPassword:n1,confirmPassword:n2});
     if(!d.ok){ toast(el,'danger',d.error); return; }
     toast(el,'success',d.message);
-    AUTH_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
+    forgetMe();
     setTimeout(()=>{ showAuthGate('Login','เปลี่ยนรหัสผ่านแล้ว กรุณาเข้าสู่ระบบใหม่'); },1200);
   }catch(err){ toast(el,'danger',err.message); }
 }
@@ -1139,9 +1143,10 @@ function openChangePw(){
   else { document.querySelector('.nav-link[data-page="settings"]').click(); setTimeout(()=>{const x=document.getElementById('cpWrap'); if(x){x.style.display='block'; x.scrollIntoView({behavior:'smooth',block:'center'});}},300); }
 }
 async function doLogout(){
-  try{ await apiPost('logout',{}); }catch(e){}
-  AUTH_TOKEN=''; localStorage.removeItem(TOKEN_KEY); ME=null; MY_PERMS=[]; clearCache();
-  showAuthGate('Login','ออกจากระบบแล้ว');
+  const tk=AUTH_TOKEN;
+  forgetMe();
+  showAuthGate('Login','ออกจากระบบแล้ว');            // ออกทันที ไม่ต้องรอ server
+  try{ await apiPost('logout',{token:tk}); }catch(e){}
 }
 
 
@@ -1175,13 +1180,52 @@ function apiCached(action, params, ttl){
   if(hit && (now-hit.t)<life) return Promise.resolve(hit.v);       // ใช้ของเดิมทันที
   if(API_INFLIGHT.has(key)) return API_INFLIGHT.get(key);           // มีคำขอเดิมวิ่งอยู่ ใช้ร่วมกัน
   const pr=api(action,params).then(d=>{
-    if(d && d.ok) API_CACHE.set(key,{t:Date.now(), v:d});
+    if(d && d.ok){ API_CACHE.set(key,{t:Date.now(), v:d}); schedulePersist(); }
     API_INFLIGHT.delete(key); return d;
   }).catch(e=>{ API_INFLIGHT.delete(key); throw e; });
   API_INFLIGHT.set(key,pr);
   return pr;
 }
-function clearCache(){ API_CACHE.clear(); }
+function clearCache(hard){
+  API_CACHE.clear();
+  if(hard){ try{ Object.keys(localStorage).forEach(k=>{ if(k.indexOf('uph_cache_')===0) localStorage.removeItem(k); }); }catch(e){} }
+}
+/* แสดงข้อมูลที่มีอยู่ทันที (แม้เก่า) แล้วโหลดใหม่เบื้องหลัง — ถ้าข้อมูลเปลี่ยน เรียก rerun ให้วาดใหม่ */
+function apiSWR(action, params, ttl, rerun){
+  const key=cacheKey(action,params), hit=API_CACHE.get(key), life=(ttl===undefined?CACHE_TTL:ttl);
+  if(hit && (Date.now()-hit.t)<life) return Promise.resolve(hit.v);
+  if(hit){
+    const old=JSON.stringify(hit.v);
+    apiCached(action,params,0).then(d=>{ if(d && d.ok && JSON.stringify(d)!==old && rerun) rerun(); }).catch(()=>{});
+    return Promise.resolve(hit.v);
+  }
+  return apiCached(action,params,ttl);
+}
+/* จำข้อมูลไว้ในเครื่อง เพื่อให้รีเฟรชหน้าแล้วข้อมูลขึ้นทันที (แยกตามผู้ใช้ ลบเมื่อออกจากระบบ) */
+const CACHE_PERSIST=['dashboard','getBootstrap','getStationQueue','getHistory','getReport','getMaintenance','listUsers','getOwnerDirectory','getAudit'];
+let persistTimer=null;
+function persistKey(){ return (ME&&ME.userId) ? 'uph_cache_'+ME.userId : ''; }
+function schedulePersist(){
+  clearTimeout(persistTimer);
+  persistTimer=setTimeout(()=>{
+    const k=persistKey(); if(!k) return;
+    const o={}; API_CACHE.forEach((v,key)=>{ if(CACHE_PERSIST.indexOf(key.split('|')[0])>=0) o[key]={v:v.v}; });
+    try{ const str=JSON.stringify(o); if(str.length<3000000) localStorage.setItem(k,str); }catch(e){}
+  },800);
+}
+function hydrateCache(){
+  const k=persistKey(); if(!k) return;
+  try{ const o=JSON.parse(localStorage.getItem(k)||'{}');
+    Object.keys(o).forEach(key=>{ if(!API_CACHE.has(key) && o[key] && o[key].v) API_CACHE.set(key,{t:0,v:o[key].v}); }); }catch(e){}
+}
+/* บันทึกแบบตอบทันที: แสดงผลสำเร็จก่อน ส่งไป server เบื้องหลัง ถ้าล้มเหลวแจ้งเตือนและคืนค่าเดิม */
+function saveInstant(el, okMsg, promise, onFail, onOk){
+  if(el) toast(el,'success',okMsg);
+  promise.then(d=>{
+    if(!d || !d.ok){ if(el) toast(el,'danger','บันทึกไม่สำเร็จ: '+((d&&d.error)||'ไม่ทราบสาเหตุ')+' — คืนค่าเดิมแล้ว'); if(onFail) onFail(d); }
+    else if(onOk) onOk(d);
+  }).catch(err=>{ if(el) toast(el,'danger','บันทึกไม่สำเร็จ: '+err.message+' — คืนค่าเดิมแล้ว'); if(onFail) onFail(); });
+}
 
 /* ---------- ตัวช่วยทั่วไป ---------- */
 function pad4(c){ const n=parseInt(String(c).replace(/[^0-9]/g,''),10); return isNaN(n)?String(c):String(n).padStart(4,'0'); }
@@ -1381,7 +1425,7 @@ async function loadDashboard(){
   const body=document.getElementById('dashBody');
   body.innerHTML='<tr><td colspan="10" class="text-center text-muted py-4">กำลังโหลด…</td></tr>';
   try{
-    const d = await apiCached('dashboard', {}, 15000);
+    const d = await apiSWR('dashboard', {}, 15000, loadDashboard);
     if(!d.ok) throw new Error(d.error||'error');
     applyDashboard(d);
   }catch(err){ body.innerHTML=`<tr><td colspan="10" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
@@ -1462,7 +1506,7 @@ async function loadReport(){
   if(prm.period==='custom' && prm.from && prm.to && prm.from>prm.to) return;
   document.getElementById('repRowsBody').innerHTML='<tr><td colspan="9" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดรายงาน…</td></tr>';
   try{
-    const d=await apiCached('getReport',prm, 120000);
+    const d=await apiSWR('getReport',prm, 120000, loadReport);
     if(!d.ok) throw new Error(d.error||'error');
     REPORT_DATA=d;
     // การ์ดสรุป
@@ -1546,7 +1590,7 @@ async function loadAudit(){
   body.innerHTML='<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</td></tr>';
   try{
     const prm=Object.assign({limit}, rp); if(folderCode) prm.folderCode=folderCode;
-    const d=await apiCached('getAudit', prm, 15000);
+    const d=await apiSWR('getAudit', prm, 15000, loadAudit);
     if(!d.ok) throw new Error(d.error||'error');
     const rows=d.rows||[];
     document.getElementById('auditTotal').textContent=(d.total>rows.length)?(rows.length+' / '+d.total):rows.length;
@@ -1853,6 +1897,7 @@ async function loadExistingFolder(code){
     fillDeptSelect(); setSelectValue(document.getElementById('regDept'), f.department||'');
     const tl=(f.timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
     document.querySelectorAll('.tl').forEach(c=>{ c.checked=tl.indexOf(c.value)>=0; });
+    updateRoutePreview();
     document.getElementById('recordRows').innerHTML='';
     const recs=f.records||[];
     if(recs.length){ recs.forEach(r=>{ const aunum=((r.docNumber||'').split('/')[1]||''); addRecordRow({aunum, subject:r.subject, docDate:r.docDate, docType:r.docType, urgency:r.urgency}); }); }
@@ -1880,6 +1925,20 @@ function renderTimeline(){
     <div class="col-md-7"><div class="fw-semibold mb-1">รองผู้อำนวยการ</div><div class="d-flex flex-wrap gap-3">${mk(rongs)}</div></div>
     <div class="col-md-5 mt-3 mt-md-0"><div class="fw-semibold mb-1">ผู้บริหารระดับสูง</div><div class="d-flex flex-wrap gap-3">${mk(highs)}</div></div>
   </div>`;
+  if(!box.dataset.wired){ box.addEventListener('change', updateRoutePreview); box.dataset.wired='1'; }
+  updateRoutePreview();
+}
+/* แสดงเส้นทางที่แฟ้มจะต้องผ่าน ตามผู้บริหารที่ติ๊กไว้ (อัปเดตทันทีที่ติ๊ก) */
+function updateRoutePreview(){
+  const el=document.getElementById('routePreview'); if(!el) return;
+  const tl=[...document.querySelectorAll('.tl:checked')].map(c=>c.value).join(', ');
+  const route=routeStations(tl);
+  const skipped=['S2','S3'].filter(k=>route.indexOf(k)<0);
+  el.innerHTML=`<div class="small p-2 rounded" style="background:#eef8f6;border:1px solid #cfe9e4">
+    <i class="bi bi-signpost-split me-1" style="color:var(--brand)"></i>เส้นทางที่แฟ้มนี้ต้องผ่าน:
+    <b>${route.map(k=>esc(stationName(k))).join(' → ')}</b>
+    ${skipped.length?`<span class="text-muted ms-1">(ไม่ผ่าน ${skipped.map(k=>esc(stationName(k))).join(', ')})</span>`:''}
+    ${!tl?'<div class="text-warning-emphasis mt-1"><i class="bi bi-info-circle me-1"></i>ยังไม่ได้เลือกผู้บริหาร — แฟ้มจะไปจากจุดแรกถึงจุดสุดท้ายโดยตรง</div>':''}</div>`;
 }
 function fillFolderSelect(){
   const showAll=document.getElementById('regShowAll').checked;
@@ -1987,6 +2046,7 @@ async function saveRegister(){
     document.getElementById('regDept').value='';
     loadOwnerDir(true);                       // อัปเดตทะเบียนผู้เสนอด้วยข้อมูลที่เพิ่งบันทึก
     document.querySelectorAll('.tl').forEach(c=>c.checked=false);
+    updateRoutePreview();
     document.getElementById('recordRows').innerHTML=''; addRecordRow();
     try{ const g=await api('getFolders'); if(g.ok) ALL_FOLDERS=g.folders||[]; }catch(e){}
     fillFolderSelect();
@@ -2160,7 +2220,7 @@ async function loadQueue(){
   document.getElementById('queueStname').textContent = station?('('+stationName(station)+')'):'';
   if(!station){ QUEUE_ROWS=[]; renderQueue(); return; }
   try{
-    const d=await apiCached('getStationQueue',{station}, 8000);
+    const d=await apiSWR('getStationQueue',{station}, 8000, loadQueue);
     if(!d.ok) throw new Error(d.error||'error');
     QUEUE_ROWS=d.rows||[];
     renderQueue();
@@ -2186,7 +2246,7 @@ function renderQueue(){
 async function loadDoneToday(){
   const body=document.getElementById('doneTodayBody');
   try{
-    const d=await apiCached('getHistory',{period:'today', onlyCompleted:'1', limit:'50'}, 20000);
+    const d=await apiSWR('getHistory',{period:'today', onlyCompleted:'1', limit:'50'}, 20000, loadDoneToday);
     if(!d.ok) throw new Error(d.error||'error');
     const rows=d.rows||[];
     document.getElementById('doneTodayCount').textContent=rows.length;
@@ -2378,47 +2438,53 @@ async function doTrack(){
 /* จำแนกชื่อผู้บริหารในไทม์ไลน์ว่าเป็น รอง / ผอ. / คณบดี (อิงจากชื่อที่ตั้งค่าไว้) */
 function classifyExec(name){
   const n=(name||'').trim();
+  if(!n) return '';
   for(let i=1;i<=5;i++){ if(n===cfg('rong'+i)) return 'rong'; }
   if(n===cfg('dean')) return 'dean';
   if(n===cfg('dir')) return 'dir';
+  // ชื่อไม่ตรงกับตั้งค่าปัจจุบัน -> ดูจากคำในชื่อ ("รอง" ต้องมาก่อน "ผู้อำนวยการ")
+  if(/รอง/.test(n)) return 'rong';
   if(/คณบดี/.test(n)) return 'dean';
   if(/ผู้อำนวยการ|ผอ/.test(n)) return 'dir';
   return 'rong';
+}
+/* จุดที่แฟ้มต้องผ่าน ตามผู้บริหารที่เลือก (ตรงกับกติกาฝั่ง server)
+   S1 ทุกแฟ้ม · S2 เมื่อเลือกรอง · S3 เมื่อเลือก ผอ./คณบดี · S4 ทุกแฟ้ม */
+function routeStations(timeline){
+  let rong=false, high=false;
+  String(timeline||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(n=>{
+    const g=classifyExec(n); if(g==='rong') rong=true; else if(g==='dir'||g==='dean') high=true;
+  });
+  const st=['S1']; if(rong) st.push('S2'); if(high) st.push('S3'); st.push('S4');
+  return st;
 }
 function histTimeline(logs, timeline){
   const done={}; (logs||[]).forEach(l=>{ done[l.station+'|'+l.direction]=l.timestamp; });
   const p=n=>String(n).padStart(2,'0');
   const tfmt=iso=>{ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; return thaiDate(iso)+' '+p(d.getHours())+':'+p(d.getMinutes()); };
-  const has=k=>!!done[k];
-  const s1out=has('S1|ออก'), s2in=has('S2|เข้า'), s2out=has('S2|ออก'), s3in=has('S3|เข้า'), s3out=has('S3|ออก'), s4in=has('S4|เข้า');
-  // จำแนกผู้บริหารที่แฟ้มเลือก
+  const route=routeStations(timeline);
   const execs=(timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
-  const rongNames=[], dirNames=[], deanNames=[];
-  execs.forEach(nm=>{ const g=classifyExec(nm); if(g==='dean') deanNames.push(nm); else if(g==='dir') dirNames.push(nm); else rongNames.push(nm); });
-  const midHigh = deanNames.concat(dirNames);   // ช่วง ธุรการ3→4 : คณบดี อยู่เหนือ ผอ.
-
+  const rongNames=[], highNames=[], deanNames=[];
+  execs.forEach(nm=>{ const g=classifyExec(nm); if(g==='dean') deanNames.push(nm); else if(g==='dir') highNames.push(nm); else if(g==='rong') rongNames.push(nm); });
+  const midHigh=deanNames.concat(highNames);         // คณบดี อยู่เหนือ ผอ.
   const stNode=(k)=>{
     const inT=done[k+'|เข้า'], outT=done[k+'|ออก'];
     const times = inT ? ('เข้า '+tfmt(inT)+(outT?('<br>ออก '+tfmt(outT)):'')) : '<span class="text-muted">ยังไม่ถึง</span>';
     return { reached:!!inT, cls:outT?'done':(inT?'active':''),
       inner:`<div class="hist-tl-dot"></div><div class="hist-tl-name">${esc(stationName(k))}</div><div class="hist-tl-times">${times}</div>` };
   };
-  const lbNode=(names, reached, doneFlag, activeFlag)=>{
-    const txt=doneFlag?'ผ่านแล้ว':(activeFlag?'อยู่ช่วงนี้':'<span class="text-muted">ยังไม่ถึง</span>');
-    return { reached, cls:'label '+(doneFlag?'done':(activeFlag?'active':'')),
+  /* ป้ายผู้บริหาร: ผ่านแล้วเมื่อจุดถัดไปรับเข้า, อยู่ช่วงนี้เมื่อจุดก่อนหน้าสแกนออกแล้ว */
+  const lbNode=(names, prevSt, nextSt)=>{
+    const started=!!done[prevSt+'|ออก'], finished=!!done[nextSt+'|เข้า'];
+    const txt=finished?'ผ่านแล้ว':(started?'อยู่ช่วงนี้':'<span class="text-muted">ยังไม่ถึง</span>');
+    return { reached:started, cls:'label '+(finished?'done':(started?'active':'')),
       inner:`<div class="hist-tl-dot"></div><div class="hist-tl-name">${names.map(n=>esc(n)).join('<br>')}</div><div class="hist-tl-times">${txt}</div>` };
   };
-
-  // ลำดับ: ธุรการ1 → หัวหน้าสำนักงาน → ธุรการ2 → รองที่เลือก → ธุรการ3 → ผอ./คณบดี → ธุรการ4
-  const nodes=[];
-  nodes.push(stNode('S1'));
-  nodes.push(lbNode(['หัวหน้าสำนักงาน'], s1out, s2in, s1out&&!s2in));
-  nodes.push(stNode('S2'));
-  if(rongNames.length) nodes.push(lbNode(rongNames, s2out, s3in, s2out&&!s3in));
-  nodes.push(stNode('S3'));
-  if(midHigh.length) nodes.push(lbNode(midHigh, s3out, s4in, s3out&&!s4in));
+  const nextOf=k=>route[route.indexOf(k)+1];
+  const nodes=[stNode('S1'), lbNode(['หัวหน้าสำนักงาน'],'S1',nextOf('S1'))];
+  if(route.indexOf('S2')>=0){ nodes.push(stNode('S2')); if(rongNames.length) nodes.push(lbNode(rongNames,'S2',nextOf('S2'))); }
+  if(route.indexOf('S3')>=0){ nodes.push(stNode('S3')); if(midHigh.length) nodes.push(lbNode(midHigh,'S3',nextOf('S3'))); }
   nodes.push(stNode('S4'));
-
   let html='<div class="hist-tl">';
   nodes.forEach((nd,i)=>{
     if(i>0) html+=`<div class="hist-tl-line ${nd.reached?'done':''}"></div>`;
@@ -2507,7 +2573,7 @@ async function loadHistory(){
   const body=document.getElementById('histBody');
   body.innerHTML='<div class="text-muted text-center py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดประวัติ…</div>';
   try{
-    const d=await apiCached('getHistory',{period, limit, light:'1'}, 120000);
+    const d=await apiSWR('getHistory',{period, limit, light:'1'}, 120000, loadHistory);
     if(!d.ok) throw new Error(d.error||'error');
     const rows=d.rows||[];
     document.getElementById('histTotal').textContent = (d.total>rows.length)? (rows.length+' / '+d.total) : rows.length;
@@ -2516,7 +2582,7 @@ async function loadHistory(){
   }catch(err){ body.innerHTML=`<div class="alert alert-danger m-3">${esc(err.message)}</div>`; }
 }
 function renderTrack(f){
-  const keys=['S1','S2','S3','S4']; const dirs=['เข้า','ออก'];
+  const keys=f.route||routeStations(f.timeline); const dirs=['เข้า','ออก'];   // เฉพาะจุดที่อยู่ในเส้นทางของแฟ้มนี้
   const done={}; (f.logs||[]).forEach(l=>{ done[l.station+'|'+l.direction]=l.timestamp; });
   // หาขั้นถัดไปที่ต้องสแกน (ขั้นแรกที่ยังไม่ done ตามลำดับ)
   const seqKeys=[]; keys.forEach(k=>{ seqKeys.push(k+'|เข้า'); seqKeys.push(k+'|ออก'); });
@@ -2590,7 +2656,7 @@ function renderTrack(f){
           <div class="col-md-4"><span class="text-muted small">ตำแหน่งปัจจุบัน</span><div class="fw-semibold">${esc(stationName(f.currentStation))||'—'} ${f.lastDirection?('('+esc(f.lastDirection)+')'):''}</div></div>
         </div>
         <div class="mb-2"><span class="text-muted small">ผู้ที่ต้องเสนอ (ไทม์ไลน์):</span><div class="mt-1">${tlBadges}</div></div>
-        <div class="mb-1 text-muted small">ความคืบหน้า (ต้องผ่านทุกจุด ${esc(cfg('station1'))} → ${esc(cfg('station4'))})</div>
+        <div class="mb-1 text-muted small">เส้นทางของแฟ้มนี้: <b>${keys.map(k=>esc(stationName(k))).join(' → ')}</b>${keys.length<4?` <span class="badge bg-info-subtle text-info-emphasis fw-normal ms-1">ข้าม ${['S1','S2','S3','S4'].filter(k=>keys.indexOf(k)<0).map(k=>esc(stationName(k))).join(', ')} ตามผู้บริหารที่เลือก</span>`:''}</div>
         <div class="stepper mb-1">${steps}</div>
       </div>
     </div>
@@ -2654,16 +2720,14 @@ async function saveConfigForm(){
   ['rong1','rong2','rong3','rong4','rong5','dir','dean','station1','station2','station3','station4'].forEach(k=>{
     params[k]=document.getElementById('cfg_'+k).value.trim();
   });
-  // ฝ่ายงาน: เก็บ 1 บรรทัด/1 ฝ่าย (ตัดบรรทัดว่าง)
   params.departments=(document.getElementById('cfg_departments').value||'').split(/\n/).map(s=>s.trim()).filter(Boolean).join('\n');
-  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
-  try{
-    const d=await api('saveConfig', params);
-    if(!d.ok) throw new Error(d.error||'error');
-    CONFIG=Object.assign({}, DEFAULTS, d.config);
-    fillStationSelect();
-    toast(el,'success',d.message);
-  }catch(err){ toast(el,'danger',err.message); }
+  // ใช้ค่าใหม่ทันทีทั้งระบบ แล้วค่อยส่งไปบันทึกเบื้องหลัง
+  const before=Object.assign({},CONFIG);
+  Object.keys(params).forEach(k=>{ if(params[k]) CONFIG[k]=params[k]; });
+  fillStationSelect(); fillDeptSelect();
+  saveInstant(el,'บันทึกการตั้งค่าเรียบร้อย', api('saveConfig', params),
+    ()=>{ CONFIG=before; fillStationSelect(); fillDeptSelect(); loadConfigForm(); },
+    d=>{ CONFIG=Object.assign({},DEFAULTS,d.config); clearCache(); });
 }
 async function testConnection(){
   const el=document.getElementById('setResult');
@@ -2689,7 +2753,7 @@ async function loadMaintenance(){
   if(!can('MANAGE_CONFIG')) return;
   const tt=document.getElementById('mtTestTo'); if(tt && !tt.value && ME) tt.value=ME.email||'';
   try{
-    const d=await api('getMaintenance');
+    const d=await apiSWR('getMaintenance', {}, 30000, loadMaintenance);
     if(!d.ok) throw new Error(d.error||'error');
     document.getElementById('mtTotal').textContent=d.totalFolders;
     document.getElementById('mtTarget').placeholder='เช่น '+(Math.ceil((d.totalFolders+1)/100)*100);
@@ -2743,10 +2807,14 @@ async function backupUI(){
 }
 async function triggersUI(on){
   const el=document.getElementById('mtAutoMsg');
-  try{
-    const d=await api(on?'setupTriggers':'stopTriggers');
-    toast(el, d.ok?'success':'danger', d.message||d.error); clearCache(); loadMaintenance();
-  }catch(err){ toast(el,'danger',err.message); }
+  const box=document.getElementById('mtAuto');
+  const prev=box.innerHTML;
+  const badge=(b,t)=>`<span class="badge ${b?'bg-success':'bg-secondary'} me-1">${b?'เปิด':'ปิด'}</span>${t}`;
+  box.innerHTML=badge(on,'สำรองข้อมูลรายสัปดาห์')+'<br>'+badge(on,'สรุปรายวัน');
+  saveInstant(el, on?'เปิดใช้งานอัตโนมัติแล้ว: สำรองข้อมูลทุกวันจันทร์ 02:00 น. และส่งสรุปทุกวัน 17:00 น.':'ปิดการทำงานอัตโนมัติแล้ว',
+    api(on?'setupTriggers':'stopTriggers'),
+    ()=>{ box.innerHTML=prev; },
+    ()=>{ clearCache(); });
 }
 async function digestUI(){
   const el=document.getElementById('mtAutoMsg');
@@ -2802,12 +2870,11 @@ async function saveSlaUI(){
     if(!v || v<=0){ toast(el,'danger','เกณฑ์เวลาต้องเป็นตัวเลขมากกว่า 0'); return; }
     p[k]=String(v);
   }
-  try{
-    const d=await api('saveConfig',p);
-    if(!d.ok){ toast(el,'danger',d.error); return; }
-    CONFIG=Object.assign({},DEFAULTS,d.config); clearCache();
-    toast(el,'success','บันทึกเกณฑ์เวลาเรียบร้อย — มีผลกับแดชบอร์ด คิวสแกน และรายงานทันที');
-  }catch(err){ toast(el,'danger',err.message); }
+  const before={}; Object.keys(p).forEach(k=>before[k]=CONFIG[k]);
+  Object.assign(CONFIG,p);
+  saveInstant(el,'บันทึกเกณฑ์เวลาเรียบร้อย — มีผลกับแดชบอร์ด คิวสแกน และรายงาน', api('saveConfig',p),
+    ()=>{ Object.assign(CONFIG,before); Object.keys(before).forEach(k=>{ const e=document.getElementById('cfg_'+k); if(e) e.value=before[k]||''; }); },
+    d=>{ CONFIG=Object.assign({},DEFAULTS,d.config); clearCache(); });
 }
 /* บันทึกอีเมลเพิ่มเติมที่รับสรุปรายวัน แล้วรีเฟรชรายชื่อผู้รับทันที */
 async function saveDigestUI(){
@@ -2817,25 +2884,31 @@ async function saveDigestUI(){
   const bad=list.filter(e=>!/^[^@\s]+@up\.ac\.th$/i.test(e));
   if(bad.length){ toast(el,'danger','อีเมลต้องเป็น @up.ac.th: '+bad.join(', ')); return; }
   const uniq=[...new Set(list)];
+  const before=CONFIG.digestEmails||'';
   document.getElementById('cfg_digestEmails').value=uniq.join(', ');
-  try{
-    const d=await api('saveConfig',{digestEmails:uniq.join(', ')});
-    if(!d.ok){ toast(el,'danger',d.error); return; }
-    CONFIG=Object.assign({},DEFAULTS,d.config); clearCache();
-    toast(el,'success','บันทึกผู้รับสรุปรายวันเรียบร้อย');
-    loadMaintenance();
-  }catch(err){ toast(el,'danger',err.message); }
+  // อัปเดตรายชื่อผู้รับบนจอทันที
+  const box=document.getElementById('mtRecipients');
+  const admins=[...box.querySelectorAll('.badge.bg-secondary-subtle')].map(b=>b.textContent.trim());
+  const all=admins.slice(); uniq.forEach(e=>{ if(all.indexOf(e)<0) all.push(e); });
+  const chip=(e,cls)=>`<span class="badge ${cls} fw-normal me-1 mb-1">${esc(e)}</span>`;
+  box.innerHTML=admins.map(e=>chip(e,'bg-secondary-subtle text-secondary-emphasis')).join('')+
+    uniq.filter(e=>admins.indexOf(e)<0).map(e=>chip(e,'bg-success-subtle text-success-emphasis')).join('')+
+    `<div class="text-muted mt-1">รวม ${all.length} คน · สีเทา = ผู้ดูแลระบบ (รับอัตโนมัติ) · สีเขียว = เพิ่มเอง</div>`;
+  CONFIG.digestEmails=uniq.join(', ');
+  saveInstant(el,'บันทึกผู้รับสรุปรายวันเรียบร้อย', api('saveConfig',{digestEmails:uniq.join(', ')}),
+    ()=>{ CONFIG.digestEmails=before; document.getElementById('cfg_digestEmails').value=before; clearCache(); loadMaintenance(); },
+    ()=>{ clearCache(); });
 }
 /* เปิด/ปิดอีเมลแจ้งผู้เสนอ (บันทึกทันทีเมื่อกดสวิตช์) */
 async function saveNotifyUI(){
   const el=document.getElementById('mtNotifyMsg');
-  const on=document.getElementById('cfg_notifyOwner').checked;
-  try{
-    const d=await api('saveConfig',{notifyOwner:on?'Y':'N'});
-    if(!d.ok){ toast(el,'danger',d.error); return; }
-    CONFIG=Object.assign({},DEFAULTS,d.config); clearCache();
-    toast(el,'success', on?'เปิดการแจ้งเตือนผู้เสนอแล้ว':'ปิดการแจ้งเตือนผู้เสนอแล้ว — ระบบจะไม่ส่งอีเมลถึงผู้เสนอ');
-  }catch(err){ toast(el,'danger',err.message); }
+  const sw=document.getElementById('cfg_notifyOwner');
+  const on=sw.checked;
+  CONFIG.notifyOwner=on?'Y':'N';
+  saveInstant(el, on?'เปิดการแจ้งเตือนผู้เสนอแล้ว':'ปิดการแจ้งเตือนผู้เสนอแล้ว — ระบบจะไม่ส่งอีเมลถึงผู้เสนอ',
+    api('saveConfig',{notifyOwner:on?'Y':'N'}),
+    ()=>{ sw.checked=!on; CONFIG.notifyOwner=!on?'Y':'N'; },
+    ()=>{ clearCache(); });
 }
 
 /* ---------- จัดการผู้ใช้งาน ---------- */
@@ -2845,7 +2918,7 @@ async function loadUsers(){
   const body=document.getElementById('usersBody');
   body.innerHTML='<tr><td colspan="9" class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</td></tr>';
   try{
-    const d=await api('listUsers');
+    const d=await apiSWR('listUsers', {}, 30000, loadUsers);
     if(!d.ok) throw new Error(d.error||'error');
     ROLE_LIST=d.roles||[];
     const sel=document.getElementById('nuRole');
@@ -2896,11 +2969,25 @@ async function createUser(){
 async function updateUser(userId, field, value){
   const el=document.getElementById('userMsg');
   const p={userId}; p[field]=value;
-  try{
-    const d=await api('updateUser',p);
-    if(!d.ok){ toast(el,'danger',d.error); return; }
-    toast(el,'success',d.message); clearCache(); loadUsers();
-  }catch(err){ toast(el,'danger',err.message); }
+  // ปุ่มระงับ/เปิดบัญชี: เปลี่ยนป้ายสถานะบนจอทันที
+  if(field==='status') optimisticUserStatus(userId, value);
+  const label = field==='roleId'?'เปลี่ยนบทบาทแล้ว':(field==='stationKey'?'เปลี่ยนจุดสแกนแล้ว':(value==='ACTIVE'?'เปิดใช้งานบัญชีแล้ว':'ระงับบัญชีแล้ว'));
+  saveInstant(el, label+' — มีผลทันทีโดยผู้ใช้ไม่ต้องล็อกอินใหม่', api('updateUser',p),
+    ()=>{ clearCache(); loadUsers(); },
+    ()=>{ clearCache(); });
+}
+/* เปลี่ยนป้ายสถานะ/ปุ่มของแถวผู้ใช้บนจอทันที */
+function optimisticUserStatus(userId, status){
+  document.querySelectorAll('#usersBody tr').forEach(tr=>{
+    const btn=tr.querySelector(`button[onclick*="updateUser('${userId}','status'"]`);
+    if(!btn) return;
+    const act=status==='ACTIVE';
+    const badge=tr.querySelector('td:nth-child(7) .badge');
+    if(badge){ badge.className='badge '+(act?'bg-success':'bg-secondary'); badge.textContent=act?'ใช้งาน':'ระงับ'; }
+    btn.setAttribute('onclick',`updateUser('${userId}','status','${act?'DISABLED':'ACTIVE'}')`);
+    btn.title=act?'ระงับบัญชี':'เปิดใช้งาน';
+    btn.innerHTML=`<i class="bi ${act?'bi-lock':'bi-unlock'}"></i>`;
+  });
 }
 async function resetUserPw(userId, email){
   if(!confirm('ตั้งรหัสผ่านชั่วคราวใหม่ให้ '+email+' ?\nผู้ใช้จะต้องเปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งถัดไป')) return;
@@ -3018,6 +3105,29 @@ function pickOwner(i){
   em.addEventListener('blur', ()=>{ em.value=emailLocal(em.value); });
 })();
 
+/* ตรวจ session กับ server — ออกจากระบบเฉพาะเมื่อ server ยืนยันว่าหมดอายุจริง (เน็ตสะดุดไม่ทำให้หลุด) */
+async function verifySession(waitResult){
+  for(let i=0;i<3;i++){
+    try{
+      const d=await apiPost('getMe',{});
+      if(d && d.ok){
+        const roleChanged = !ME || ME.roleId!==d.user.roleId || ME.stationKey!==d.user.stationKey
+                            || JSON.stringify(MY_PERMS)!==JSON.stringify(d.permissions||[]);
+        ME=d.user; MY_PERMS=d.permissions||[]; saveMe();
+        if(!waitResult){
+          if(d.mustChangePassword){ showAuthGate('MustChange',''); return d; }
+          showMe(); if(roleChanged) applyPermissions();
+        }
+        return d;
+      }
+      if(d && (d.code==='NO_AUTH')){ forgetMe(); if(!waitResult) showAuthGate('Login','เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง'); return d; }
+      if(d && d.code==='MUST_CHANGE_PW'){ if(!waitResult) showAuthGate('MustChange',''); return d; }
+    }catch(e){}
+    await new Promise(r=>setTimeout(r, 1200*(i+1)));   // เน็ตสะดุด -> ลองใหม่
+  }
+  return null;                                          // ยังติดต่อไม่ได้ -> คงสถานะล็อกอินไว้
+}
+
 /* โหลดแอปหลังจากล็อกอินแล้ว */
 /* โหลดข้อมูลที่ใช้บ่อยไว้ล่วงหน้าแบบเงียบ ๆ เพื่อให้สลับหน้าแล้วขึ้นทันที */
 function prewarm(){
@@ -3034,10 +3144,18 @@ function prewarm(){
 }
 async function startApp(){
   enterApp();
+  hydrateCache();
   showMe();
   applyPermissions();
+  // มีข้อมูลที่จำไว้ -> วาดแดชบอร์ดทันที ไม่ต้องรอ server
+  const bc=API_CACHE.get(cacheKey('getBootstrap',{}));
+  if(bc && bc.v && bc.v.ok){
+    if(bc.v.config) CONFIG=Object.assign({},DEFAULTS,bc.v.config);
+    fillStationSelect(); applyPermissions();
+    if(bc.v.dashboard && bc.v.dashboard.ok) applyDashboard(bc.v.dashboard);
+  }
   try{
-    const d = await api('getBootstrap');
+    const d = await apiCached('getBootstrap', {}, 0);
     if(d && d.ok){
       if(d.config) CONFIG = Object.assign({}, DEFAULTS, d.config);
       setConn(true);
@@ -3067,17 +3185,19 @@ async function startApp(){
   }
   // มาจากลิงก์ตั้งรหัสผ่านใหม่ในอีเมล
   if(new URLSearchParams(location.search).get('reset')){ showAuthGate('Reset',''); return; }
-  // มี token เดิมอยู่ -> ตรวจว่ายังใช้ได้ไหม
+  // มี token เดิมอยู่ -> เข้าระบบต่อได้เลย (อยู่ในระบบจนกว่าจะกดออกจากระบบเอง)
   if(AUTH_TOKEN){
-    try{
-      const d = await apiPost('getMe',{});
-      if(d && d.ok){
-        ME=d.user; MY_PERMS=d.permissions||[];
-        if(d.mustChangePassword){ showAuthGate('MustChange',''); return; }
-        await startApp(); return;
-      }
-    }catch(e){}
-    AUTH_TOKEN=''; localStorage.removeItem(TOKEN_KEY);
+    if(loadSavedMe()){
+      startApp();                                   // แสดงหน้าทันที ไม่ต้องรอ
+      verifySession();                              // ตรวจกับ server เบื้องหลัง
+      return;
+    }
+    // ไม่มีข้อมูลที่จำไว้ -> ต้องถามก่อน (ลองซ้ำถ้าเน็ตสะดุด ไม่ลบ token ทิ้ง)
+    const d = await verifySession(true);
+    if(d && d.ok){ if(d.mustChangePassword){ showAuthGate('MustChange',''); return; } startApp(); return; }
+    if(d && d.code==='NO_AUTH'){ showAuthGate('Login',''); checkSetup(); return; }
+    showAuthGate('Login','เชื่อมต่อ server ไม่ได้ชั่วคราว — กดรีเฟรชอีกครั้ง หรือเข้าสู่ระบบใหม่');
+    return;
   }
   showAuthGate('Login','');
   checkSetup();
