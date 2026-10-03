@@ -8,7 +8,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Noto+Serif+Thai:wght@500;600;700&display=swap" rel="stylesheet">
 <!-- JsBarcode: บาร์โค้ด 1 มิติ (Code 128) รองรับเครื่องสแกนเลเซอร์ Symbol -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <!-- SheetJS: ส่งออก Excel -->
@@ -207,7 +207,164 @@
     #printArea{ position:absolute; inset:0; margin:0; padding:10px; }
     .bc-item{ border:none; page-break-inside:avoid; }
   }
+  /* =====================================================================
+     ธีม: ม่วง-ทอง ตามโลโก้โรงพยาบาลมหาวิทยาลัยพะเยา (ค่าเริ่มต้น)
+     โดมสีม่วง · ริบบิ้นสีทอง · คทาแพทย์สีเขียว
+     ===================================================================== */
+  :root{
+    --bg:#F6F4F9; --surface:#FFFFFF; --ink:#231A2F; --muted:#6E6680; --line:#E6E0EE;
+    --brand:#6B3D9A; --brand-600:#5A3184; --brand-700:#46266A; --brand-soft:#EFE7F8;
+    --accent:#C8963E; --accent-ink:#86611A; --accent-soft:#FBF3E2;
+    --ok:#1F7A4C; --ok-soft:#E3F3EA; --danger:#B4373F; --danger-soft:#FBECEC;
+    --neutral-soft:#F0EDF4; --neutral-ink:#5B5469;
+    --sidebar:#2E1A47; --sidebar-2:#2E1A47; --sidebar-ink:#EDE6F7; --sidebar-muted:#A99BC0;
+    --nav-accent:#D9AE5F; --hover:#F7F2FC; --focus:rgba(107,61,154,.22); --overlay:rgba(35,26,47,.55);
+    --shadow-sm:0 1px 2px rgba(46,26,71,.06); --shadow:0 18px 40px -22px rgba(46,26,71,.45);
+    --radius:14px;
+    --font-ui:'IBM Plex Sans Thai', system-ui, sans-serif;
+    --font-display:'Noto Serif Thai', 'IBM Plex Sans Thai', serif;
+  }
+  /* ธีมเดิม: เขียวน้ำทะเล (สลับได้ที่ปุ่มจานสีมุมล่างซ้าย) */
+  html[data-theme="teal"]{
+    --bg:#eef2f4; --ink:#132a2f; --muted:#647a80; --line:#e6ecee;
+    --brand:#0d9488; --brand-600:#0f766e; --brand-700:#115e56; --brand-soft:#d8f0ec;
+    --accent:#e0a100; --accent-ink:#8a5a00; --accent-soft:#fff6e6;
+    --neutral-soft:#eef1f3; --neutral-ink:#55606b;
+    --sidebar:#0e2a30; --sidebar-2:#123a41; --sidebar-ink:#eafffb; --sidebar-muted:#8fbab5;
+    --nav-accent:#5eead4; --hover:#f3faf9; --focus:rgba(13,148,136,.18); --overlay:rgba(8,24,27,.55);
+    --shadow-sm:0 1px 2px rgba(16,36,42,.05); --shadow:0 10px 30px -14px rgba(16,36,42,.28);
+  }
+
+  /* ---------- ตัวอักษร ---------- */
+  *{ font-family:var(--font-ui); }
+  h1,h2,h3,h4,h5,h6,.font-display,.nav-link,.eyebrow,.table thead th{ font-family:var(--font-ui); }
+  .topbar .pt-title, .sidebar .brand-name, .topbar .brand-name, .stat .num, .auth-title{
+    font-family:var(--font-display); letter-spacing:0; }
+  body{ background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; }
+
+  /* ---------- แถบเมนูซ้าย: จุดเด่นของหน้าจอ ---------- */
+  .sidebar{ background:var(--sidebar); color:var(--sidebar-ink); }
+  .sidebar .brand{ padding:24px 20px 20px; border-bottom:1px solid rgba(255,255,255,.07); }
+  .sidebar .brand-name{ font-weight:600; font-size:1.08rem; }
+  .sidebar .brand-sub{ color:var(--sidebar-muted); }
+  .sidebar nav{ padding:14px 12px; }
+  .sidebar .nav-link{ color:var(--sidebar-muted); border:0; border-radius:10px; position:relative; padding:11px 14px; }
+  .sidebar .nav-link:hover{ background:rgba(255,255,255,.05); color:var(--sidebar-ink); }
+  .sidebar .nav-link.active{ background:rgba(255,255,255,.08); color:#fff; border:0;
+    box-shadow:inset 3px 0 0 var(--nav-accent); }
+  .sidebar .nav-link.active i{ color:var(--nav-accent); }
+  .sidebar .side-foot{ border-top:1px solid rgba(255,255,255,.07); }
+  .user-chip .ava{ background:var(--nav-accent); color:var(--sidebar); }
+  .user-chip .rl{ color:var(--sidebar-muted); }
+  .sidebar .btn-outline-light{ border-color:rgba(255,255,255,.18); color:var(--sidebar-ink); }
+  .sidebar .btn-outline-light:hover{ background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.3); color:#fff; }
+
+  /* ---------- แถบหัวหน้า ---------- */
+  .topbar{ background:rgba(255,255,255,.92); border-bottom:1px solid var(--line); }
+  .topbar .pt-title{ font-weight:600; font-size:1.3rem; color:var(--ink); }
+  .topbar .pt-sub{ color:var(--muted); }
+
+  /* ---------- การ์ด: เรียบ เงาจาง ไม่เด้ง ---------- */
+  .card{ border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); }
+  .card-header{ font-weight:600; color:var(--ink); }
+  .card-header > span > .bi:first-child, .card-header > .bi:first-child{ color:var(--brand); }
+
+  /* ---------- ตัวเลขสรุป ---------- */
+  .stat{ box-shadow:none; padding:18px 20px 16px; }
+  .stat:hover{ transform:none; box-shadow:none; }
+  .stat .bar{ display:none; }
+  .stat .lbl{ font-size:.85rem; }
+  .stat .num{ font-size:2.35rem; font-weight:600; margin-top:8px; }
+  .stat .chip{ width:34px; height:34px; border-radius:9px; font-size:1.02rem; top:16px; right:16px; }
+  .stat.total .chip{ background:var(--accent-soft); color:var(--accent-ink); }
+  .stat.vang  .chip{ background:var(--neutral-soft); color:var(--neutral-ink); }
+  .stat.using .chip{ background:var(--brand-soft); color:var(--brand-700); }
+  .stat.done  .chip{ background:var(--ok-soft); color:var(--ok); }
+
+  /* ---------- ปุ่ม ---------- */
+  .btn{ border-radius:9px; }
+  .btn-brand{ background:var(--brand); border-color:var(--brand); color:#fff; box-shadow:none; }
+  .btn-brand:hover, .btn-brand:focus{ background:var(--brand-600); border-color:var(--brand-600); color:#fff; transform:none; }
+  .btn-outline-brand{ border-color:var(--brand); color:var(--brand); }
+  .btn-outline-brand:hover{ background:var(--brand); border-color:var(--brand); color:#fff; }
+  .btn:focus-visible, a:focus-visible, .nav-link:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; box-shadow:none; }
+
+  /* ---------- ฟอร์ม ---------- */
+  .form-control, .form-select{ border-color:var(--line); }
+  .form-control:focus, .form-select:focus{ border-color:var(--brand); box-shadow:0 0 0 .2rem var(--focus); }
+  .form-check-input:checked{ background-color:var(--brand); border-color:var(--brand); }
+  .form-check-input:focus{ border-color:var(--brand); box-shadow:0 0 0 .2rem var(--focus); }
+  .fixed-prefix{ background:var(--brand-soft); color:var(--brand-700); }
+  .scan-input{ border-color:var(--brand); color:var(--ink); }
+
+  /* ---------- ป้ายสถานะ ---------- */
+  .badge-status{ border-radius:999px; padding:.4em .78em; font-weight:600; }
+  .st-ว่าง{ background:var(--neutral-soft); color:var(--neutral-ink); }
+  .st-ใช้{ background:var(--brand-soft); color:var(--brand-700); }
+  .st-เสร็จ{ background:var(--ok-soft); color:var(--ok); }
+
+  /* ---------- ตาราง ---------- */
+  .table thead th{ color:var(--muted); font-weight:600; }
+  .table-hover tbody tr:hover, .hist-head:hover, .hist-entry:hover{ background:var(--hover); }
+  .hist-colhead{ background:var(--bg); }
+
+  /* ---------- ขั้นตอน / ไทม์ไลน์ ---------- */
+  .step{ background:var(--bg); border-color:var(--line); color:var(--muted); }
+  .step.done{ background:var(--brand-soft); color:var(--brand-700); border-color:transparent; }
+  .step.next{ background:var(--accent-soft); color:var(--accent-ink); border:2px solid var(--accent); box-shadow:none; }
+  .dwell-box{ background:var(--bg); }
+  .dwell-box.dwell-now{ background:var(--accent-soft); border-color:var(--accent); box-shadow:none; }
+  .dwell-box.dwell-now .fw-bold{ color:var(--accent-ink); }
+  .hist-tl-dot{ border-color:var(--surface); background:var(--line); }
+  .hist-tl-node.active .hist-tl-dot{ background:var(--accent); }
+  .hist-tl-node.done .hist-tl-dot{ background:var(--brand); }
+  .hist-tl-line{ background:var(--line); }
+  .hist-tl-line.done{ background:var(--brand); }
+  .hist-tl-node.label .hist-tl-dot{ background:var(--surface); border-color:var(--line); }
+  .hist-tl-node.label.active .hist-tl-dot{ background:var(--accent-soft); border-color:var(--accent); }
+  .hist-tl-node.label.done .hist-tl-dot{ background:var(--brand-soft); border-color:var(--brand); }
+  .hist-tl-node.label .hist-tl-name{ color:var(--muted); }
+
+  /* ---------- กล่องข้อความในหน้า ---------- */
+  .note-route{ background:var(--brand-soft); border:1px solid transparent; color:var(--ink); }
+  .note-route .bi{ color:var(--brand); }
+  .note-edit{ background:var(--accent-soft); border:1px solid var(--accent); }
+  .bc-item.bc-printed{ border-color:var(--accent); background:var(--accent-soft); }
+  .owner-suggest .it.on, .owner-suggest .it:hover{ background:var(--hover); }
+  .owner-suggest mark{ background:var(--accent-soft); color:var(--accent-ink); }
+
+  /* ---------- หน้าเข้าสู่ระบบ ---------- */
+  .auth-wrap{ background:
+      radial-gradient(1100px 520px at 18% -10%, rgba(255,255,255,.07), transparent 60%),
+      var(--sidebar); }
+  .auth-card{ border-radius:18px; box-shadow:0 30px 70px -30px rgba(0,0,0,.55); }
+  .auth-title{ color:var(--brand-700); font-weight:600; font-size:1.3rem; }
+  .auth-sub{ padding-bottom:12px; margin:0 auto 4px; width:fit-content;
+    border-bottom:2px solid var(--accent); }
+
+  /* ---------- หน้าต่างแจ้งผลสแกน / เมนูมือถือ ---------- */
+  .scan-modal-overlay{ background:var(--overlay); }
+  .sidebar-backdrop{ background:var(--overlay); }
+
+
+  /* ---------- ป้ายชั้นความเร็ว / กำหนดเสร็จ: เข้าโทนเดียวกัน (สีทึบเฉพาะเรื่องเร่งด่วนที่สุด) ---------- */
+  .ub, .sb{ border-radius:999px; font-weight:600; padding:.38em .72em; }
+  .ub-most, .sb-over{ background:var(--danger); color:#fff; }
+  .ub-very, .sb-near, .eb-edit{ background:var(--accent-soft); color:var(--accent-ink); box-shadow:inset 0 0 0 1px var(--accent); }
+  .ub-urgent{ background:var(--brand-soft); color:var(--brand-700); }
+  .sb-ok{ background:var(--ok-soft); color:var(--ok); }
+  /* ลิงก์ใช้สีม่วงของระบบ */
+  :root{ --bs-link-color-rgb:107,61,154; --bs-link-hover-color-rgb:70,38,106; }
+  html[data-theme="teal"]{ --bs-link-color-rgb:13,148,136; --bs-link-hover-color-rgb:17,94,86; }
+  /* ---------- ลดการเคลื่อนไหวสำหรับผู้ที่ตั้งค่าไว้ ---------- */
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
 </style>
+<script>
+  /* ใช้ธีมที่เลือกไว้ทันทีก่อนวาดหน้า (กันหน้ากระพริบเปลี่ยนสี) */
+  (function(){ try{ var t=localStorage.getItem('uph_theme'); if(t==='teal') document.documentElement.setAttribute('data-theme','teal'); }catch(e){} })();
+</script>
 </head>
 <body>
 
@@ -309,6 +466,7 @@
       </div>
       <div class="d-flex gap-1 mb-2">
         <button class="btn btn-sm btn-outline-light flex-fill py-0" onclick="openChangePw()" title="เปลี่ยนรหัสผ่าน"><i class="bi bi-key"></i></button>
+        <button id="themeBtn" class="btn btn-sm btn-outline-light flex-fill py-0" onclick="toggleTheme()" title="สลับธีมสี"><i class="bi bi-palette"></i></button>
         <button class="btn btn-sm btn-outline-light flex-fill py-0" onclick="doLogout()" title="ออกจากระบบ"><i class="bi bi-box-arrow-right"></i></button>
       </div>
       <span id="connBadge" class="badge bg-secondary"><i class="bi bi-plug"></i> ยังไม่เชื่อมต่อ</span>
@@ -349,8 +507,8 @@
             <option value="">ทุกสถานะ</option><option>ว่าง</option><option>กำลังใช้งาน</option><option>เสร็จสิ้น</option>
             <option value="__OVERDUE">⚠ เกินกำหนด</option><option value="__NEAR">ใกล้ครบกำหนด</option>
           </select>
-          <button class="btn btn-sm btn-success" onclick="exportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
-          <button class="btn btn-sm btn-danger" onclick="exportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
+          <button class="btn btn-sm btn-outline-success" onclick="exportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="exportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
           <button class="btn btn-sm btn-outline-brand" onclick="clearCache();loadDashboard()"><i class="bi bi-arrow-clockwise"></i></button>
         </div>
       </div>
@@ -386,8 +544,8 @@
           </select>
           <button class="btn btn-sm btn-outline-brand" onclick="clearCache();loadReport();loadAudit()"><i class="bi bi-arrow-clockwise me-1"></i>รีเฟรช</button>
           <div class="ms-auto d-flex gap-2">
-            <button class="btn btn-sm btn-success" onclick="exportReportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</button>
-            <button class="btn btn-sm btn-danger" onclick="exportReportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</button>
+            <button class="btn btn-sm btn-outline-success" onclick="exportReportExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="exportReportPDF()"><i class="bi bi-file-earmark-pdf me-1"></i>Export PDF</button>
           </div>
         </div>
         <!-- ช่วงวันที่กำหนดเอง (แสดงเมื่อเลือก "กำหนดช่วงวันที่เอง") -->
@@ -1167,6 +1325,16 @@ async function doLogout(){
   document.addEventListener('dragstart', block);
 })();
 
+/* สลับธีมสี (จำไว้ในเครื่อง) */
+function toggleTheme(){
+  const root=document.documentElement;
+  const next = root.getAttribute('data-theme')==='teal' ? '' : 'teal';
+  if(next) root.setAttribute('data-theme',next); else root.removeAttribute('data-theme');
+  try{ localStorage.setItem('uph_theme', next||'purple'); }catch(e){}
+  const b=document.getElementById('themeBtn');
+  if(b) b.title = next ? 'เปลี่ยนเป็นธีมม่วง-ทอง' : 'เปลี่ยนเป็นธีมเขียวน้ำทะเล';
+}
+
 /* ---------- แคชข้อมูล: เปิดหน้า/ค้นหาซ้ำให้แสดงทันที ไม่ต้องรอโหลดใหม่ ----------
    - เก็บผลลัพธ์ตาม action+พารามิเตอร์ พร้อมอายุ (TTL)
    - ถ้ามีคำขอเดิมกำลังวิ่งอยู่ จะใช้ผลร่วมกัน (ไม่ยิงซ้ำ)
@@ -1307,7 +1475,7 @@ function statusBadge(st){ let c='st-ว่าง'; if(st==='กำลังใ�
 function toast(el,type,msg){ el.innerHTML=`<div class="alert alert-${type} py-2 mb-0"><i class="bi bi-${type==='success'?'check-circle':type==='danger'?'x-circle':'info-circle'} me-1"></i>${esc(msg)}</div>`; }
 function beep(ok){ try{const ctx=new (window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=ok?880:220;o.type='sine';g.gain.setValueAtTime(0.15,ctx.currentTime);o.start();o.stop(ctx.currentTime+(ok?0.12:0.28));}catch(e){} }
 function editBadge(f){ return (f && f.editStatus==='มีแก้ไข')
-  ? `<span class="badge bg-warning text-dark ms-1"><i class="bi bi-pencil-fill me-1"></i>มีแก้ไข${f.editStation?(' @'+esc(stationName(f.editStation))):''}</span>` : ''; }
+  ? `<span class="badge sb eb-edit ms-1"><i class="bi bi-pencil-fill me-1"></i>มีแก้ไข${f.editStation?(' @'+esc(stationName(f.editStation))):''}</span>` : ''; }
 
 /* ---------- Popup เด้งเตือนผลการสแกน ---------- */
 function showScanModal(title, msg, isError){
@@ -1934,8 +2102,8 @@ function updateRoutePreview(){
   const tl=[...document.querySelectorAll('.tl:checked')].map(c=>c.value).join(', ');
   const route=routeStations(tl);
   const skipped=['S2','S3'].filter(k=>route.indexOf(k)<0);
-  el.innerHTML=`<div class="small p-2 rounded" style="background:#eef8f6;border:1px solid #cfe9e4">
-    <i class="bi bi-signpost-split me-1" style="color:var(--brand)"></i>เส้นทางที่แฟ้มนี้ต้องผ่าน:
+  el.innerHTML=`<div class="small p-2 rounded note-route">
+    <i class="bi bi-signpost-split me-1"></i>เส้นทางที่แฟ้มนี้ต้องผ่าน:
     <b>${route.map(k=>esc(stationName(k))).join(' → ')}</b>
     ${skipped.length?`<span class="text-muted ms-1">(ไม่ผ่าน ${skipped.map(k=>esc(stationName(k))).join(', ')})</span>`:''}
     ${!tl?'<div class="text-warning-emphasis mt-1"><i class="bi bi-info-circle me-1"></i>ยังไม่ได้เลือกผู้บริหาร — แฟ้มจะไปจากจุดแรกถึงจุดสุดท้ายโดยตรง</div>':''}</div>`;
@@ -1984,9 +2152,9 @@ function hrsText(h){ if(h==null) return ''; const a=Math.abs(h); const d=Math.fl
 /* ช่องกำหนดเสร็จตามชั้นความเร็ว */
 function slaCell(sla){
   if(!sla) return '<span class="text-muted">—</span>';
-  if(sla.status==='OVERDUE') return `<span class="badge bg-danger">เกินกำหนด</span><div class="small text-danger">เกิน ${hrsText(sla.elapsedH-sla.limitH)}</div>`;
-  if(sla.status==='NEAR') return `<span class="badge bg-warning text-dark">ใกล้ครบ</span><div class="small text-muted">เหลือ ${hrsText(sla.limitH-sla.elapsedH)}</div>`;
-  return `<span class="badge bg-success-subtle text-success-emphasis">ตามกำหนด</span><div class="small text-muted">เหลือ ${hrsText(sla.limitH-sla.elapsedH)}</div>`;
+  if(sla.status==='OVERDUE') return `<span class="badge sb sb-over">เกินกำหนด</span><div class="small text-danger">เกิน ${hrsText(sla.elapsedH-sla.limitH)}</div>`;
+  if(sla.status==='NEAR') return `<span class="badge sb sb-near">ใกล้ครบ</span><div class="small text-muted">เหลือ ${hrsText(sla.limitH-sla.elapsedH)}</div>`;
+  return `<span class="badge sb sb-ok">ตามกำหนด</span><div class="small text-muted">เหลือ ${hrsText(sla.limitH-sla.elapsedH)}</div>`;
 }
 /* แถบเตือนแฟ้มเกินกำหนดบนแดชบอร์ด */
 function renderOverdueBar(d){
@@ -2010,8 +2178,8 @@ function safeType(v){ const t=(v==null)?'':String(v); return t.indexOf('หน�
 /* ป้ายชั้นความเร็ว */
 function urgencyBadge(u){
   if(!u || u==='ปกติ') return '';
-  const c = u==='ด่วนที่สุด' ? 'bg-danger' : (u==='ด่วนมาก' ? 'bg-warning text-dark' : 'bg-info text-dark');
-  return `<span class="badge ${c} ms-1">${esc(u)}</span>`;
+  const c = u==='ด่วนที่สุด' ? 'ub-most' : (u==='ด่วนมาก' ? 'ub-very' : 'ub-urgent');
+  return `<span class="badge ub ${c} ms-1">${esc(u)}</span>`;
 }
 async function saveRegister(){
   const el=document.getElementById('regResult');
@@ -2236,8 +2404,8 @@ function renderQueue(){
     const au = x.docNumbers ? esc(x.docNumbers) : '<span class="text-muted">—</span>';
     const subj = x.subjects ? `<div class="text-muted">${esc(x.subjects)}</div>` : '';
     const dt = x.docTypes ? `<div class="text-muted" style="font-size:.76rem">${esc(x.docTypes)}</div>` : '';
-    const slaTag = x.sla && x.sla.status==='OVERDUE' ? '<span class="badge bg-danger ms-1">เกินกำหนด</span>'
-                 : (x.sla && x.sla.status==='NEAR' ? '<span class="badge bg-warning text-dark ms-1">ใกล้ครบ</span>' : '');
+    const slaTag = x.sla && x.sla.status==='OVERDUE' ? '<span class="badge sb sb-over ms-1">เกินกำหนด</span>'
+                 : (x.sla && x.sla.status==='NEAR' ? '<span class="badge sb sb-near ms-1">ใกล้ครบ</span>' : '');
     return `<tr${x.sla&&x.sla.status==='OVERDUE'?' style="background:#fdf2f2"':''}><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}${slaTag}${editTag}<div class="small text-muted">${esc(x.owner)||''}</div></td>
       <td class="small">${au}${subj}${dt}</td></tr>`;
   }).join('');
@@ -2515,7 +2683,7 @@ async function ensureTimeline(item){
 /* ประวัติการแก้ไขของแฟ้ม (แสดงใต้ไทม์ไลน์) */
 function editLogsHTML(logs){
   if(!logs||!logs.length) return '';
-  return `<div class="small mt-2 p-2 rounded" style="background:#fff8e6;border:1px solid #f5d98b">
+  return `<div class="small mt-2 p-2 rounded note-edit">
     <div class="fw-semibold mb-1"><i class="bi bi-pencil-square me-1"></i>ประวัติการแก้ไข (${logs.length} ครั้ง)</div>
     ${logs.map(l=>`<div>• <span class="text-muted">${thaiDateTime(l.timestamp)}</span> — ${esc(l.action)}${l.station?(' @'+esc(stationName(l.station))):''}${l.note?(' : '+esc(l.note)):''}</div>`).join('')}
   </div>`;
