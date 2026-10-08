@@ -356,6 +356,28 @@
   /* ลิงก์ใช้สีม่วงของระบบ */
   :root{ --bs-link-color-rgb:107,61,154; --bs-link-hover-color-rgb:70,38,106; }
   html[data-theme="teal"]{ --bs-link-color-rgb:13,148,136; --bs-link-hover-color-rgb:17,94,86; }
+  /* ---------- ดรอปดาวน์รูปแบบเอกสาร: คงสีพื้นแต่ให้เห็นลูกศรชัดว่ากดเลือกได้ ---------- */
+  .rec-format.fixed-prefix{ background-color:var(--brand-soft); background-image:var(--bs-form-select-bg-img);
+    background-repeat:no-repeat; background-position:right .55rem center; background-size:14px 10px;
+    padding-right:1.9rem; flex:0 0 auto; width:auto; max-width:10rem; font-weight:600; color:var(--brand-700); cursor:pointer; }
+  .rec-aunum:disabled{ background:var(--bg); }
+
+  /* ---------- รายการเลือกแฟ้ม ---------- */
+  .folder-picker{ display:none; position:absolute; z-index:1065; left:0; right:0; top:calc(100% + 4px); background:var(--surface);
+    border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow); max-height:300px; overflow:auto; }
+  .folder-picker .fp-hint{ position:sticky; top:0; background:var(--brand-soft); color:var(--brand-700); font-size:.8rem; padding:7px 12px; }
+  .folder-picker .fp-it{ padding:7px 12px; cursor:pointer; }
+  .folder-picker .fp-it:hover{ background:var(--hover); }
+  .folder-picker .fp-it.on{ background:var(--brand-soft); color:var(--brand-700); font-weight:600; }
+  #regFolder{ cursor:pointer; }
+  /* ---------- กระดานสถานะการพิมพ์บาร์โค้ด ---------- */
+  .pb-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(54px,1fr)); gap:4px; }
+  .pb-c{ font-size:.74rem; text-align:center; padding:4px 0; border-radius:6px; background:var(--neutral-soft); color:var(--neutral-ink); }
+  .pb-c.on{ background:var(--ok-soft); color:var(--ok); font-weight:600; }
+  .pb-legend .pb-c{ display:inline-block; width:44px; margin-right:4px; }
+  /* ---------- แถบแจ้งเมื่อสแกนแทนจุดคู่ ---------- */
+  .cover-banner{ background:var(--accent-soft); color:var(--accent-ink); border:1px solid var(--accent); border-radius:9px; padding:8px 12px; font-size:.86rem; }
+
   /* ---------- ลดการเคลื่อนไหวสำหรับผู้ที่ตั้งค่าไว้ ---------- */
   @media (prefers-reduced-motion: reduce){
     *{ animation:none !important; transition:none !important; }
@@ -664,7 +686,7 @@
         <div class="row g-3">
           <div class="col-md-4">
             <label class="form-label">เลือกแฟ้ม <span class="text-muted small">(หรือใช้ยิงบาร์โค้ดด้านบน)</span></label>
-            <select id="regFolder" class="form-select"></select>
+            <div class="position-relative"><select id="regFolder" class="form-select"></select></div>
             <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="regShowAll" onchange="fillFolderSelect()">
               <label class="form-check-label small" for="regShowAll">แสดงแฟ้มทั้งหมด</label></div>
           </div>
@@ -724,7 +746,7 @@
           <div class="card-header"><i class="bi bi-upc-scan me-1"></i>สแกนเข้า-ออก</div>
           <div class="card-body">
             <label class="form-label">จุดสแกน (ธุรการ)</label>
-            <select id="scanStation" class="form-select mb-3" onchange="loadQueue();renderTrays();focusScan()"></select>
+            <select id="scanStation" class="form-select mb-2" onchange="updateCoverBanner();loadQueue();renderTrays();focusScan()"></select>
             <label class="form-label">ยิงบาร์โค้ดที่นี่</label>
             <input id="scanInput" class="form-control scan-input" placeholder="รอสแกน…" autocomplete="off">
             <div class="form-text">ยิงบาร์โค้ดแฟ้มได้เลย ระบบจะรู้เองว่าเป็นการ <b>เข้า</b> หรือ <b>ออก</b> โดยไม่ต้องเลือกทิศทาง</div>
@@ -828,6 +850,19 @@
         <div id="printArea"><div id="bcGrid" class="row g-2 mt-2"></div></div>
       </div>
     </div>
+
+    <div class="card mt-3 d-print-none">
+      <div class="card-header d-flex align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-clipboard-check me-1"></i>สถานะการพิมพ์บาร์โค้ด</span>
+        <span id="pbSummary" class="small text-muted"></span>
+        <button class="btn btn-sm btn-outline-brand ms-auto" onclick="loadPrintBoard(true)"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
+      <div class="card-body">
+        <div class="small text-muted mb-2">แสดงร่วมกันทุกเครื่อง — แฟ้มที่มีผู้ทำเครื่องหมายว่าพิมพ์แล้วจะขึ้นสีเขียวค้างไว้ ชี้ที่เลขแฟ้มเพื่อดูว่าใครพิมพ์และเมื่อไร</div>
+        <div id="pbBatches" class="mb-3"></div>
+        <div id="pbGrid" class="pb-grid"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ================= TRACK ================= -->
@@ -896,12 +931,27 @@
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-6">
-            <div class="fw-semibold mb-2">รองผู้อำนวยการ (ไทม์ไลน์)</div>
-            <div class="mb-2"><label class="form-label small mb-1">รอง 1</label><input id="cfg_rong1" class="form-control"></div>
-            <div class="mb-2"><label class="form-label small mb-1">รอง 2</label><input id="cfg_rong2" class="form-control"></div>
-            <div class="mb-2"><label class="form-label small mb-1">รอง 3</label><input id="cfg_rong3" class="form-control"></div>
-            <div class="mb-2"><label class="form-label small mb-1">รอง 4</label><input id="cfg_rong4" class="form-control"></div>
-            <div class="mb-2"><label class="form-label small mb-1">รอง 5</label><input id="cfg_rong5" class="form-control"></div>
+            <div class="fw-semibold mb-1">ผู้บริหารที่เสนอผ่านเลขารอง (จุดที่ 2)</div>
+            <div class="small text-muted mb-2">แก้ได้ทั้งตำแหน่งและชื่อ เช่น เปลี่ยนเป็นผู้ช่วยผู้อำนวยการ · ช่องที่ชื่อว่างจะไม่แสดงในหน้าลงทะเบียน</div>
+            <div class="row g-1 mb-1 small text-muted"><div class="col-5">ตำแหน่ง</div><div class="col-7">ชื่อ-นามสกุล</div></div>
+            <div class="row g-1 mb-2">
+              <div class="col-5"><input id="cfg_rongTitle1" class="form-control form-control-sm" placeholder="ตำแหน่ง"></div>
+              <div class="col-7"><input id="cfg_rong1" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล"></div>
+              <div class="col-5"><input id="cfg_rongTitle2" class="form-control form-control-sm" placeholder="ตำแหน่ง"></div>
+              <div class="col-7"><input id="cfg_rong2" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล"></div>
+              <div class="col-5"><input id="cfg_rongTitle3" class="form-control form-control-sm" placeholder="ตำแหน่ง"></div>
+              <div class="col-7"><input id="cfg_rong3" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล"></div>
+              <div class="col-5"><input id="cfg_rongTitle4" class="form-control form-control-sm" placeholder="ตำแหน่ง"></div>
+              <div class="col-7"><input id="cfg_rong4" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล"></div>
+              <div class="col-5"><input id="cfg_rongTitle5" class="form-control form-control-sm" placeholder="ตำแหน่ง"></div>
+              <div class="col-7"><input id="cfg_rong5" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล"></div>
+              <div class="col-5"><input id="cfg_rongTitle6" class="form-control form-control-sm" placeholder="ตำแหน่ง"></div>
+              <div class="col-7"><input id="cfg_rong6" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล (เว้นว่างถ้าไม่ใช้)"></div>
+              <div class="col-5"><input id="cfg_rongTitle7" class="form-control form-control-sm" placeholder="ตำแหน่ง"></div>
+              <div class="col-7"><input id="cfg_rong7" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล (เว้นว่างถ้าไม่ใช้)"></div>
+              <div class="col-5"><input id="cfg_rongTitle8" class="form-control form-control-sm" placeholder="ตำแหน่ง"></div>
+              <div class="col-7"><input id="cfg_rong8" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล (เว้นว่างถ้าไม่ใช้)"></div>
+            </div>
             <div class="fw-semibold mb-2 mt-3">ผู้บริหารระดับสูง</div>
             <div class="mb-2"><label class="form-label small mb-1">ผู้อำนวยการโรงพยาบาล</label><input id="cfg_dir" class="form-control"></div>
             <div class="mb-2"><label class="form-label small mb-1">คณบดี</label><input id="cfg_dean" class="form-control"></div>
@@ -1091,7 +1141,9 @@ const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyKTb341vJ4N4Um2N-mO
 
 /* ค่าเริ่มต้นของชื่อ (ตรงกับ Code.gs) ใช้แสดงผลก่อนโหลด Config */
 const DEFAULTS = {
-  rong1:'รอง 1', rong2:'รอง 2', rong3:'รอง 3', rong4:'รอง 4', rong5:'รอง 5',
+  rong1:'รอง 1', rong2:'รอง 2', rong3:'รอง 3', rong4:'รอง 4', rong5:'รอง 5', rong6:'', rong7:'', rong8:'',
+  rongTitle1:'รองผู้อำนวยการ', rongTitle2:'รองผู้อำนวยการ', rongTitle3:'รองผู้อำนวยการ', rongTitle4:'รองผู้อำนวยการ',
+  rongTitle5:'รองผู้อำนวยการ', rongTitle6:'ผู้ช่วยผู้อำนวยการ', rongTitle7:'ผู้ช่วยผู้อำนวยการ', rongTitle8:'ผู้ช่วยผู้อำนวยการ',
   dir:'ผู้อำนวยการโรงพยาบาล', dean:'คณบดี',
   station1:'ธุรการ 1', station2:'ธุรการ 2', station3:'ธุรการ 3', station4:'ธุรการ 4',
   departments:'งานแผน\nงานพัสดุ\nงานเวชระเบียน\nงานการเงิน\nงานธุรการ'
@@ -1192,12 +1244,8 @@ function applyPermissions(){
   if(active && active.style.display==='none' && firstVisible){
     const t=document.querySelector(`.nav-link[data-page="${firstVisible}"]`); if(t) t.click();
   }
-  // ธุรการ: ล็อกจุดสแกนของตัวเอง
-  const st=document.getElementById('scanStation');
-  if(st && ME && ME.roleId==='CLERK' && ME.stationKey){
-    st.value=ME.stationKey; st.disabled=true;
-    st.insertAdjacentHTML('afterend','<div class="form-text">จุดสแกนถูกกำหนดตามบัญชีของคุณ</div>');
-  }
+  // ธุรการ: เลือกได้เฉพาะจุดของตัวเอง และจุดคู่ที่ทำแทนกันได้
+  if(document.getElementById('scanStation')) fillStationSelect();
 }
 function showMe(){
   if(!ME) return;
@@ -1430,7 +1478,11 @@ function normalizeScan(raw){
   return d ? {code:d, warn:null} : {code:null, warn:THAI_SCAN_WARN};
 }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-function cfg(k){ return (CONFIG && CONFIG[k]!=null && CONFIG[k]!=='') ? CONFIG[k] : DEFAULTS[k]; }
+function cfg(k){
+  if(CONFIG && /^rong\d$/.test(k) && (k in CONFIG)) return CONFIG[k]||'';   // ช่องผู้บริหารที่ตั้งใจเว้นว่าง = ไม่ใช้
+  return (CONFIG && CONFIG[k]!=null && CONFIG[k]!=='') ? CONFIG[k] : DEFAULTS[k];
+}
+const RONG_SLOTS=[1,2,3,4,5,6,7,8];
 function stationName(key){ if(!key) return ''; const m={S1:1,S2:2,S3:3,S4:4}; return m[key]?cfg('station'+m[key]):key; }
 function dateStamp(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate()); }
 function thaiDate(iso){
@@ -1576,7 +1628,7 @@ document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
     if(p==='report'){ loadReport(); loadAudit(); }
     if(p==='register') loadRegister();
     if(p==='scan'){ fillStationSelect(); loadQueue(); loadDoneToday(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
-    if(p==='barcode'){ PRINTED_LOADED=false; loadPrinted(); }
+    if(p==='barcode'){ PRINTED_LOADED=false; loadPrintBoard(true); }
     if(p==='track'){ fillTrackDept(); loadHistory(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
     if(p==='settings'){ loadConfigForm(); loadUsers(); loadMaintenance(); }
   });
@@ -2015,6 +2067,7 @@ function setSelectValue(sel, val){
 const regScanInput=document.getElementById('regScanInput');
 regScanInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); regScan(regScanInput.value); } });
 async function regScan(code){
+  closeFolderPicker();
   const raw=(code||'').trim();
   regScanInput.value='';
   if(!raw) return;
@@ -2032,6 +2085,69 @@ async function regScan(code){
   showRegFolderStatus(fc);
   regScanInput.focus();
 }
+/* ===== ช่อง "เลือกแฟ้ม": ใช้รายการเลือกของระบบเอง (ไม่ใช่ของเบราว์เซอร์)
+   เหตุผล: รายการแบบเดิมจะแย่งรับตัวอักษรจากเครื่องสแกน ทำให้ยิงบาร์โค้ดแล้วแฟ้มไม่เปลี่ยน
+   แบบใหม่: คลิกแล้วรายการเปิดขึ้น แต่ช่องยิงบาร์โค้ดยังพร้อมรับการสแกนอยู่ตลอด ===== */
+function openFolderPicker(){
+  const sel=document.getElementById('regFolder');
+  let box=document.getElementById('folderPicker');
+  if(!box){ box=document.createElement('div'); box.id='folderPicker'; box.className='folder-picker'; sel.insertAdjacentElement('afterend',box); }
+  const opts=[...sel.options].filter(o=>o.value);
+  box.innerHTML=`<div class="fp-hint"><i class="bi bi-upc-scan me-1"></i>ยิงบาร์โค้ดได้เลย · หรือคลิกเลือกแฟ้มจากรายการ</div>`+
+    (opts.length?opts.map(o=>`<div class="fp-it${o.value===sel.value?' on':''}" data-v="${esc(o.value)}">${esc(o.textContent)}</div>`).join('')
+                :'<div class="p-3 small text-muted">ไม่มีแฟ้มในรายการ</div>');
+  box.querySelectorAll('.fp-it').forEach(it=>it.addEventListener('mousedown',ev=>{
+    ev.preventDefault();
+    sel.value=it.dataset.v; sel.dispatchEvent(new Event('change'));
+    closeFolderPicker(); regScanInput.focus();
+  }));
+  box.style.display='block';
+  const on=box.querySelector('.fp-it.on'); if(on) on.scrollIntoView({block:'nearest'});
+  regScanInput.focus({preventScroll:true});     // เครื่องสแกนจะพิมพ์ลงช่องยิงบาร์โค้ด ไม่ใช่ช่องนี้
+}
+function closeFolderPicker(){ const b=document.getElementById('folderPicker'); if(b) b.style.display='none'; }
+(function wireFolderPicker(){
+  const sel=document.getElementById('regFolder');
+  sel.addEventListener('mousedown', e=>{
+    e.preventDefault();                                     // ไม่เปิดรายการของเบราว์เซอร์
+    const b=document.getElementById('folderPicker');
+    if(b && b.style.display==='block') closeFolderPicker(); else openFolderPicker();
+  });
+  document.addEventListener('mousedown', e=>{
+    const b=document.getElementById('folderPicker');
+    if(b && b.style.display==='block' && !b.contains(e.target) && e.target.id!=='regFolder') closeFolderPicker();
+  });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeFolderPicker(); });
+})();
+
+/* ===== ตัวดักการยิงบาร์โค้ดทั้งหน้าลงทะเบียน
+   ไม่ว่าเคอร์เซอร์อยู่ช่องไหน ถ้าเป็นการยิงจากเครื่องสแกน (พิมพ์เร็วมากต่อเนื่องแล้วตามด้วย Enter)
+   ระบบจะเลือกแฟ้มตามบาร์โค้ดให้ และคืนค่าเดิมของช่องที่ถูกพิมพ์ทับ (เช่น ช่องชื่อผู้เสนอ) ===== */
+(function wireRegScanCatcher(){
+  const GAP=45, MIN=3;                 // เครื่องสแกนพิมพ์ห่างกันไม่ถึง 45 มิลลิวินาที / คนพิมพ์ช้ากว่ามาก
+  let buf={chars:'', last:0, el:null, before:null};
+  const reset=()=>{ buf={chars:'', last:0, el:null, before:null}; };
+  document.addEventListener('keydown', e=>{
+    const page=document.getElementById('page-register');
+    if(!page || !page.classList.contains('active')) return;
+    if(e.target===regScanInput) return;                     // ช่องยิงบาร์โค้ดจัดการเองอยู่แล้ว
+    const now=performance.now();
+    if(e.key==='Enter'){
+      if(buf.chars.length>=MIN && now-buf.last<=GAP*3){
+        e.preventDefault(); e.stopPropagation();
+        const el=buf.el, before=buf.before, code=buf.chars;
+        reset();
+        setTimeout(()=>{ if(el && before!==null && el.tagName!=='SELECT' && 'value' in el) el.value=before; }, 0);
+        regScan(code);
+      } else reset();
+      return;
+    }
+    if(e.key.length!==1 || e.ctrlKey || e.metaKey || e.altKey) return;
+    if(now-buf.last>GAP){ buf={chars:'', last:0, el:e.target, before:('value' in e.target && e.target.tagName!=='SELECT')?e.target.value:null}; }
+    buf.chars+=e.key; buf.last=now;
+  }, true);
+})();
+
 /* แสดงสถานะแฟ้มที่เลือก (ว่าง/ถูกใช้) */
 function showRegFolderStatus(code){
   const fc=pad4(code);
@@ -2068,7 +2184,11 @@ async function loadExistingFolder(code){
     updateRoutePreview();
     document.getElementById('recordRows').innerHTML='';
     const recs=f.records||[];
-    if(recs.length){ recs.forEach(r=>{ const aunum=((r.docNumber||'').split('/')[1]||''); addRecordRow({aunum, subject:r.subject, docDate:r.docDate, docType:r.docType, urgency:r.urgency}); }); }
+    if(recs.length){ recs.forEach(r=>{
+      const dn=r.docNumber||'';
+      const docFormat = r.docFormat || (/^แบบฟอร์ม/.test(dn)?'FORM':(dn==='ไม่มีเลข อว.'?'NONE':'AUV'));
+      const aunum = docFormat==='FORM' ? dn.replace(/^แบบฟอร์ม\s*/,'') : (docFormat==='NONE' ? '' : (dn.split('/')[1]||''));
+      addRecordRow({docFormat, aunum, subject:r.subject, docDate:r.docDate, docType:r.docType, urgency:r.urgency}); }); }
     else { addRecordRow(); }
     info.innerHTML=`<div class="alert alert-info py-2 mb-0"><i class="bi bi-info-circle me-1"></i>โหลดข้อมูลเดิมของแฟ้ม <b>${fc}</b> มาแล้ว — แก้ไขแล้วกด “บันทึกข้อมูลแฟ้ม” จะเขียนทับของเดิม</div>`;
   }catch(err){ toast(info,'danger',err.message); }
@@ -2084,13 +2204,13 @@ function fillDeptSelect(){
 }
 function renderTimeline(){
   const box=document.getElementById('timelineBox');
-  const rongs=['rong1','rong2','rong3','rong4','rong5'].map(k=>({k, v:cfg(k)}));
+  const rongs=RONG_SLOTS.map(i=>({k:'rong'+i, v:cfg('rong'+i), t:cfg('rongTitle'+i)})).filter(o=>o.v);
   const highs=[{k:'dir', v:cfg('dir')},{k:'dean', v:cfg('dean')}];
   const mk=arr=>arr.map(o=>`<div class="form-check">
      <input class="form-check-input tl" type="checkbox" value="${esc(o.v)}" id="tl_${o.k}">
-     <label class="form-check-label" for="tl_${o.k}">${esc(o.v)}</label></div>`).join('');
+     <label class="form-check-label" for="tl_${o.k}">${esc(o.v)}${o.t?`<div class="small text-muted lh-1">${esc(o.t)}</div>`:''}</label></div>`).join('');
   box.innerHTML=`<div class="row">
-    <div class="col-md-7"><div class="fw-semibold mb-1">รองผู้อำนวยการ</div><div class="d-flex flex-wrap gap-3">${mk(rongs)}</div></div>
+    <div class="col-md-7"><div class="fw-semibold mb-1">รองผู้อำนวยการ / ผู้ช่วยผู้อำนวยการ <span class="small text-muted fw-normal">(ผ่าน ${esc(stationName('S2'))})</span></div><div class="d-flex flex-wrap gap-3">${mk(rongs)}</div></div>
     <div class="col-md-5 mt-3 mt-md-0"><div class="fw-semibold mb-1">ผู้บริหารระดับสูง</div><div class="d-flex flex-wrap gap-3">${mk(highs)}</div></div>
   </div>`;
   if(!box.dataset.wired){ box.addEventListener('change', updateRoutePreview); box.dataset.wired='1'; }
@@ -2116,8 +2236,18 @@ function fillFolderSelect(){
                   || '<option value="">— ไม่มีแฟ้มว่าง —</option>';
 }
 document.getElementById('regFolder').addEventListener('change', function(){ if(this.value) showRegFolderStatus(this.value); });
+/* ปรับช่องเลขที่ตามรูปแบบเอกสาร: มีเลข อว. / แบบฟอร์ม / ไม่มีเลข อว. */
+function onDocFormat(sel, keep){
+  const inp=sel.closest('.input-group').querySelector('.rec-aunum');
+  const f=sel.value;
+  if(f==='NONE'){ inp.value=''; inp.disabled=true; inp.placeholder='ไม่ต้องกรอก'; inp.removeAttribute('maxlength'); inp.inputMode='text'; }
+  else if(f==='FORM'){ inp.disabled=false; inp.placeholder='ชื่อหรือเลขแบบฟอร์ม (ถ้ามี)'; inp.maxLength=60; inp.inputMode='text'; }
+  else { inp.disabled=false; inp.placeholder='01234'; inp.maxLength=6; inp.inputMode='numeric'; }
+  if(!keep && f!=='NONE') inp.focus();
+}
 function addRecordRow(data){
   data=data||{};
+  const fmt=(data.docFormat==='FORM'||data.docFormat==='NONE')?data.docFormat:'AUV';
   const dt=esc(data.docType||'');
   const ug=esc(data.urgency||'ปกติ');
   const opt=(v)=>`<option value="${esc(v)}" ${dt===v?'selected':''}>${esc(v)}</option>`;
@@ -2125,9 +2255,14 @@ function addRecordRow(data){
   const div=document.createElement('div');
   div.className='row g-2 align-items-end mb-2 record-row';
   div.innerHTML=`
-    <div class="col-md-3"><label class="form-label small mb-1">เลขที่หนังสือ</label>
-      <div class="input-group"><span class="input-group-text fixed-prefix">อว 7332.02/</span>
-      <input class="form-control rec-aunum" maxlength="6" inputmode="numeric" placeholder="01234" value="${esc(data.aunum||'')}"></div></div>
+    <div class="col-md-3"><label class="form-label small mb-1">รูปแบบเอกสาร / เลขที่</label>
+      <div class="input-group">
+        <select class="form-select rec-format fixed-prefix" onchange="onDocFormat(this)" title="รูปแบบเอกสาร">
+          <option value="AUV" ${fmt==='AUV'?'selected':''}>อว 7332.02/</option>
+          <option value="FORM" ${fmt==='FORM'?'selected':''}>แบบฟอร์ม</option>
+          <option value="NONE" ${fmt==='NONE'?'selected':''}>ไม่มีเลข อว.</option>
+        </select>
+        <input class="form-control rec-aunum" value="${esc(data.aunum||'')}"></div></div>
     <div class="col-md-3"><label class="form-label small mb-1">ชื่อเรื่อง</label>
       <input class="form-control rec-subject" placeholder="กรอกชื่อเรื่องเอกสาร" value="${esc(data.subject||'')}"></div>
     <div class="col-md-2"><label class="form-label small mb-1">วันที่</label>
@@ -2146,6 +2281,7 @@ function addRecordRow(data){
         <button class="btn btn-outline-danger flex-shrink-0" title="ลบรายการนี้" onclick="this.closest('.record-row').remove()"><i class="bi bi-trash"></i></button>
       </div></div>`;
   document.getElementById('recordRows').appendChild(div);
+  onDocFormat(div.querySelector('.rec-format'), true);
 }
 /* เวลาเป็นข้อความสั้น */
 function hrsText(h){ if(h==null) return ''; const a=Math.abs(h); const d=Math.floor(a/24), r=Math.round(a%24); return (d?d+' วัน ':'')+(r||!d?r+' ชม.':''); }
@@ -2190,12 +2326,13 @@ async function saveRegister(){
   const department=document.getElementById('regDept').value;
   const timeline=[...document.querySelectorAll('.tl:checked')].map(c=>c.value).join(', ');
   const records=[...document.querySelectorAll('.record-row')].map(r=>({
+    docFormat:r.querySelector('.rec-format').value,
     aunum:r.querySelector('.rec-aunum').value.trim(),
     subject:r.querySelector('.rec-subject').value.trim(),
     docDate:r.querySelector('.rec-date').value,
     docType:r.querySelector('.rec-type').value,
     urgency:r.querySelector('.rec-urgency').value
-  })).filter(r=>r.aunum||r.subject||r.docDate||r.docType);
+  })).filter(r=>r.aunum||r.subject||r.docDate||r.docType||r.docFormat!=='AUV');
   if(!owner){ toast(el,'danger','กรุณากรอกเจ้าของแฟ้ม'); return; }
   if(document.getElementById('regNotify').checked && !ownerEmail){ toast(el,'danger','เปิดแจ้งเตือนไว้ กรุณากรอกอีเมลผู้เสนอ หรือปิดสวิตช์แจ้งเตือน'); return; }
   if(ownerEmail && !/^[^@\s]+@up\.ac\.th$/.test(ownerEmail)){ toast(el,'danger','อีเมลผู้เสนอต้องเป็น @up.ac.th เท่านั้น'); return; }
@@ -2223,11 +2360,36 @@ async function saveRegister(){
 }
 
 /* ========================= SCAN ========================= */
+const CLERK_PARTNER={S1:'S4', S4:'S1', S2:'S3', S3:'S2'};   // จุดที่ทำแทนกันได้เมื่อธุรการลา
+function isClerk(){ return ME && ME.roleId==='CLERK' && ME.stationKey; }
 function fillStationSelect(){
   const sel=document.getElementById('scanStation');
   const cur=sel.value;
-  sel.innerHTML=['S1','S2','S3','S4'].map((k,i)=>`<option value="${k}">${esc(cfg('station'+(i+1)))}</option>`).join('');
-  if(cur) sel.value=cur;
+  if(isClerk()){
+    const own=ME.stationKey, partner=CLERK_PARTNER[own];
+    sel.innerHTML=`<option value="${own}">${esc(stationName(own))} (จุดของฉัน)</option>`+
+                  `<option value="${partner}">${esc(stationName(partner))} (ทำแทนเมื่อลา)</option>`;
+    sel.value=(cur===partner)?partner:own;
+  } else {
+    sel.innerHTML=['S1','S2','S3','S4'].map((k,i)=>`<option value="${k}">${esc(cfg('station'+(i+1)))}</option>`).join('');
+    if(cur) sel.value=cur;
+  }
+  sel.disabled=false;
+  updateCoverBanner();
+}
+/* แจ้งชัด ๆ เมื่อกำลังสแกนแทนจุดคู่ (กันลืมเปลี่ยนกลับ) */
+function updateCoverBanner(){
+  const sel=document.getElementById('scanStation'); if(!sel) return;
+  let b=document.getElementById('coverBanner');
+  if(!b){ b=document.createElement('div'); b.id='coverBanner'; sel.insertAdjacentElement('afterend',b); }
+  if(isClerk() && sel.value!==ME.stationKey){
+    b.className='cover-banner mb-3';
+    b.innerHTML=`<i class="bi bi-person-badge me-1"></i>กำลัง<b>ทำแทน ${esc(stationName(sel.value))}</b> — ระบบจะบันทึกว่าคุณเป็นผู้สแกนแทน
+      <a href="#" class="ms-1" onclick="document.getElementById('scanStation').value='${ME.stationKey}';document.getElementById('scanStation').dispatchEvent(new Event('change'));return false;">กลับไปจุดของฉัน</a>`;
+  } else if(isClerk()){
+    b.className='form-text mb-3';
+    b.textContent=`ถ้า ${stationName(CLERK_PARTNER[ME.stationKey])} ลา เลือก "ทำแทนเมื่อลา" ด้านบนเพื่อสแกนแทนได้`;
+  } else { b.className=''; b.textContent=''; }
 }
 const scanInput=document.getElementById('scanInput');
 scanInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doScan(scanInput.value); } });
@@ -2438,11 +2600,41 @@ async function loadDoneToday(){
 let PRINTED = new Set();
 let PRINTED_LOADED = false;
 let LAST_BC_CODES = [];
+let PRINT_INFO={};                      // รหัสแฟ้ม -> {at, by}
 async function loadPrinted(){
   try{
     const d=await api('getFolders');
-    if(d.ok){ ALL_FOLDERS=d.folders||[]; PRINTED=new Set(ALL_FOLDERS.filter(f=>f.printedAt).map(f=>pad4(f.folderCode))); PRINTED_LOADED=true; }
+    if(d.ok){
+      ALL_FOLDERS=d.folders||[];
+      PRINT_INFO={};
+      ALL_FOLDERS.forEach(f=>{ if(f.printedAt) PRINT_INFO[pad4(f.folderCode)]={at:f.printedAt, by:f.printedBy||''}; });
+      PRINTED=new Set(Object.keys(PRINT_INFO)); PRINTED_LOADED=true;
+    }
   }catch(e){}
+}
+/* กระดานสถานะการพิมพ์: แสดงทุกแฟ้ม + กลุ่มที่ทำเครื่องหมายล่าสุด (ใคร/เมื่อไร) */
+async function loadPrintBoard(force){
+  const grid=document.getElementById('pbGrid'); if(!grid) return;
+  if(force || !PRINTED_LOADED){ grid.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</div>'; await loadPrinted(); }
+  const codes=ALL_FOLDERS.map(f=>pad4(f.folderCode)).sort();
+  const nP=codes.filter(c=>PRINT_INFO[c]).length;
+  document.getElementById('pbSummary').innerHTML=`พิมพ์แล้ว <b class="text-success">${nP}</b> / ${codes.length} แฟ้ม · ยังไม่พิมพ์ <b>${codes.length-nP}</b>`;
+  grid.innerHTML=codes.map(c=>{
+    const p=PRINT_INFO[c];
+    return `<div class="pb-c${p?' on':''}" title="${p?('พิมพ์แล้ว โดย '+(p.by||'ไม่ระบุ')+' เมื่อ '+thaiDateTime(p.at)):'ยังไม่พิมพ์'}">${c}</div>`;
+  }).join('');
+  // จัดกลุ่มการทำเครื่องหมาย: คนเดียวกัน นาทีเดียวกัน = ครั้งเดียวกัน
+  const groups={};
+  codes.forEach(c=>{ const p=PRINT_INFO[c]; if(!p) return; const k=(p.by||'ไม่ระบุ')+'|'+String(p.at).slice(0,16);
+    (groups[k]=groups[k]||{by:p.by||'ไม่ระบุ', at:p.at, codes:[]}).codes.push(c); });
+  const toRanges=list=>{ const out=[]; let a=null,b=null;
+    list.map(Number).sort((x,y)=>x-y).forEach(n=>{ if(a===null){a=b=n;} else if(n===b+1){b=n;} else {out.push([a,b]); a=b=n;} });
+    if(a!==null) out.push([a,b]); return out.map(([x,y])=>x===y?pad4(x):pad4(x)+'–'+pad4(y)).join(', '); };
+  const gl=Object.values(groups).sort((x,y)=>new Date(y.at)-new Date(x.at)).slice(0,5);
+  document.getElementById('pbBatches').innerHTML = gl.length
+    ? '<div class="small fw-semibold mb-1">ทำเครื่องหมายล่าสุด</div>'+gl.map(g=>`<div class="small mb-1"><i class="bi bi-check2-circle text-success me-1"></i>
+        แฟ้ม <b>${toRanges(g.codes)}</b> (${g.codes.length} แฟ้ม) — โดย <b>${esc(g.by)}</b> เมื่อ ${thaiDateTime(g.at)}</div>`).join('')
+    : '<div class="small text-muted">ยังไม่มีแฟ้มที่ทำเครื่องหมายว่าพิมพ์แล้ว</div>';
 }
 async function renderBarcodes(){
   if(!PRINTED_LOADED) await loadPrinted();
@@ -2481,7 +2673,7 @@ async function renderBarcodes(){
   codes.forEach(code=>{
     const isP=PRINTED.has(code);
     const col=document.createElement('div'); col.className='col-6 col-md-3 col-lg-2';
-    col.innerHTML=`<div class="bc-item ${isP?'bc-printed':''}"><svg id="bc-${code}"></svg>${showNum?`<div class="bc-code">${code}</div>`:''}${isP?'<div class="small text-warning-emphasis d-print-none"><i class="bi bi-check2 me-1"></i>พิมพ์แล้ว</div>':''}</div>`;
+    col.innerHTML=`<div class="bc-item ${isP?'bc-printed':''}"><svg id="bc-${code}"></svg>${showNum?`<div class="bc-code">${code}</div>`:''}${isP?`<div class="small text-success d-print-none"><i class="bi bi-check2 me-1"></i>พิมพ์แล้ว${PRINT_INFO[code]&&PRINT_INFO[code].by?' · '+esc(PRINT_INFO[code].by):''}</div>`:''}</div>`;
     grid.appendChild(col);
     JsBarcode(`#bc-${code}`, encodeFolderBarcode(code), {format:'CODE128', displayValue:false, width:2, height:55, margin:6});
   });
@@ -2495,8 +2687,9 @@ async function markPrintedRange(printed){
     const d=await api('setPrinted',{codes:LAST_BC_CODES.join(','), printed:printed?'1':'0'});
     if(!d.ok) throw new Error(d.error||'error');
     clearCache();
-    LAST_BC_CODES.forEach(c=>{ if(printed) PRINTED.add(c); else PRINTED.delete(c); });
+    await loadPrinted();
     await renderBarcodes();
+    loadPrintBoard();
     const t=document.createElement('div'); t.className='alert alert-success py-2 small mb-2';
     t.innerHTML='<i class="bi bi-check-circle me-1"></i>'+esc(d.message);
     info.prepend(t);
@@ -2607,11 +2800,11 @@ async function doTrack(){
 function classifyExec(name){
   const n=(name||'').trim();
   if(!n) return '';
-  for(let i=1;i<=5;i++){ if(n===cfg('rong'+i)) return 'rong'; }
+  for(let i=1;i<=8;i++){ const v=cfg('rong'+i); if(v && n===v) return 'rong'; }
   if(n===cfg('dean')) return 'dean';
   if(n===cfg('dir')) return 'dir';
   // ชื่อไม่ตรงกับตั้งค่าปัจจุบัน -> ดูจากคำในชื่อ ("รอง" ต้องมาก่อน "ผู้อำนวยการ")
-  if(/รอง/.test(n)) return 'rong';
+  if(/รอง|ผู้ช่วย/.test(n)) return 'rong';          // รอง/ผู้ช่วยผู้อำนวยการ ผ่านเลขารอง
   if(/คณบดี/.test(n)) return 'dean';
   if(/ผู้อำนวยการ|ผอ/.test(n)) return 'dir';
   return 'rong';
@@ -2877,7 +3070,8 @@ async function resetFolder(code){
 
 /* ========================= SETTINGS ========================= */
 function loadConfigForm(){
-  ['rong1','rong2','rong3','rong4','rong5','dir','dean','station1','station2','station3','station4'].forEach(k=>{
+  RONG_SLOTS.forEach(i=>{ const t=document.getElementById('cfg_rongTitle'+i); if(t) t.value=cfg('rongTitle'+i); });
+  ['rong1','rong2','rong3','rong4','rong5','rong6','rong7','rong8','dir','dean','station1','station2','station3','station4'].forEach(k=>{
     const el=document.getElementById('cfg_'+k); if(el) el.value=cfg(k);
   });
   const dep=document.getElementById('cfg_departments'); if(dep) dep.value=(cfg('departments')||'');
@@ -2885,13 +3079,14 @@ function loadConfigForm(){
 async function saveConfigForm(){
   const el=document.getElementById('cfgResult');
   const params={};
-  ['rong1','rong2','rong3','rong4','rong5','dir','dean','station1','station2','station3','station4'].forEach(k=>{
+  ['rong1','rong2','rong3','rong4','rong5','rong6','rong7','rong8','dir','dean','station1','station2','station3','station4'].forEach(k=>{
     params[k]=document.getElementById('cfg_'+k).value.trim();
   });
+  RONG_SLOTS.forEach(i=>{ params['rongTitle'+i]=document.getElementById('cfg_rongTitle'+i).value.trim()||DEFAULTS['rongTitle'+i]; });
   params.departments=(document.getElementById('cfg_departments').value||'').split(/\n/).map(s=>s.trim()).filter(Boolean).join('\n');
   // ใช้ค่าใหม่ทันทีทั้งระบบ แล้วค่อยส่งไปบันทึกเบื้องหลัง
   const before=Object.assign({},CONFIG);
-  Object.keys(params).forEach(k=>{ if(params[k]) CONFIG[k]=params[k]; });
+  Object.keys(params).forEach(k=>{ if(params[k] || /^rong\d$/.test(k)) CONFIG[k]=params[k]; });
   fillStationSelect(); fillDeptSelect();
   saveInstant(el,'บันทึกการตั้งค่าเรียบร้อย', api('saveConfig', params),
     ()=>{ CONFIG=before; fillStationSelect(); fillDeptSelect(); loadConfigForm(); },
