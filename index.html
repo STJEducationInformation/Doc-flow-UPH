@@ -758,7 +758,7 @@
             <div id="scanResult" class="mt-3"></div>
           </div>
         </div>
-        <div class="card mt-3">
+        <div class="card mt-3" id="queueCard">
           <div class="card-header d-flex align-items-center py-2">
             <span><i class="bi bi-inboxes text-primary me-1"></i><span id="queueTitle">คิวรอสแกนเข้า</span> <span id="queueStname" class="text-muted small"></span> <span id="queueCount" class="badge bg-primary ms-1">0</span></span>
             <button class="btn btn-sm btn-outline-brand ms-auto" onclick="clearCache();loadQueue();focusScan()"><i class="bi bi-arrow-clockwise"></i></button>
@@ -772,10 +772,10 @@
       </div>
       <div class="col-lg-8">
         <div class="row g-3">
-          <div class="col-md-6">
+          <div class="col-md-6" id="inTrayCol">
             <div class="card h-100">
               <div class="card-header d-flex align-items-center">
-                <span><i class="bi bi-box-arrow-in-right text-success me-1"></i>สแกนเข้าแล้ว — รออยู่ที่จุดนี้ <span id="inCount" class="badge bg-success ms-1">0</span></span>
+                <span><i class="bi bi-box-arrow-in-right text-success me-1"></i><span id="inTitle">สแกนเข้าแล้ว — รออยู่ที่จุดนี้</span> <span id="inCount" class="badge bg-success ms-1">0</span></span>
               </div>
               <div class="card-body p-0"><div class="table-responsive" style="max-height:420px;overflow:auto">
                 <table class="table table-sm table-hover mb-0 align-middle">
@@ -784,10 +784,10 @@
                 </table></div></div>
             </div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-6" id="outTrayCol">
             <div class="card h-100">
               <div class="card-header d-flex align-items-center">
-                <span><i class="bi bi-box-arrow-right text-danger me-1"></i>สแกนออกแล้ว <span id="outCount" class="badge bg-danger ms-1">0</span></span>
+                <span><i class="bi bi-box-arrow-right text-danger me-1"></i><span id="outTitle">สแกนออกแล้ว</span> <span id="outCount" class="badge bg-danger ms-1">0</span></span>
                 <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="sessionLog=[];renderTrays();focusScan()">ล้าง</button>
               </div>
               <div class="card-body p-0"><div class="table-responsive" style="max-height:420px;overflow:auto">
@@ -1633,13 +1633,26 @@ async function saveEdit(code, pfx){
   const retEl=document.querySelector(`input[name="${pfx}_editRet"]:checked`);
   const returnMode=has==='1'&&retEl?retEl.value:'same';
   const el=document.getElementById(pfx+'_editResult');
+  if(pfx==='scan'){
+    // หน้าสแกน: ติดป้าย "แก้ไข" บนแฟ้มในถาดทันที แล้วบันทึกเบื้องหลัง
+    const rows=(HERE_ROWS||[]).concat(QUEUE_ROWS||[]).filter(r=>pad4(r.folderCode)===pad4(code));
+    const prev=rows.map(r=>({r, st:r.editStatus, es:r.editStation, er:r.editReturn, en:r.editNote}));
+    rows.forEach(r=>{ r.editStatus=has==='1'?'มีแก้ไข':''; r.editStation=station; r.editReturn=returnMode; r.editNote=note; });
+    sessionLog.forEach(x=>{ if(x.folderCode===pad4(code)) x.editStatus=has==='1'?'มีแก้ไข':''; });
+    renderQueue(); renderTrays();
+    saveInstant(el, has==='1'?'บันทึกสถานะ "มีแก้ไข" แล้ว':'ยกเลิกสถานะแก้ไขแล้ว',
+      api('setEdit',{folderCode:code, hasEdit:has, station, note, returnMode}),
+      ()=>{ prev.forEach(p=>{ p.r.editStatus=p.st; p.r.editStation=p.es; p.r.editReturn=p.er; p.r.editNote=p.en; }); renderQueue(); renderTrays(); },
+      ()=>{ clearCache(); refreshFoldersQuiet(); scheduleRefresh(); });
+    return;
+  }
   el.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
   try{
     const d=await api('setEdit',{folderCode:code, hasEdit:has, station, note, returnMode});
     if(!d.ok) throw new Error(d.error||'error');
     clearCache();
     toast(el,'success',d.message);
-    ALL_FOLDERS=[];
+    refreshFoldersQuiet();
     if(pfx==='track') openFolder(code);
     else if(pfx==='scan' && d.folder){ document.getElementById('scanEditBox').innerHTML=editFormHTML(d.folder,'scan',document.getElementById('scanStation').value); loadQueue(); }
   }catch(err){ toast(el,'danger',err.message); }
@@ -2125,13 +2138,23 @@ async function loadRegister(){
   document.getElementById('recordRows').innerHTML='';
   addRecordRow();
   loadOwnerDir();
-  if(!CONFIG || !CONFIG.rong1) await loadConfig();
+  if(!CONFIG || !CONFIG.rong1) loadConfig().then(()=>{ renderTimeline(); fillDeptSelect(); });
   renderTimeline();
   fillDeptSelect();
-  // โหลดสถานะแฟ้มสดเสมอ เพื่อให้ยิงบาร์โค้ดรู้ว่าแฟ้มว่าง/ถูกใช้
-  try{ const d=await api('getFolders'); if(d.ok) ALL_FOLDERS=d.folders||[]; }catch(e){}
+  // พร้อมสแกนทันทีด้วยรายการแฟ้มที่มีในเครื่อง แล้วอัปเดตสถานะล่าสุดเบื้องหลัง (ไม่ต้องรอ)
   fillFolderSelect();
-  setTimeout(()=>document.getElementById('regScanInput').focus(),120);
+  document.getElementById('regScanInput').focus();
+  refreshFoldersQuiet();
+}
+/* อัปเดตรายการแฟ้มจาก server แบบเงียบ ๆ (ไม่ทับแฟ้มที่ผู้ใช้เลือก/สแกนไว้แล้ว) */
+function refreshFoldersQuiet(){
+  return api('getFolders').then(d=>{
+    if(!d || !d.ok) return;
+    ALL_FOLDERS=d.folders||[];
+    fillFolderSelect();
+    const v=document.getElementById('regFolder').value;
+    if(v && document.getElementById('regScanInfo').innerHTML) showRegFolderStatus(v);
+  }).catch(()=>{});
 }
 /* helper: ตั้งค่า select โดยเพิ่ม option ถ้ายังไม่มี */
 function setSelectValue(sel, val){
@@ -2150,9 +2173,13 @@ async function regScan(code){
   const norm=normalizeScan(raw);
   if(norm.warn){ beep(false); toast(info,'warning',norm.warn); regScanInput.focus(); return; }
   const fc=pad4(norm.code);
-  if(!ALL_FOLDERS.length){ try{ const d=await api('getFolders'); ALL_FOLDERS=d.folders||[]; }catch(e){} }
   const f=ALL_FOLDERS.find(x=>pad4(x.folderCode)===fc);
-  if(!f){ beep(false); toast(info,'danger','ไม่พบแฟ้มรหัส '+fc+' ในระบบ (ยังไม่ได้สร้างแฟ้มนี้?)'); regScanInput.focus(); return; }
+  if(!f && ALL_FOLDERS.length && parseInt(fc,10)>TOTAL_FOLDERS){ beep(false); toast(info,'danger','ไม่พบแฟ้มรหัส '+fc+' ในระบบ (ยังไม่ได้สร้างแฟ้มนี้?)'); regScanInput.focus(); return; }
+  if(!f){   // ยังไม่มีรายการในเครื่อง -> เลือกให้ทันที แล้วตรวจสถานะเบื้องหลัง
+    beep(true); setSelectValue(document.getElementById('regFolder'), fc);
+    info.innerHTML=`<div class="alert alert-success py-2 mb-0"><i class="bi bi-check-circle me-1"></i>เลือกแฟ้ม <b>${fc}</b> แล้ว</div>`;
+    refreshFoldersQuiet().then(()=>showRegFolderStatus(fc)); regScanInput.focus(); return;
+  }
   beep(true);
   // ให้ดรอปดาวน์มีแฟ้มนี้ (แฟ้มที่ถูกใช้จะไม่อยู่ในรายการ "ว่าง")
   if((f.status||'ว่าง')!=='ว่าง'){ document.getElementById('regShowAll').checked=true; fillFolderSelect(); }
@@ -2306,9 +2333,17 @@ function updateRoutePreview(){
 function fillFolderSelect(){
   const showAll=document.getElementById('regShowAll').checked;
   const sel=document.getElementById('regFolder');
+  const keep=sel.value;
   const list=ALL_FOLDERS.filter(f=> showAll ? true : (f.status||'ว่าง')==='ว่าง');
   sel.innerHTML = list.map(f=>`<option value="${pad4(f.folderCode)}">แฟ้ม ${pad4(f.folderCode)} — ${esc(f.status||'ว่าง')}</option>`).join('')
                   || '<option value="">— ไม่มีแฟ้มว่าง —</option>';
+  if(keep){
+    if(![...sel.options].some(o=>o.value===keep)){
+      const f=ALL_FOLDERS.find(x=>pad4(x.folderCode)===keep);
+      const o=document.createElement('option'); o.value=keep; o.textContent=`แฟ้ม ${keep} — ${f?(f.status||'ว่าง'):'กำลังตรวจสอบ'}`; sel.appendChild(o);
+    }
+    sel.value=keep;
+  }
 }
 document.getElementById('regFolder').addEventListener('change', function(){ if(this.value) showRegFolderStatus(this.value); });
 /* ปรับช่องเลขที่ตามรูปแบบเอกสาร: มีเลข อว. / แบบฟอร์ม / ไม่มีเลข อว. */
@@ -2416,8 +2451,12 @@ async function saveRegister(){
   if(records.some(r=>!r.docType)){ toast(el,'danger','กรุณาเลือก “ประเภท” ให้ครบทุกรายการเอกสาร'); return; }
   el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</div>';
   try{
-    const d=await api('registerFolder',{folderCode, owner, ownerEmail, department, timeline, records:JSON.stringify(records)});
-    if(!d.ok) throw new Error(d.error||'error');
+    const cur=ALL_FOLDERS.find(x=>pad4(x.folderCode)===pad4(folderCode));
+    const expectNew = (!cur || (cur.status||'ว่าง')==='ว่าง') ? '1' : '0';   // หน้าเว็บเห็นว่าว่าง = ลงทะเบียนใหม่
+    const d=await api('registerFolder',{folderCode, owner, ownerEmail, department, timeline, records:JSON.stringify(records), expectNew});
+    if(!d.ok){ if(d.code==='TAKEN') refreshFoldersQuiet(); throw new Error(d.error||'error'); }
+    // อัปเดตสถานะแฟ้มในเครื่องทันที (ยิงแฟ้มถัดไปได้เลย ไม่ต้องรอโหลด)
+    if(cur){ cur.status='กำลังใช้งาน'; cur.owner=owner; cur.department=department; }
     clearCache();
     el.innerHTML=`<div class="alert alert-success mb-0"><i class="bi bi-check-circle me-1"></i>${esc(d.message)}
       <div class="mt-2"><button class="btn btn-sm btn-outline-brand" onclick="gotoTrack('${pad4(folderCode)}')"><i class="bi bi-search me-1"></i>ดูแฟ้มนี้</button></div></div>`;
@@ -2428,9 +2467,10 @@ async function saveRegister(){
     document.querySelectorAll('.tl').forEach(c=>c.checked=false);
     updateRoutePreview();
     document.getElementById('recordRows').innerHTML=''; addRecordRow();
-    try{ const g=await api('getFolders'); if(g.ok) ALL_FOLDERS=g.folders||[]; }catch(e){}
+    document.getElementById('regFolder').value='';
     fillFolderSelect();
-    setTimeout(()=>document.getElementById('regScanInput').focus(),100);
+    document.getElementById('regScanInput').focus();
+    refreshFoldersQuiet();
   }catch(err){ toast(el,'danger',err.message); }
 }
 
@@ -2476,6 +2516,7 @@ scanInput.addEventListener('blur', ()=>{ setTimeout(()=>{
   if(!a || !['INPUT','SELECT','TEXTAREA','BUTTON','A'].includes(a.tagName)) scanInput.focus();
 }, 60); });
 /* ---------- สแกน: ออกแบบให้ยิงต่อเนื่องได้ทันที ไม่ต้องรอผลก่อนหน้า ---------- */
+let HERE_ROWS=[];             // แฟ้มที่อยู่ในมือจุดนี้ รอสแกนออก (ดึงจาก server — ธุรการ 1 = ลงทะเบียนแล้ว)
 let QUEUE_ROWS=[];            // คิวปัจจุบัน (เก็บไว้ในหน้าเว็บ เพื่ออัปเดตทันทีโดยไม่ต้องโหลดใหม่)
 const RECENT_SCAN={};         // กันสแกนซ้ำฝั่งหน้าเว็บ (ไม่ต้องวิ่งไป server)
 const LOCAL_GAP_MS=4000;
@@ -2507,70 +2548,111 @@ function doScan(code){
   }
   RECENT_SCAN[folderCode]=now;
 
-  // แสดงผลทันทีแบบ "กำลังบันทึก" แล้วค่อยอัปเดตเมื่อได้ผลจริง (ไม่หน่วงการสแกนถัดไป)
-  const entry={time:new Date(), folderCode, station, direction:'', ok:true, pending:true, au:'', subject:'', urgency:''};
+  // แสดงผลทันที (ทายจากคิว/ถาดที่มีอยู่) — ไม่มีวงหมุน ไม่ต้องรอ server แล้วค่อยยืนยันเบื้องหลัง
+  const pred=predictScan(folderCode, station);
+  const entry=Object.assign({time:new Date(), folderCode, station, ok:true, direction:pred.direction}, pred.info);
   sessionLog.unshift(entry);
   const qi=QUEUE_ROWS.findIndex(x=>pad4(x.folderCode)===folderCode);
-  if(qi>=0){ QUEUE_ROWS.splice(qi,1); renderQueue(); }
-  renderTrays();
-  scanNote(`<span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึกแฟ้ม <b>${folderCode}</b> … (ยิงแฟ้มถัดไปได้เลย)`,'alert-secondary');
+  const qRow = qi>=0 ? QUEUE_ROWS.splice(qi,1)[0] : null;
+  renderQueue(); renderTrays();
+  beep(true);
+  showScanDone(folderCode, station, entry.direction, entry, station==='S4');
 
   clearCache();
   const sendScan=(retry)=> api('scan',{folderCode, station, direction:'auto'}).then(d=>{
-    // ระบบกำลังบันทึกของผู้ใช้อื่นอยู่ -> ลองใหม่ให้อัตโนมัติ (ไม่ต้องยิงซ้ำเอง)
-    if(d && !d.ok && d.code==='BUSY' && retry>0){
-      scanNote(`<span class="spinner-border spinner-border-sm me-1"></span>ระบบกำลังบันทึกของผู้ใช้อื่น — กำลังลองใหม่ให้อัตโนมัติ…`,'alert-secondary');
-      return new Promise(r=>setTimeout(r,1200)).then(()=>sendScan(retry-1));
-    }
+    // ระบบกำลังบันทึกของผู้ใช้อื่นอยู่ -> ลองใหม่ให้อัตโนมัติแบบเงียบ ๆ
+    if(d && !d.ok && d.code==='BUSY' && retry>0) return new Promise(r=>setTimeout(r,1200)).then(()=>sendScan(retry-1));
     return d;
   });
-  sendScan(3).then(d=>{
-    if(!d || !d.ok){
-      beep(false);
-      entry.ok=false; entry.pending=false; entry.msg=(d&&d.error)?d.error.split('\n')[0]:'ผิดพลาด';
-      sessionLog.splice(sessionLog.indexOf(entry),1);   // ไม่สำเร็จ ไม่ต้องอยู่ในถาด
-      renderTrays();
-      delete RECENT_SCAN[folderCode];
-      showScanModal('สแกนไม่สำเร็จ', (d&&d.error)||'เกิดข้อผิดพลาด', true);
-      scheduleRefresh(); return;
-    }
-    beep(true);
-    const f=d.folder, dir=d.direction||f.lastDirection||'';
-    const recs=f.records||[];
-    entry.pending=false; entry.direction=dir;
-    entry.au=recs.map(r=>r.docNumber||'').filter(Boolean).join(', ');
-    entry.subject=recs.map(r=>r.subject||'').filter(Boolean).join(' / ');
-    entry.urgency=f.urgency||'';
-    entry.docType=recs.map(r=>safeType(r.docType)).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' / ');
-    renderTrays();
-    if(d.completed){
-      scanNote(`<div class="fw-bold"><i class="bi bi-check2-circle me-1"></i>แฟ้ม ${pad4(f.folderCode)} เสร็จสิ้นครบทุกจุด</div>
-        <div class="small mt-1"><i class="bi bi-arrow-counterclockwise me-1"></i>คืนเป็น “ว่าง” อัตโนมัติแล้ว (ข้อมูลเก็บในประวัติ)</div>`,'alert-success');
-    }else{
-      const dirColor = dir==='เข้า' ? 'text-success':'text-danger';
-      scanNote(`<div class="fw-bold"><i class="bi bi-check-circle me-1"></i>แฟ้ม ${pad4(f.folderCode)} <span class="${dirColor}">(${esc(dir)})</span> ${urgencyBadge(f.urgency)} ${editBadge(f)}</div>
-        <div class="small">เจ้าของ: ${esc(f.owner)||'—'} &middot; ${esc(stationName(station))}</div>
-        ${d.nextHint?`<div class="small mt-1 text-primary"><i class="bi bi-arrow-right-circle me-1"></i>${esc(d.nextHint)}</div>`:''}`,'alert-success');
-    }
-    scheduleRefresh();
-  }).catch(err=>{
+  const undo=(title,msg)=>{
     beep(false);
-    sessionLog.splice(sessionLog.indexOf(entry),1); renderTrays();
+    const i=sessionLog.indexOf(entry); if(i>=0) sessionLog.splice(i,1);
+    if(qRow && !QUEUE_ROWS.some(x=>pad4(x.folderCode)===folderCode)) QUEUE_ROWS.push(qRow);
+    renderQueue(); renderTrays();
     delete RECENT_SCAN[folderCode];
-    showScanModal('เชื่อมต่อไม่สำเร็จ', err.message, true);
-  });
+    scanNote(`<i class="bi bi-x-circle-fill me-1"></i>แฟ้ม <b>${folderCode}</b> ไม่ได้บันทึก — ${esc(String(msg).split('\n')[0])}`,'alert-danger');
+    showScanModal(title, msg, true);
+    scheduleRefresh();
+  };
+  sendScan(3).then(d=>{
+    if(!d || !d.ok){ undo('สแกนไม่สำเร็จ', (d&&d.error)||'เกิดข้อผิดพลาด'); return; }
+    // ยืนยันจาก server แล้ว — เติมข้อมูลจริง (ถ้าทิศทางต่างจากที่ทายไว้ จะแก้บนจอให้ตรง)
+    const f=d.folder||{}, dir=d.direction||f.lastDirection||entry.direction;
+    const recs=f.records||[];
+    const changed = dir!==entry.direction;
+    entry.direction=dir;
+    if(recs.length){
+      entry.au=recs.map(r=>r.docNumber||'').filter(Boolean).join(', ');
+      entry.subject=recs.map(r=>r.subject||'').filter(Boolean).join(' / ');
+      entry.docType=recs.map(r=>safeType(r.docType)).filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' / ');
+    }
+    entry.urgency=f.urgency||entry.urgency; entry.owner=f.owner||entry.owner; entry.editStatus=f.editStatus||'';
+    renderTrays();
+    if(changed || d.completed) showScanDone(folderCode, station, dir, entry, !!d.completed, d.nextHint);
+    scheduleRefresh();
+  }).catch(err=>undo('เชื่อมต่อไม่สำเร็จ', err.message));
+}
+/* ทายทิศทางจากข้อมูลที่มีอยู่: อยู่ในมือจุดนี้ -> ออก · อยู่ในคิว -> ตามขั้นถัดไป · ธุรการ 1/4 -> ออก · อื่น ๆ -> เข้า */
+function predictScan(code, station){
+  const here=(HERE_ROWS||[]).find(r=>pad4(r.folderCode)===code);
+  const q=(QUEUE_ROWS||[]).find(r=>pad4(r.folderCode)===code);
+  const last=sessionLog.find(x=>x.ok && x.station===station && x.folderCode===code);
+  let dir;
+  if(last) dir = last.direction==='เข้า' ? 'ออก' : 'เข้า';
+  else if(here) dir='ออก';
+  else if(q) dir=q.nextDirection||'เข้า';
+  else dir=(station==='S1'||station==='S4') ? 'ออก' : 'เข้า';
+  const src=here||q||{};
+  const f=(ALL_FOLDERS||[]).find(x=>pad4(x.folderCode)===code)||{};
+  return { direction:dir, info:{ au:src.docNumbers||'', subject:src.subjects||'', docType:src.docTypes||'',
+    urgency:src.urgency||f.urgency||'', owner:src.owner||f.owner||'', editStatus:src.editStatus||'' } };
+}
+/* ข้อความผลการสแกน (แสดงทันที) */
+function showScanDone(code, station, dir, info, completed, hint){
+  if(completed){
+    scanNote(`<div class="fw-bold"><i class="bi bi-check2-circle me-1"></i>แฟ้ม ${code} ส่งคืนแล้ว — เสร็จสิ้นครบทุกจุด</div>
+      <div class="small mt-1">${info.owner?('เจ้าของ: '+esc(info.owner)+' &middot; '):''}คืนเป็น “ว่าง” อัตโนมัติ (ข้อมูลเก็บในประวัติ)</div>`,'alert-success');
+    return;
+  }
+  const dirColor = dir==='เข้า' ? 'text-success':'text-danger';
+  scanNote(`<div class="fw-bold"><i class="bi bi-check-circle me-1"></i>แฟ้ม ${code} <span class="${dirColor}">(${esc(dir)})</span> ${urgencyBadge(info.urgency)}</div>
+    <div class="small">เจ้าของ: ${esc(info.owner)||'—'} &middot; ${esc(stationName(station))}</div>
+    ${hint?`<div class="small mt-1 text-primary"><i class="bi bi-arrow-right-circle me-1"></i>${esc(hint)}</div>`:''}`,'alert-success');
+}
+/* จัดหน้าตามจุดสแกน
+   ธุรการ 1: ถาดซ้าย = ลงทะเบียนแล้ว รอสแกนออก (คลิกแจ้งแก้ไขได้ตั้งแต่ลงทะเบียน) · ซ่อนคิวรอเข้า
+   ธุรการ 2/3: คิวรอเข้า + ถาดสแกนเข้าแล้ว + ถาดสแกนออกแล้ว
+   ธุรการ 4: คิวรอสแกนออก (ส่งคืน) + ถาดส่งคืนแล้ว (ไม่มีการสแกนเข้า) */
+function applyStationLayout(st){
+  const inCol=document.getElementById('inTrayCol'), outCol=document.getElementById('outTrayCol'), qCard=document.getElementById('queueCard');
+  if(!inCol) return;
+  document.getElementById('inTitle').textContent = st==='S1' ? 'ลงทะเบียนแล้ว — รอสแกนออก' : 'สแกนเข้าแล้ว — รออยู่ที่จุดนี้';
+  document.getElementById('outTitle').textContent = st==='S4' ? 'สแกนออกแล้ว (ส่งคืน)' : 'สแกนออกแล้ว';
+  const s4 = st==='S4';
+  inCol.style.display = s4 ? 'none' : '';
+  outCol.className = s4 ? 'col-md-12' : 'col-md-6';
+  // ธุรการ 1 ไม่ต้องมีคิวรอเข้า (ลงทะเบียน = เข้าแล้ว) — แสดงเฉพาะเมื่อมีแฟ้มค้างแบบเดิม
+  qCard.style.display = (st==='S1' && !(QUEUE_ROWS||[]).length) ? 'none' : '';
 }
 /* ถาดเข้า/ออก: เฉพาะจุดที่เลือกอยู่ (ของใครของมัน) */
 function renderTrays(){
   const cur=document.getElementById('scanStation').value;
+  applyStationLayout(cur);
   const latest={};
   sessionLog.forEach(x=>{ if(x.ok && x.station===cur && !latest[x.folderCode]) latest[x.folderCode]=x; });
-  const inList=[], outList=[];
+  // ถาด "รออยู่ที่จุดนี้" = ข้อมูลจาก server (ทุกเครื่องเห็นตรงกัน) + การสแกนล่าสุดในหน้าจอนี้
+  const inMap={};
+  (HERE_ROWS||[]).forEach(r=>{ const c=pad4(r.folderCode);
+    inMap[c]={folderCode:c, time:r.inAt?new Date(r.inAt):null, au:r.docNumbers||'', subject:r.subjects||'', docType:r.docTypes||'',
+              urgency:r.urgency||'', owner:r.owner||'', editStatus:r.editStatus||''}; });
+  const outList=[];
   Object.keys(latest).forEach(c=>{
     const x=latest[c];
-    if(x.pending || x.direction==='เข้า') inList.push(x); else outList.push(x);
+    if(x.direction==='เข้า') inMap[c]=Object.assign({}, inMap[c]||{}, x);
+    else { delete inMap[c]; outList.push(x); }
   });
-  const byTime=(a,b)=>b.time-a.time; inList.sort(byTime); outList.sort(byTime);
+  const inList=Object.values(inMap);
+  const byTime=(a,b)=>((b.time||0)-(a.time||0)); inList.sort(byTime); outList.sort(byTime);
   renderTray('inBody', inList, true); renderTray('outBody', outList, false);
   document.getElementById('inCount').textContent=inList.length;
   document.getElementById('outCount').textContent=outList.length;
@@ -2579,17 +2661,17 @@ function renderTray(bodyId, list, clickable){
   const b=document.getElementById(bodyId);
   if(!list.length){ b.innerHTML='<tr><td colspan="2" class="text-center text-muted py-4">ยังไม่มีแฟ้ม</td></tr>'; return; }
   const p=n=>String(n).padStart(2,'0');
+  const today=new Date().toDateString();
   b.innerHTML=list.map(x=>{
-    const t=x.time; const tt=`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`;
-    if(x.pending){
-      return `<tr class="text-muted"><td><b>${esc(x.folderCode)}</b><div class="small">${tt}</div></td>
-        <td class="small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังบันทึก…</td></tr>`;
-    }
+    const t=x.time;
+    const tt = !t ? '' : (t.toDateString()===today ? `${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}` : thaiDateTime(t.toISOString()));
+    const editTag = x.editStatus==='มีแก้ไข' ? '<span class="badge sb eb-edit ms-1"><i class="bi bi-pencil-fill"></i> แก้ไข</span>' : '';
+    const owner = x.owner ? `<div class="small text-muted">${esc(x.owner)}</div>` : '';
     const au = x.au ? esc(x.au) : '<span class="text-muted">—</span>';
     const subj = x.subject ? `<div class="text-muted">${esc(x.subject)}</div>` : '';
     const dt = x.docType ? `<div class="text-muted" style="font-size:.76rem">${esc(x.docType)}</div>` : '';
     const clickAttr = clickable ? ` style="cursor:pointer" onclick="openScanEdit('${esc(x.folderCode)}')" title="คลิกเพื่อบันทึกสถานะการแก้ไขแฟ้มนี้"` : '';
-    return `<tr${clickAttr}><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}<div class="small text-muted">${tt}</div></td>
+    return `<tr${clickAttr}><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}${editTag}${owner}<div class="small text-muted">${tt}</div></td>
       <td class="small">${au}${subj}${dt}</td></tr>`;
   }).join('');
 }
@@ -2599,9 +2681,12 @@ async function openScanEdit(code){
   const wrap=document.getElementById('scanEditWrap');
   const box=document.getElementById('scanEditBox');
   document.getElementById('scanEditCode').textContent=fc;
-  box.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</div>';
   wrap.style.display='block';
   wrap.scrollIntoView({behavior:'smooth', block:'center'});
+  // มีข้อมูลในถาด/คิวอยู่แล้ว -> แสดงฟอร์มทันที ไม่ต้องรอ server
+  const known=(HERE_ROWS||[]).concat(QUEUE_ROWS||[]).find(r=>pad4(r.folderCode)===fc);
+  if(known){ box.innerHTML=editFormHTML(Object.assign({folderCode:fc}, known),'scan', document.getElementById('scanStation').value); return; }
+  box.innerHTML='<div class="text-muted small">กำลังเปิดข้อมูลแฟ้ม…</div>';
   try{
     const d=await api('getFolder',{folderCode:fc});
     if(!d.ok) throw new Error(d.error||'error');
@@ -2631,7 +2716,9 @@ async function loadQueue(){
     const d=await apiSWR('getStationQueue',{station}, 8000, loadQueue);
     if(!d.ok) throw new Error(d.error||'error');
     QUEUE_ROWS=d.rows||[];
+    HERE_ROWS=d.here||[];
     renderQueue();
+    renderTrays();
   }catch(err){ document.getElementById('queueBody').innerHTML=`<tr><td colspan="2" class="text-center text-danger py-3">${esc(err.message)}</td></tr>`; }
 }
 function renderQueue(){
