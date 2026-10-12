@@ -362,6 +362,14 @@
     padding-right:1.9rem; flex:0 0 auto; width:auto; max-width:10rem; font-weight:600; color:var(--brand-700); cursor:pointer; }
   .rec-aunum:disabled{ background:var(--bg); }
 
+  /* ---------- กล่องแสดงแฟ้มที่สแกน (หน้าลงทะเบียน) ---------- */
+  .reg-folder-show{ border:2px solid var(--line); border-radius:12px; padding:9px 14px; min-height:58px;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--surface); }
+  .reg-folder-show.empty{ border-style:dashed; color:var(--muted); font-size:.9rem; }
+  .reg-folder-show.ok{ border-color:var(--ok); background:var(--ok-soft); }
+  .reg-folder-show.used{ border-color:var(--accent); background:var(--accent-soft); }
+  .reg-folder-show .rf-num{ font-family:var(--font-display); font-size:1.55rem; font-weight:700; line-height:1; color:var(--ink); }
+  .reg-folder-show .rf-sub{ font-size:.8rem; color:var(--muted); line-height:1.3; }
   /* ---------- รายการเลือกแฟ้ม ---------- */
   .folder-picker{ display:none; position:absolute; z-index:1065; left:0; right:0; top:calc(100% + 4px); background:var(--surface);
     border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow); max-height:300px; overflow:auto; }
@@ -682,18 +690,17 @@
         <div class="mb-3">
           <label class="form-label"><i class="bi bi-upc-scan me-1"></i>ยิงบาร์โค้ดแฟ้ม <span class="badge bg-brand" style="background:var(--brand)">แนะนำ</span></label>
           <div class="row g-2">
-            <div class="col-md-5"><input id="regScanInput" class="form-control" style="font-size:1.25rem;letter-spacing:2px;font-weight:600;border:2px dashed var(--brand);border-radius:12px;text-align:center" placeholder="ยิงบาร์โค้ด…" autocomplete="off"></div>
+            <div class="col-md-5"><input id="regScanInput" class="form-control" style="font-size:1.25rem;letter-spacing:2px;font-weight:600;border:2px dashed var(--brand);border-radius:12px;text-align:center" placeholder="ยิงบาร์โค้ด…" autocomplete="off" title="บาร์โค้ดชำรุด? พิมพ์เลขแฟ้มแล้วกด Enter ได้"></div>
             <div class="col-md-7"><div id="regScanInfo"></div></div>
           </div>
-          <div class="form-text">หยิบแฟ้มจริงมายิงบาร์โค้ด ระบบจะเลือกเลขแฟ้มให้อัตโนมัติและถูกต้อง — ไม่ต้องจำหรืออ่านเลขเอง</div>
+          <div class="form-text">หยิบแฟ้มจริงมายิงบาร์โค้ด ระบบจะเลือกแฟ้มให้อัตโนมัติ · บาร์โค้ดชำรุด? พิมพ์เลขแฟ้ม (เช่น 34) แล้วกด Enter ได้</div>
         </div>
         <hr class="mt-0 mb-3">
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label">เลือกแฟ้ม <span class="text-muted small">(หรือใช้ยิงบาร์โค้ดด้านบน)</span></label>
-            <div class="position-relative"><select id="regFolder" class="form-select"></select></div>
-            <div class="form-check mt-1"><input class="form-check-input" type="checkbox" id="regShowAll" onchange="fillFolderSelect()">
-              <label class="form-check-label small" for="regShowAll">แสดงแฟ้มทั้งหมด</label></div>
+            <label class="form-label">แฟ้มที่ลงทะเบียน <span class="text-muted small">(จากการยิงบาร์โค้ด)</span></label>
+            <input type="hidden" id="regFolder">
+            <div id="regFolderShow"></div>
           </div>
           <div class="col-md-4">
             <label class="form-label">เจ้าของแฟ้ม (ชื่อ-นามสกุล)</label>
@@ -2141,8 +2148,8 @@ async function loadRegister(){
   if(!CONFIG || !CONFIG.rong1) loadConfig().then(()=>{ renderTimeline(); fillDeptSelect(); });
   renderTimeline();
   fillDeptSelect();
-  // พร้อมสแกนทันทีด้วยรายการแฟ้มที่มีในเครื่อง แล้วอัปเดตสถานะล่าสุดเบื้องหลัง (ไม่ต้องรอ)
-  fillFolderSelect();
+  // พร้อมสแกนทันที — เริ่มที่ "ยังไม่ได้เลือกแฟ้ม" เสมอ แล้วอัปเดตสถานะแฟ้มล่าสุดเบื้องหลัง
+  setRegFolder('');
   document.getElementById('regScanInput').focus();
   refreshFoldersQuiet();
 }
@@ -2175,52 +2182,13 @@ async function regScan(code){
   const fc=pad4(norm.code);
   const f=ALL_FOLDERS.find(x=>pad4(x.folderCode)===fc);
   if(!f && ALL_FOLDERS.length && parseInt(fc,10)>TOTAL_FOLDERS){ beep(false); toast(info,'danger','ไม่พบแฟ้มรหัส '+fc+' ในระบบ (ยังไม่ได้สร้างแฟ้มนี้?)'); regScanInput.focus(); return; }
-  if(!f){   // ยังไม่มีรายการในเครื่อง -> เลือกให้ทันที แล้วตรวจสถานะเบื้องหลัง
-    beep(true); setSelectValue(document.getElementById('regFolder'), fc);
-    info.innerHTML=`<div class="alert alert-success py-2 mb-0"><i class="bi bi-check-circle me-1"></i>เลือกแฟ้ม <b>${fc}</b> แล้ว</div>`;
-    refreshFoldersQuiet().then(()=>showRegFolderStatus(fc)); regScanInput.focus(); return;
-  }
   beep(true);
-  // ให้ดรอปดาวน์มีแฟ้มนี้ (แฟ้มที่ถูกใช้จะไม่อยู่ในรายการ "ว่าง")
-  if((f.status||'ว่าง')!=='ว่าง'){ document.getElementById('regShowAll').checked=true; fillFolderSelect(); }
-  setSelectValue(document.getElementById('regFolder'), fc);
+  setRegFolder(fc);
+  if(!f){ info.innerHTML=''; refreshFoldersQuiet().then(()=>showRegFolderStatus(fc)); regScanInput.focus(); return; }
   showRegFolderStatus(fc);
   regScanInput.focus();
 }
-/* ===== ช่อง "เลือกแฟ้ม": ใช้รายการเลือกของระบบเอง (ไม่ใช่ของเบราว์เซอร์)
-   เหตุผล: รายการแบบเดิมจะแย่งรับตัวอักษรจากเครื่องสแกน ทำให้ยิงบาร์โค้ดแล้วแฟ้มไม่เปลี่ยน
-   แบบใหม่: คลิกแล้วรายการเปิดขึ้น แต่ช่องยิงบาร์โค้ดยังพร้อมรับการสแกนอยู่ตลอด ===== */
-function openFolderPicker(){
-  const sel=document.getElementById('regFolder');
-  let box=document.getElementById('folderPicker');
-  if(!box){ box=document.createElement('div'); box.id='folderPicker'; box.className='folder-picker'; sel.insertAdjacentElement('afterend',box); }
-  const opts=[...sel.options].filter(o=>o.value);
-  box.innerHTML=`<div class="fp-hint"><i class="bi bi-upc-scan me-1"></i>ยิงบาร์โค้ดได้เลย · หรือคลิกเลือกแฟ้มจากรายการ</div>`+
-    (opts.length?opts.map(o=>`<div class="fp-it${o.value===sel.value?' on':''}" data-v="${esc(o.value)}">${esc(o.textContent)}</div>`).join('')
-                :'<div class="p-3 small text-muted">ไม่มีแฟ้มในรายการ</div>');
-  box.querySelectorAll('.fp-it').forEach(it=>it.addEventListener('mousedown',ev=>{
-    ev.preventDefault();
-    sel.value=it.dataset.v; sel.dispatchEvent(new Event('change'));
-    closeFolderPicker(); regScanInput.focus();
-  }));
-  box.style.display='block';
-  const on=box.querySelector('.fp-it.on'); if(on) on.scrollIntoView({block:'nearest'});
-  regScanInput.focus({preventScroll:true});     // เครื่องสแกนจะพิมพ์ลงช่องยิงบาร์โค้ด ไม่ใช่ช่องนี้
-}
-function closeFolderPicker(){ const b=document.getElementById('folderPicker'); if(b) b.style.display='none'; }
-(function wireFolderPicker(){
-  const sel=document.getElementById('regFolder');
-  sel.addEventListener('mousedown', e=>{
-    e.preventDefault();                                     // ไม่เปิดรายการของเบราว์เซอร์
-    const b=document.getElementById('folderPicker');
-    if(b && b.style.display==='block') closeFolderPicker(); else openFolderPicker();
-  });
-  document.addEventListener('mousedown', e=>{
-    const b=document.getElementById('folderPicker');
-    if(b && b.style.display==='block' && !b.contains(e.target) && e.target.id!=='regFolder') closeFolderPicker();
-  });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeFolderPicker(); });
-})();
+function closeFolderPicker(){}   // (เลิกใช้รายการเลือกแฟ้มแล้ว — รับแฟ้มจากการสแกนอย่างเดียว)
 
 /* ===== ตัวดักการยิงบาร์โค้ดทั้งหน้าลงทะเบียน
    ไม่ว่าเคอร์เซอร์อยู่ช่องไหน ถ้าเป็นการยิงจากเครื่องสแกน (พิมพ์เร็วมากต่อเนื่องแล้วตามด้วย Enter)
@@ -2256,9 +2224,11 @@ function showRegFolderStatus(code){
   const f=ALL_FOLDERS.find(x=>pad4(x.folderCode)===fc);
   const info=document.getElementById('regScanInfo');
   if(!f){ info.innerHTML=''; return; }
+  fillFolderSelect();
   if((f.status||'ว่าง')==='ว่าง'){
     info.innerHTML=`<div class="alert alert-success py-2 mb-0"><i class="bi bi-check-circle me-1"></i>เลือกแฟ้ม <b>${fc}</b> แล้ว — ว่าง พร้อมลงทะเบียน</div>`;
   }else{
+    apiCached('getFolder',{folderCode:fc}, 60000).catch(()=>{});      // เตรียมข้อมูลเดิมไว้ก่อน
     info.innerHTML=`<div class="alert alert-warning py-2 mb-0">
       <i class="bi bi-exclamation-triangle-fill me-1"></i>แฟ้ม <b>${fc}</b> มีข้อมูลอยู่แล้ว (สถานะ: ${esc(f.status)})${f.owner?(' · เจ้าของ: '+esc(f.owner)):''}
       <div class="mt-2 d-flex gap-2 flex-wrap">
@@ -2271,13 +2241,11 @@ function showRegFolderStatus(code){
 async function loadExistingFolder(code){
   const fc=pad4(code);
   const info=document.getElementById('regScanInfo');
-  info.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดข้อมูลเดิม…</div>';
   try{
-    const d=await api('getFolder',{folderCode:fc});
+    const d=await apiCached('getFolder',{folderCode:fc}, 60000);     // เตรียมไว้แล้วตอนสแกน -> ขึ้นทันที
     if(!d.ok) throw new Error(d.error||'error');
     const f=d.folder;
-    document.getElementById('regShowAll').checked=true; fillFolderSelect();
-    setSelectValue(document.getElementById('regFolder'), fc);
+    setRegFolder(fc);
     document.getElementById('regOwner').value=f.owner||'';
     setNotify(!!f.ownerEmail, f.ownerEmail||'');
     fillDeptSelect(); setSelectValue(document.getElementById('regDept'), f.department||'');
@@ -2330,22 +2298,34 @@ function updateRoutePreview(){
     ${skipped.length?`<span class="text-muted ms-1">(ไม่ผ่าน ${skipped.map(k=>esc(stationName(k))).join(', ')})</span>`:''}
     ${!tl?'<div class="text-warning-emphasis mt-1"><i class="bi bi-info-circle me-1"></i>ยังไม่ได้เลือกผู้บริหาร — แฟ้มจะไปจากจุดแรกถึงจุดสุดท้ายโดยตรง</div>':''}</div>`;
 }
+/* กล่องแสดงแฟ้มที่ลงทะเบียน — แหล่งข้อมูลเดียวคือการยิงบาร์โค้ด (ไม่มีดรอปดาวน์ที่ต้องคอยซิงก์) */
+function setRegFolder(code){
+  document.getElementById('regFolder').value = code ? pad4(code) : '';
+  fillFolderSelect();
+}
 function fillFolderSelect(){
-  const showAll=document.getElementById('regShowAll').checked;
-  const sel=document.getElementById('regFolder');
-  const keep=sel.value;
-  const list=ALL_FOLDERS.filter(f=> showAll ? true : (f.status||'ว่าง')==='ว่าง');
-  sel.innerHTML = list.map(f=>`<option value="${pad4(f.folderCode)}">แฟ้ม ${pad4(f.folderCode)} — ${esc(f.status||'ว่าง')}</option>`).join('')
-                  || '<option value="">— ไม่มีแฟ้มว่าง —</option>';
-  if(keep){
-    if(![...sel.options].some(o=>o.value===keep)){
-      const f=ALL_FOLDERS.find(x=>pad4(x.folderCode)===keep);
-      const o=document.createElement('option'); o.value=keep; o.textContent=`แฟ้ม ${keep} — ${f?(f.status||'ว่าง'):'กำลังตรวจสอบ'}`; sel.appendChild(o);
-    }
-    sel.value=keep;
+  const box=document.getElementById('regFolderShow'); if(!box) return;
+  const fc=document.getElementById('regFolder').value;
+  if(!fc){
+    box.className='reg-folder-show empty';
+    box.innerHTML='<i class="bi bi-upc-scan fs-4"></i><div>ยังไม่ได้เลือกแฟ้ม<div class="rf-sub">ยิงบาร์โค้ดที่แฟ้ม (หรือพิมพ์เลขแฟ้มแล้วกด Enter)</div></div>';
+    return;
+  }
+  const f=ALL_FOLDERS.find(x=>pad4(x.folderCode)===fc);
+  const st=f ? (f.status||'ว่าง') : '';
+  if(!f){
+    box.className='reg-folder-show';
+    box.innerHTML=`<div class="rf-num">${fc}</div><div class="rf-sub">กำลังตรวจสถานะแฟ้ม</div>`;
+  } else if(st==='ว่าง'){
+    box.className='reg-folder-show ok';
+    box.innerHTML=`<div class="rf-num">${fc}</div><div><span class="badge-status st-ว่าง badge">ว่าง</span><div class="rf-sub mt-1">พร้อมลงทะเบียน</div></div>`;
+  } else {
+    box.className='reg-folder-show used';
+    box.innerHTML=`<div class="rf-num">${fc}</div><div class="flex-grow-1"><span class="badge badge-status st-ใช้">${esc(st)}</span>
+      <div class="rf-sub mt-1">${f.owner?('เจ้าของ: '+esc(f.owner)):'มีข้อมูลอยู่แล้ว'}</div></div>`;
   }
 }
-document.getElementById('regFolder').addEventListener('change', function(){ if(this.value) showRegFolderStatus(this.value); });
+// (ช่องแฟ้มรับจากการสแกนเท่านั้น)
 /* ปรับช่องเลขที่ตามรูปแบบเอกสาร: มีเลข อว. / แบบฟอร์ม / ไม่มีเลข อว. */
 function onDocFormat(sel, keep){
   const inp=sel.closest('.input-group').querySelector('.rec-aunum');
@@ -2430,7 +2410,7 @@ function urgencyBadge(u){
 async function saveRegister(){
   const el=document.getElementById('regResult');
   const folderCode=document.getElementById('regFolder').value;
-  if(!folderCode){ toast(el,'danger','กรุณาเลือกแฟ้ม'); return; }
+  if(!folderCode){ toast(el,'danger','กรุณายิงบาร์โค้ดแฟ้มก่อน (หรือพิมพ์เลขแฟ้มในช่องยิงบาร์โค้ดแล้วกด Enter)'); regScanInput.focus(); return; }
   const owner=document.getElementById('regOwner').value.trim();
   const ownerEmail=document.getElementById('regNotify').checked ? fullEmail(document.getElementById('regOwnerEmail').value) : '';
   const department=document.getElementById('regDept').value;
@@ -2467,8 +2447,7 @@ async function saveRegister(){
     document.querySelectorAll('.tl').forEach(c=>c.checked=false);
     updateRoutePreview();
     document.getElementById('recordRows').innerHTML=''; addRecordRow();
-    document.getElementById('regFolder').value='';
-    fillFolderSelect();
+    setRegFolder('');
     document.getElementById('regScanInput').focus();
     refreshFoldersQuiet();
   }catch(err){ toast(el,'danger',err.message); }
@@ -2786,7 +2765,14 @@ async function loadPrinted(){
 /* กระดานสถานะการพิมพ์: แสดงทุกแฟ้ม + กลุ่มที่ทำเครื่องหมายล่าสุด (ใคร/เมื่อไร) */
 async function loadPrintBoard(force){
   const grid=document.getElementById('pbGrid'); if(!grid) return;
-  if(force || !PRINTED_LOADED){ grid.innerHTML='<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</div>'; await loadPrinted(); }
+  if(force || !PRINTED_LOADED){
+    if(ALL_FOLDERS.length){
+      // วาดทันทีจากข้อมูลแฟ้มที่มีในเครื่อง แล้วอัปเดตเบื้องหลัง
+      PRINT_INFO={}; ALL_FOLDERS.forEach(f=>{ if(f.printedAt) PRINT_INFO[pad4(f.folderCode)]={at:f.printedAt, by:f.printedBy||''}; });
+      PRINTED=new Set(Object.keys(PRINT_INFO));
+      loadPrinted().then(()=>loadPrintBoard(false));
+    } else { grid.innerHTML='<div class="text-muted small">กำลังเตรียมข้อมูล…</div>'; await loadPrinted(); }
+  }
   const codes=ALL_FOLDERS.map(f=>pad4(f.folderCode)).sort();
   const nP=codes.filter(c=>PRINT_INFO[c]).length;
   document.getElementById('pbSummary').innerHTML=`พิมพ์แล้ว <b class="text-success">${nP}</b> / ${codes.length} แฟ้ม · ยังไม่พิมพ์ <b>${codes.length-nP}</b>`;
@@ -2895,15 +2881,31 @@ function gotoTrack(code){
   openFolder(pad4(code));
 }
 /* เปิดรายละเอียดแฟ้มเดียว */
+/* ข้อมูลแฟ้มเบื้องต้นจากที่มีในเครื่อง (แดชบอร์ด + ผลค้นหา/ประวัติ) เพื่อแสดงทันที */
+function provisionalFolder(fc){
+  const base=(ALL_FOLDERS||[]).find(x=>pad4(x.folderCode)===fc);
+  const rows=(typeof SEARCH_ROWS!=='undefined' && SEARCH_ROWS) ? SEARCH_ROWS : [];
+  const live=rows.find(x=>x.live && pad4(x.folderCode)===fc) || Object.values(HIST_ROWS||{}).find(x=>x.live && pad4(x.folderCode)===fc);
+  if(!base && !live) return null;
+  const f=Object.assign({}, base||{}, live||{}, {folderCode:fc});
+  f.records=(live&&live.records)||[];
+  f.logs=(live && (live.logs&&live.logs.length ? live.logs : LOGS_CACHE[tlKey(live)])) || [];
+  f.route=routeStations(f.timeline);
+  return f;
+}
 async function openFolder(code){
   const el=document.getElementById('trackResult');
-  el.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลดแฟ้ม…</div>';
+  const fc=pad4(code);
+  const hit=API_CACHE.get(cacheKey('getFolder',{folderCode:fc}));
+  const prov=(hit && hit.v && hit.v.ok) ? hit.v.folder : provisionalFolder(fc);
+  if(prov){ renderTrack(prov); el.scrollIntoView({behavior:'smooth', block:'start'}); }
+  else el.innerHTML='<div class="text-muted small">กำลังเปิดแฟ้ม '+fc+'…</div>';
   try{
-    const d=await api('getFolder',{folderCode:code});
+    const d=await apiCached('getFolder',{folderCode:fc}, 3000);     // ข้อมูลล่าสุดจาก server -> วาดทับเงียบ ๆ
     if(!d.ok) throw new Error(d.error||'error');
     renderTrack(d.folder);
-    el.scrollIntoView({behavior:'smooth', block:'start'});
-  }catch(err){ toast(el,'danger',err.message); }
+    if(!prov) el.scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(err){ if(!prov) toast(el,'danger',err.message); }
 }
 /* ค้นหา/กรองหลายเงื่อนไข */
 /* ===================== ค้นหาทันทีขณะพิมพ์ =====================
@@ -2957,6 +2959,7 @@ function renderSearch(matched){
       <span class="small text-muted ms-2">(กำลังดำเนินการ ${liveN} &middot; เสร็จ/คืนแล้ว ${doneN}) — คลิกเพื่อดูไทม์ไลน์</span>
       ${matched.length>SEARCH_LIMIT?`<div class="small text-muted fw-normal mt-1">แสดง ${SEARCH_LIMIT} รายการแรก — พิมพ์เพิ่มเพื่อกรองให้แคบลง</div>`:''}</div>
     <div class="card-body p-0">${histHeaderHTML()}${shown.map(histEntryHTML).join('')}</div></div>`;
+  prefetchTimelines(shown);
 }
 function scheduleLiveSearch(){ clearTimeout(LIVE_TIMER); LIVE_TIMER=setTimeout(liveSearch, 120); }
 async function liveSearch(){
@@ -2979,10 +2982,14 @@ async function doTrack(){
   if(!s.dept && !s.date && /^\d{1,4}$/.test(kw)){
     const n=parseInt(kw,10);
     if(n>=1 && n<=TOTAL_FOLDERS){
-      try{
-        const d=await api('getFolder',{folderCode:pad4(kw)});
-        if(d.ok && d.folder && (d.folder.status||'ว่าง')!=='ว่าง'){ document.getElementById('trackList').innerHTML=''; if(typeof showHistCard==='function') showHistCard(false); return renderTrack(d.folder); }
-      }catch(e){}
+      const fc=pad4(kw), base=(ALL_FOLDERS||[]).find(x=>pad4(x.folderCode)===fc);
+      if(base && (base.status||'ว่าง')!=='ว่าง'){ document.getElementById('trackList').innerHTML=''; if(typeof showHistCard==='function') showHistCard(false); return openFolder(fc); }
+      if(!base){
+        try{
+          const d=await apiCached('getFolder',{folderCode:fc}, 3000);
+          if(d.ok && d.folder && (d.folder.status||'ว่าง')!=='ว่าง'){ document.getElementById('trackList').innerHTML=''; if(typeof showHistCard==='function') showHistCard(false); return renderTrack(d.folder); }
+        }catch(e){}
+      }
     }
   }
   await liveSearch();
@@ -3071,10 +3078,29 @@ function toggleHist(head){
   if(open) ensureTimeline(item);
 }
 /* โหลดไทม์ไลน์เมื่อกางดูครั้งแรก (ไม่โหลดมาพร้อมรายการ เพื่อให้หน้าขึ้นไว) */
+const LOGS_CACHE={};          // คีย์ (historyId หรือ L+รหัสแฟ้ม) -> ไทม์ไลน์ที่ดึงไว้แล้ว
+const tlKey=x=>x.historyId ? x.historyId : ('L'+pad4(x.folderCode));
+let TL_TIMER=null;
+/* ดึงไทม์ไลน์ของทุกแฟ้มที่แสดงอยู่ไว้ล่วงหน้า (คำขอเดียว) — กางดูแล้วขึ้นทันที */
+function prefetchTimelines(rows){
+  clearTimeout(TL_TIMER);
+  TL_TIMER=setTimeout(()=>{
+    const need=(rows||[]).filter(x=>x && x.logsPending && !LOGS_CACHE[tlKey(x)]).slice(0,120);
+    if(!need.length) return;
+    const items=need.map(x=>({k:tlKey(x), h:x.historyId||'', f:pad4(x.folderCode)}));
+    apiCached('getHistoryLogsBatch',{items:JSON.stringify(items)}, 120000).then(d=>{
+      if(!d || !d.ok) return;
+      Object.keys(d.logs||{}).forEach(k=>{ LOGS_CACHE[k]=d.logs[k]; });
+      // แถวที่กางค้างไว้ระหว่างรอ -> วาดไทม์ไลน์ทันที
+      document.querySelectorAll('.hist-item.open').forEach(it=>ensureTimeline(it));
+    }).catch(()=>{});
+  }, 250);
+}
 async function ensureTimeline(item){
   const hid=item.dataset.hid; const x=HIST_ROWS[hid];
   if(!x || !x.logsPending) return;
   const box=item.querySelector('.hist-tl-box');
+  if(LOGS_CACHE[tlKey(x)]){ x.logs=LOGS_CACHE[tlKey(x)]; x.logsPending=false; box.innerHTML=histTimeline(x.logs, x.timeline); return; }
   try{
     const d=await apiCached('getHistoryLogs', x.historyId?{historyId:x.historyId}:{folderCode:x.folderCode}, 300000);
     x.logs=(d&&d.ok)?(d.logs||[]):[];
@@ -3103,6 +3129,7 @@ function histHeaderHTML(){
 /* การ์ดประวัติ 1 รายการ (ใช้ทั้งหน้าประวัติและผลการค้นหา) */
 function histEntryHTML(x){
   const hid='h'+(++HIST_SEQ); HIST_ROWS[hid]=x;
+  if(x.logsPending && typeof LOGS_CACHE!=='undefined' && LOGS_CACHE[tlKey(x)]){ x.logs=LOGS_CACHE[tlKey(x)]; x.logsPending=false; }
   const when = thaiDateTime(x.live ? x.archivedAt : x.completedAt);
   const recs=x.records||[];
   const first=recs[0]||{};
@@ -3149,6 +3176,7 @@ async function loadHistory(){
     document.getElementById('histTotal').textContent = (d.total>rows.length)? (rows.length+' / '+d.total) : rows.length;
     if(!rows.length){ body.innerHTML='<div class="text-muted text-center py-4">ไม่พบประวัติในช่วงเวลานี้</div>'; return; }
     body.innerHTML=histHeaderHTML()+rows.map(histEntryHTML).join('');
+    prefetchTimelines(rows);
   }catch(err){ body.innerHTML=`<div class="alert alert-danger m-3">${esc(err.message)}</div>`; }
 }
 function renderTrack(f){
@@ -3746,6 +3774,13 @@ function prewarm(){
       }
       if(can('VIEW_FILE')) apiCached('getHistory',{period:'month', limit:'50', light:'1'}, 120000).catch(()=>{});
       if(can('VIEW_FILE')) setTimeout(()=>loadSearchData().catch(()=>{}), 1500);
+      // ทยอยเตรียมข้อมูลหน้าอื่น ๆ ตามสิทธิ์ (เว้นระยะเพื่อไม่ให้ server ทำงานหนักพร้อมกัน)
+      const later=(ms,fn)=>setTimeout(()=>{ try{ fn(); }catch(e){} }, ms);
+      if(can('CREATE_FILE')) later(2500, ()=>apiCached('getOwnerDirectory',{},300000).catch(()=>{}));
+      if(can('VIEW_REPORT')) later(3500, ()=>apiCached('getReport',repPeriodParams(),120000).catch(()=>{}));
+      if(can('VIEW_AUDIT_LOG')) later(5000, ()=>apiCached('getAudit',Object.assign({limit:document.getElementById('auditLimit').value}, repPeriodParams()),15000).catch(()=>{}));
+      if(can('MANAGE_USER')) later(6000, ()=>apiCached('listUsers',{},30000).catch(()=>{}));
+      if(can('MANAGE_CONFIG')) later(7000, ()=>apiCached('getMaintenance',{},30000).catch(()=>{}));
     }catch(e){}
   }, 600);
 }
