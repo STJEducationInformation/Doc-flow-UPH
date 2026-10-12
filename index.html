@@ -378,6 +378,11 @@
   /* ---------- แถบแจ้งเมื่อสแกนแทนจุดคู่ ---------- */
   .cover-banner{ background:var(--accent-soft); color:var(--accent-ink); border:1px solid var(--accent); border-radius:9px; padding:8px 12px; font-size:.86rem; }
 
+  /* ---------- ส่วนอันตราย (ล้างข้อมูลทั้งระบบ) ---------- */
+  .danger-zone{ border-color:var(--danger); }
+  .danger-zone .card-header{ background:var(--danger-soft); color:var(--danger); border-bottom-color:var(--danger); }
+  .danger-zone .card-header .bi{ color:var(--danger) !important; }
+
   /* ---------- ลดการเคลื่อนไหวสำหรับผู้ที่ตั้งค่าไว้ ---------- */
   @media (prefers-reduced-motion: reduce){
     *{ animation:none !important; transition:none !important; }
@@ -523,7 +528,7 @@
       <div class="card-header d-flex flex-wrap gap-2 align-items-center">
         <span><i class="bi bi-table me-1"></i>รายการแฟ้ม</span>
         <div class="ms-auto d-flex gap-2 flex-wrap">
-          <input id="dashSearch" class="form-control form-control-sm" style="width:150px" placeholder="ค้นหา รหัส/เจ้าของ">
+          <input id="dashSearch" class="form-control form-control-sm" style="width:210px" placeholder="ค้นหา รหัส/เจ้าของ/ฝ่าย/ตำแหน่ง" autocomplete="off">
           <select id="dashDept" class="form-select form-select-sm" style="width:150px"><option value="">ทุกฝ่ายงาน</option></select>
           <select id="dashFilter" class="form-select form-select-sm" style="width:130px">
             <option value="">ทุกสถานะ</option><option>ว่าง</option><option>กำลังใช้งาน</option><option>เสร็จสิ้น</option>
@@ -651,7 +656,7 @@
       <div class="card-header d-flex flex-wrap gap-2 align-items-center">
         <span><i class="bi bi-shield-check me-1"></i>บันทึกการทำงานทั้งระบบ <span id="auditTotal" class="badge bg-secondary ms-1">0</span></span>
         <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
-          <input id="auditFolder" class="form-control form-control-sm" style="width:120px" placeholder="รหัสแฟ้ม (ถ้ามี)">
+          <input id="auditFolder" class="form-control form-control-sm" style="width:230px" placeholder="ค้นหา แฟ้ม/ผู้ใช้/การกระทำ/รายละเอียด" autocomplete="off" oninput="renderAudit()">
           <select id="auditLimit" class="form-select form-select-sm" style="width:110px" onchange="loadAudit()">
             <option value="100" selected>100 แถว</option><option value="300">300 แถว</option>
             <option value="1000">1000 แถว</option><option value="all">ทั้งหมด</option>
@@ -755,7 +760,7 @@
         </div>
         <div class="card mt-3">
           <div class="card-header d-flex align-items-center py-2">
-            <span><i class="bi bi-inboxes text-primary me-1"></i>คิวรอสแกนเข้า <span id="queueStname" class="text-muted small"></span> <span id="queueCount" class="badge bg-primary ms-1">0</span></span>
+            <span><i class="bi bi-inboxes text-primary me-1"></i><span id="queueTitle">คิวรอสแกนเข้า</span> <span id="queueStname" class="text-muted small"></span> <span id="queueCount" class="badge bg-primary ms-1">0</span></span>
             <button class="btn btn-sm btn-outline-brand ms-auto" onclick="clearCache();loadQueue();focusScan()"><i class="bi bi-arrow-clockwise"></i></button>
           </div>
           <div class="card-body p-0"><div class="table-responsive" style="max-height:280px;overflow:auto">
@@ -1127,6 +1132,45 @@
         <div id="setResult" class="mt-3"></div>
       </div>
     </div>
+
+    <!-- ล้างข้อมูลทั้งระบบ: เฉพาะผู้ดูแลระบบสูงสุด -->
+    <div class="card mt-3 danger-zone" data-role="SUPER_ADMIN" style="display:none">
+      <div class="card-header"><i class="bi bi-exclamation-octagon me-1"></i>ล้างข้อมูลทั้งระบบ — ใช้ก่อนเริ่มใช้งานจริง</div>
+      <div class="card-body">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="small fw-semibold mb-1 text-danger">ข้อมูลที่จะถูกล้าง</div>
+            <ul class="small mb-3 ps-3">
+              <li>แฟ้มทุกแฟ้มกลับเป็น "ว่าง" พร้อมลงทะเบียนใหม่</li>
+              <li>รายการเอกสาร การสแกนเข้า-ออก การแจ้งแก้ไข และประวัติแฟ้มทั้งหมด</li>
+              <li>การเข้าสู่ระบบของผู้ใช้อื่น (ต้องเข้าสู่ระบบใหม่ ส่วนคุณอยู่ในระบบต่อได้)</li>
+            </ul>
+            <div class="small fw-semibold mb-1 text-success">ข้อมูลที่เก็บไว้</div>
+            <ul class="small mb-0 ps-3">
+              <li>การตั้งค่าทั้งหมด: ชื่อผู้บริหาร จุดสแกน ฝ่ายงาน เกณฑ์เวลา ผู้รับสรุป</li>
+              <li>จำนวนแฟ้มและรหัสแฟ้ม (สติกเกอร์บาร์โค้ดที่ติดแฟ้มแล้วใช้ต่อได้)</li>
+              <li>บัญชีผู้ใช้และสิทธิ์ (ยกเว้นเลือกให้ลบด้านขวา)</li>
+            </ul>
+          </div>
+          <div class="col-lg-6">
+            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="rsBackup" checked>
+              <label class="form-check-label small" for="rsBackup"><b>สำรองข้อมูลก่อนล้าง</b> (แนะนำ — ถ้าสำรองไม่สำเร็จ ระบบจะไม่ล้าง)</label></div>
+            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="rsAudit" checked>
+              <label class="form-check-label small" for="rsAudit">ล้างบันทึกการทำงานช่วงทดสอบด้วย</label></div>
+            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="rsPrinted">
+              <label class="form-check-label small" for="rsPrinted">ล้างสถานะ "พิมพ์บาร์โค้ดแล้ว" (เลือกเมื่อจะพิมพ์สติกเกอร์ใหม่ทั้งหมด)</label></div>
+            <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="rsUsers">
+              <label class="form-check-label small" for="rsUsers">ลบบัญชีผู้ใช้อื่นทั้งหมด (เก็บไว้เฉพาะบัญชีของคุณ)</label></div>
+            <label class="form-label small mb-1">พิมพ์ <b class="text-danger">ล้างข้อมูลทั้งหมด</b> เพื่อยืนยัน</label>
+            <input id="rsConfirm" class="form-control form-control-sm mb-2" autocomplete="off" oninput="onResetInput()">
+            <label class="form-label small mb-1">รหัสผ่านของคุณ</label>
+            <input id="rsPassword" type="password" class="form-control form-control-sm mb-3" autocomplete="current-password" oninput="onResetInput()">
+            <button id="rsBtn" class="btn btn-danger w-100" disabled onclick="resetSystemUI()"><i class="bi bi-trash3 me-1"></i>ล้างข้อมูลทั้งระบบ</button>
+            <div id="rsResult" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
     </div><!-- /.content -->
   </div><!-- /.main -->
@@ -1198,7 +1242,7 @@ function apiJsonp(action, params){
   });
 }
 /* คำสั่งที่มีรหัสผ่าน ต้องส่งแบบ POST เท่านั้น */
-const SECRET_ACTIONS=['login','changePassword','resetPassword','forgotPassword','createUser','updateUser','resetUserPassword','listUsers','listRoles'];
+const SECRET_ACTIONS=['login','changePassword','resetPassword','forgotPassword','createUser','updateUser','resetUserPassword','listUsers','listRoles','resetSystem'];
 
 function api(action, params){
   const p = Object.assign({}, params||{});
@@ -1237,6 +1281,8 @@ function applyPermissions(){
     a.style.display = ok ? '' : 'none';
     if(ok && !firstVisible) firstVisible=a.dataset.page;
   });
+  // ส่วนเฉพาะบทบาท (เช่น ล้างข้อมูลทั้งระบบ = ผู้ดูแลระบบสูงสุดเท่านั้น)
+  document.querySelectorAll('[data-role]').forEach(el=>{ el.style.display = (ME && ME.roleId===el.dataset.role) ? '' : 'none'; });
   // ปุ่มเฉพาะสิทธิ์
   document.querySelectorAll('[data-perm]').forEach(el=>{ el.style.display = can(el.dataset.perm) ? '' : 'none'; });
   // ถ้าหน้าที่เปิดอยู่ไม่มีสิทธิ์ ให้ย้ายไปหน้าแรกที่มีสิทธิ์
@@ -1629,7 +1675,7 @@ document.querySelectorAll('.nav-link[data-page]').forEach(a=>{
     if(p==='register') loadRegister();
     if(p==='scan'){ fillStationSelect(); loadQueue(); loadDoneToday(); setTimeout(()=>document.getElementById('scanInput').focus(),100); }
     if(p==='barcode'){ PRINTED_LOADED=false; loadPrintBoard(true); }
-    if(p==='track'){ fillTrackDept(); loadHistory(); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
+    if(p==='track'){ fillTrackDept(); loadHistory(); loadSearchData().catch(()=>{}); setTimeout(()=>document.getElementById('trackInput').focus(),100); }
     if(p==='settings'){ loadConfigForm(); loadUsers(); loadMaintenance(); }
   });
 });
@@ -1801,26 +1847,43 @@ function auditDetailHTML(r){
   }
   return html;
 }
+let AUDIT_ROWS=[], AUDIT_TOTAL=0;
 async function loadAudit(){
   const limit=document.getElementById('auditLimit').value;
-  const folderCode=(document.getElementById('auditFolder').value||'').trim();
   const rp=repPeriodParams();
   if(rp.period==='custom' && rp.from && rp.to && rp.from>rp.to) return;
   const body=document.getElementById('auditBody');
-  body.innerHTML='<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</td></tr>';
+  if(!AUDIT_ROWS.length) body.innerHTML='<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-1"></span>กำลังโหลด…</td></tr>';
   try{
-    const prm=Object.assign({limit}, rp); if(folderCode) prm.folderCode=folderCode;
-    const d=await apiSWR('getAudit', prm, 15000, loadAudit);
+    const d=await apiSWR('getAudit', Object.assign({limit}, rp), 15000, loadAudit);
     if(!d.ok) throw new Error(d.error||'error');
-    const rows=d.rows||[];
-    document.getElementById('auditTotal').textContent=(d.total>rows.length)?(rows.length+' / '+d.total):rows.length;
-    if(!rows.length){ body.innerHTML='<tr><td colspan="4" class="text-center text-muted py-4">ไม่พบบันทึกในช่วงเวลานี้</td></tr>'; return; }
-    body.innerHTML=rows.map(r=>`<tr>
+    AUDIT_ROWS=(d.rows||[]).map(r=>{
+      r._hay=[r.folderCode, r.userName, r.userEmail, AUDIT_LABEL[r.action]||r.action, r.summary, stationName(r.station),
+              thaiDateTime(r.timestamp)].map(v=>(v||'').toString().toLowerCase()).join(' | ');
+      return r;
+    });
+    AUDIT_TOTAL=d.total||AUDIT_ROWS.length;
+    renderAudit();
+  }catch(err){ body.innerHTML=`<tr><td colspan="4" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
+}
+/* กรองบันทึกการทำงานทันทีขณะพิมพ์ (ในรายการที่โหลดมาแล้ว ไม่ต้องรอ server) */
+function renderAudit(){
+  const body=document.getElementById('auditBody');
+  const raw=(document.getElementById('auditFolder').value||'').trim(), q=raw.toLowerCase();
+  let code=''; if(raw){ const n=normalizeScan(raw); if(n.code && /^\d{1,4}$/.test(n.code)) code=pad4(n.code); }
+  const rows=q ? AUDIT_ROWS.filter(r=>r._hay.indexOf(q)>=0 || (code && pad4(r.folderCode||'')===code)) : AUDIT_ROWS;
+  document.getElementById('auditTotal').textContent = q ? (rows.length+' / '+AUDIT_ROWS.length)
+    : ((AUDIT_TOTAL>AUDIT_ROWS.length)?(AUDIT_ROWS.length+' / '+AUDIT_TOTAL):AUDIT_ROWS.length);
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="4" class="text-center text-muted py-4">${q?'ไม่พบรายการที่ตรงกับคำค้นหา'+(AUDIT_TOTAL>AUDIT_ROWS.length?' — ลองเลือก "ทั้งหมด" เพื่อค้นในทุกรายการ':''):'ไม่พบบันทึกในช่วงเวลานี้'}</td></tr>`;
+    return;
+  }
+  body.innerHTML=rows.map(r=>`<tr>
       <td class="small text-muted">${thaiDateTime(r.timestamp)}</td>
       <td><b>${esc(r.folderCode)||'—'}</b></td>
-      <td class="small">${esc(AUDIT_LABEL[r.action]||r.action)}${r.station?(' <span class="text-muted">@'+esc(stationName(r.station))+'</span>'):''}</td>
+      <td class="small">${esc(AUDIT_LABEL[r.action]||r.action)}${r.station?(' <span class="text-muted">@'+esc(stationName(r.station))+'</span>'):''}
+        ${r.userName?`<div class="text-muted" style="font-size:.76rem"><i class="bi bi-person me-1"></i>${esc(r.userName)}</div>`:''}</td>
       <td class="small">${esc(r.summary)}${auditDetailHTML(r)}</td></tr>`).join('');
-  }catch(err){ body.innerHTML=`<tr><td colspan="4" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`; }
 }
 function renderRepRows(){
   if(!REPORT_DATA) return;
@@ -1943,7 +2006,10 @@ function exportReportPDF(){
   const w=window.open('','_blank'); w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(),600);
 }
 function renderDash(){
-  const q=(document.getElementById('dashSearch').value||'').toLowerCase().trim();
+  const qRaw=(document.getElementById('dashSearch').value||'').trim();
+  const q=qRaw.toLowerCase();
+  // ยิงบาร์โค้ดลงช่องค้นหา -> ถอดเป็นเลขแฟ้ม
+  let qCode=''; if(qRaw){ const n=normalizeScan(qRaw); if(n.code && /^\d{1,4}$/.test(n.code) && n.code!==qRaw) qCode=pad4(n.code); }
   const f=document.getElementById('dashFilter').value;
   const dept=document.getElementById('dashDept').value;
   const body=document.getElementById('dashBody');
@@ -1952,7 +2018,11 @@ function renderDash(){
     else if(f==='__NEAR'){ if(!x.sla || x.sla.status!=='NEAR') return false; }
     else if(f && (x.status||'ว่าง')!==f) return false;
     if(dept && (x.department||'')!==dept) return false;
-    if(q){ const s=(pad4(x.folderCode)+' '+(x.owner||'')+' '+(x.department||'')).toLowerCase(); if(s.indexOf(q)<0) return false; }
+    if(q){
+      const s=(pad4(x.folderCode)+' '+(x.owner||'')+' '+(x.department||'')+' '+safeType(x.docType)+' '+(x.urgency||'')+' '+
+               (x.status||'')+' '+stationName(x.currentStation)+' '+(x.timeline||'')).toLowerCase();
+      if(s.indexOf(q)<0 && !(qCode && pad4(x.folderCode)===qCode)) return false;
+    }
     return true;
   });
   const cnt=document.getElementById('dashCount'); if(cnt) cnt.textContent=rows.length;
@@ -2548,6 +2618,9 @@ document.addEventListener('click', e=>{
 async function loadQueue(){
   const station=document.getElementById('scanStation').value;
   document.getElementById('queueStname').textContent = station?('('+stationName(station)+')'):'';
+  // ธุรการ 1: แฟ้มที่ลงทะเบียนแล้วรอสแกนออก · ธุรการ 4: แฟ้มที่ส่งมาถึงรอสแกนออก · จุดอื่น: รอสแกนเข้า
+  document.getElementById('queueTitle').textContent = station==='S1' ? 'ลงทะเบียนแล้ว รอสแกนออก'
+    : (station==='S4' ? 'คิวรอสแกนออก (ส่งคืน)' : 'คิวรอสแกนเข้า');
   if(!station){ QUEUE_ROWS=[]; renderQueue(); return; }
   try{
     const d=await apiSWR('getStationQueue',{station}, 8000, loadQueue);
@@ -2560,7 +2633,7 @@ function renderQueue(){
   const body=document.getElementById('queueBody');
   const rows=QUEUE_ROWS||[];
   document.getElementById('queueCount').textContent=rows.length;
-  if(!rows.length){ body.innerHTML='<tr><td colspan="2" class="text-center text-muted py-3">ไม่มีแฟ้มรอสแกนเข้า</td></tr>'; return; }
+  if(!rows.length){ body.innerHTML='<tr><td colspan="2" class="text-center text-muted py-3">ไม่มีแฟ้มรอสแกน</td></tr>'; return; }
   body.innerHTML=rows.map(x=>{
     const editTag = x.editStatus==='มีแก้ไข' ? `<span class="badge bg-warning text-dark ms-1" title="${x.editReturn==='restart'?'เริ่มธุรการ 1 ใหม่':'คืนจุดเดิม'}"><i class="bi bi-pencil-fill"></i> แก้ไข</span>` : '';
     const au = x.docNumbers ? esc(x.docNumbers) : '<span class="text-muted">—</span>';
@@ -2568,7 +2641,9 @@ function renderQueue(){
     const dt = x.docTypes ? `<div class="text-muted" style="font-size:.76rem">${esc(x.docTypes)}</div>` : '';
     const slaTag = x.sla && x.sla.status==='OVERDUE' ? '<span class="badge sb sb-over ms-1">เกินกำหนด</span>'
                  : (x.sla && x.sla.status==='NEAR' ? '<span class="badge sb sb-near ms-1">ใกล้ครบ</span>' : '');
-    return `<tr${x.sla&&x.sla.status==='OVERDUE'?' style="background:#fdf2f2"':''}><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}${slaTag}${editTag}<div class="small text-muted">${esc(x.owner)||''}</div></td>
+    const st=document.getElementById('scanStation').value;
+    const dirTag = (st==='S1' && x.nextDirection==='เข้า') ? '<span class="badge bg-secondary-subtle text-secondary-emphasis ms-1">ยังไม่สแกนเข้า</span>' : '';
+    return `<tr${x.sla&&x.sla.status==='OVERDUE'?' style="background:#fdf2f2"':''}><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}${slaTag}${editTag}${dirTag}<div class="small text-muted">${esc(x.owner)||''}</div></td>
       <td class="small">${au}${subj}${dt}</td></tr>`;
   }).join('');
 }
@@ -2735,66 +2810,96 @@ async function openFolder(code){
   }catch(err){ toast(el,'danger',err.message); }
 }
 /* ค้นหา/กรองหลายเงื่อนไข */
-async function doTrack(){
-  let kw=(document.getElementById('trackInput').value||'').trim();
-  // ถ้าเป็นการยิงบาร์โค้ด (ตัวอักษร/พยัญชนะไทย/เลขเก่าโหมดไทย) ให้ถอดเป็นเลขก่อน — ไม่แตะการค้นหาคำไทยทั่วไป
-  { const n=normalizeScan(kw); if(n.code && /^\d{3,4}$/.test(n.code) && n.code!==kw) kw=n.code; }
-  const dept=document.getElementById('trackDept').value;
-  const date=document.getElementById('trackDate').value;
-  const listEl=document.getElementById('trackList');
-  const resEl=document.getElementById('trackResult');
-  resEl.innerHTML='';
-
-  // ทางลัด: ยิงบาร์โค้ด/พิมพ์รหัสแฟ้มล้วน และไม่ได้กรองอย่างอื่น -> เปิดแฟ้มนั้นเลย (ถ้ายังใช้งานอยู่)
-  if(!dept && !date && /^\d{1,4}$/.test(kw)){
-    const n=parseInt(kw,10);
-    if(n>=1 && n<=TOTAL_FOLDERS){
-      listEl.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังค้นหา…</div>';
-      try{
-        const d=await api('getFolder',{folderCode:pad4(kw)});
-        if(d.ok && d.folder && (d.folder.status||'ว่าง')!=='ว่าง'){ listEl.innerHTML=''; showHistCard(false); return renderTrack(d.folder); }
-      }catch(e){}
-      // แฟ้มนี้ว่างอยู่ (เคยใช้แล้วคืนไป) -> ไปค้นในประวัติแทน
-    }
-  }
-  if(!kw && !dept && !date){ listEl.innerHTML=''; showHistCard(true); return; }
-
-  showHistCard(false);                                   // ค้นหาแล้ว: ซ่อนประวัติทั้งหมด ดูเฉพาะผลค้นหา
-  listEl.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังค้นหา…</div>';
-  let entries;
-  // ค้นจากประวัติทั้งหมด (รวมแฟ้มที่กำลังดำเนินการ + แฟ้มที่เสร็จ/คืนไปแล้ว)
-  try{ const d=await apiCached('getHistory',{period:'all', limit:'all', light:'1'}); if(!d.ok) throw new Error(d.error||'error'); entries=d.rows||[]; }
-  catch(err){ toast(listEl,'danger',err.message); return; }
-
-  const q=kw.toLowerCase();
-  const qDigits=kw.replace(/[^0-9]/g,'');
-  const matched=entries.filter(x=>{
-    if(dept && (x.department||'')!==dept) return false;
-    if(date && !(x.records||[]).some(r=>(r.docDate||'')===date)) return false;
-    if(!q) return true;
-    const parts=[pad4(x.folderCode), x.owner, x.department, x.timeline, x.status];
-    (x.records||[]).forEach(r=>{
-      parts.push(r.docNumber, (r.docNumber||'').split('/')[1]||'', r.subject, r.docType, r.urgency, r.docDate, thaiDate(r.docDate));
-    });
-    const hay=parts.map(v=>(v||'').toString().toLowerCase()).join(' | ');
-    if(hay.indexOf(q)>=0) return true;
-    if(qDigits && (x.records||[]).some(r=>(r.docNumber||'').replace(/[^0-9]/g,'').indexOf(qDigits)>=0)) return true;
-    return false;
+/* ===================== ค้นหาทันทีขณะพิมพ์ =====================
+   โหลดรายการแฟ้มทั้งหมดมาไว้ในเครื่องครั้งเดียว (อัปเดตเบื้องหลังเป็นระยะ)
+   แล้วกรองในเครื่องทุกครั้งที่พิมพ์ — ไม่ต้องรอ server ระหว่างพิมพ์ */
+let SEARCH_ROWS=null, SEARCH_PROMISE=null, LIVE_TIMER=null;
+const SEARCH_LIMIT=100;
+function prepSearchRow(x){
+  const parts=[pad4(x.folderCode), x.owner, x.department, x.timeline, x.status];
+  const dig=[], dates=[];
+  (x.records||[]).forEach(r=>{
+    parts.push(r.docNumber,(r.docNumber||'').split('/')[1]||'',r.subject,r.docType,r.urgency,r.docDate,thaiDate(r.docDate));
+    dig.push((r.docNumber||'').replace(/[^0-9]/g,'')); dates.push(r.docDate||'');
   });
-
-  if(!matched.length){
-    listEl.innerHTML='<div class="card"><div class="card-body text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>ไม่พบแฟ้มที่ตรงกับเงื่อนไข</div></div>';
-    return;
+  x._hay=parts.map(v=>(v||'').toString().toLowerCase()).join(' | ');
+  x._dig=dig; x._dates=dates;
+  return x;
+}
+function loadSearchData(){
+  SEARCH_PROMISE = apiSWR('getHistory',{period:'all', limit:'all', light:'1'}, 60000, onSearchDataChanged)
+    .then(d=>{ if(d && d.ok){ SEARCH_ROWS=(d.rows||[]).map(prepSearchRow); } return SEARCH_ROWS; })
+    .catch(err=>{ SEARCH_PROMISE=null; throw err; });
+  return SEARCH_PROMISE;
+}
+function onSearchDataChanged(){ loadSearchData().then(()=>{ if(searchActive()) liveSearch(); }).catch(()=>{}); }
+function searchQuery(){
+  const raw=(document.getElementById('trackInput').value||'').trim();
+  let alt='';   // ยิงบาร์โค้ดลงช่องค้นหา -> ถอดเป็นเลขแฟ้มด้วย (ค้นทั้งคำที่พิมพ์และเลขแฟ้มที่ถอดได้)
+  if(raw){ const n=normalizeScan(raw); if(n.code && /^\d{3,4}$/.test(n.code) && n.code!==raw) alt=n.code; }
+  return { raw, alt, dept:document.getElementById('trackDept').value, date:document.getElementById('trackDate').value };
+}
+function searchActive(){ const s=searchQuery(); return !!(s.raw||s.dept||s.date); }
+function filterSearch(s){
+  const q=s.raw.toLowerCase(), qd=s.raw.replace(/[^0-9]/g,''), alt=s.alt?pad4(s.alt):'';
+  const out=[];
+  for(const x of (SEARCH_ROWS||[])){
+    if(s.dept && (x.department||'')!==s.dept) continue;
+    if(s.date && x._dates.indexOf(s.date)<0) continue;
+    if(q && !(x._hay.indexOf(q)>=0 || (qd && x._dig.some(d=>d.indexOf(qd)>=0)) || (alt && pad4(x.folderCode)===alt))) continue;
+    out.push(x);
   }
-  // เจอแฟ้มเดียวและเป็นแฟ้มที่กำลังดำเนินการ + ค้นด้วยคำค้นหา -> เปิดรายละเอียดเลย
-  if(matched.length===1 && matched[0].live && kw && !dept && !date){ listEl.innerHTML=''; return openFolder(matched[0].folderCode); }
-
+  return out;
+}
+function renderSearch(matched){
+  const listEl=document.getElementById('trackList');
+  if(!matched.length){ listEl.innerHTML='<div class="card"><div class="card-body text-center text-muted py-4"><i class="bi bi-inbox me-1"></i>ไม่พบแฟ้มที่ตรงกับเงื่อนไข</div></div>'; return; }
+  const shown=matched.slice(0,SEARCH_LIMIT);
   const liveN=matched.filter(x=>x.live).length, doneN=matched.length-liveN;
   listEl.innerHTML=`<div class="card mb-3">
     <div class="card-header"><i class="bi bi-list-ul me-1"></i>ผลการค้นหา — พบ ${matched.length} รายการ
-      <span class="small text-muted ms-2">(กำลังดำเนินการ ${liveN} &middot; เสร็จ/คืนแล้ว ${doneN}) — คลิกเพื่อดูไทม์ไลน์</span></div>
-    <div class="card-body p-0">${histHeaderHTML()}${matched.map(histEntryHTML).join('')}</div></div>`;
+      <span class="small text-muted ms-2">(กำลังดำเนินการ ${liveN} &middot; เสร็จ/คืนแล้ว ${doneN}) — คลิกเพื่อดูไทม์ไลน์</span>
+      ${matched.length>SEARCH_LIMIT?`<div class="small text-muted fw-normal mt-1">แสดง ${SEARCH_LIMIT} รายการแรก — พิมพ์เพิ่มเพื่อกรองให้แคบลง</div>`:''}</div>
+    <div class="card-body p-0">${histHeaderHTML()}${shown.map(histEntryHTML).join('')}</div></div>`;
 }
+function scheduleLiveSearch(){ clearTimeout(LIVE_TIMER); LIVE_TIMER=setTimeout(liveSearch, 120); }
+async function liveSearch(){
+  const listEl=document.getElementById('trackList');
+  const resEl=document.getElementById('trackResult'); if(resEl) resEl.innerHTML='';
+  if(!searchActive()){ listEl.innerHTML=''; if(typeof showHistCard==='function') showHistCard(true); return; }
+  if(typeof showHistCard==='function') showHistCard(false);
+  if(!SEARCH_ROWS){
+    listEl.innerHTML='<div class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>กำลังเตรียมข้อมูลค้นหา… (เฉพาะครั้งแรก)</div>';
+    try{ await (SEARCH_PROMISE||loadSearchData()); }
+    catch(err){ listEl.innerHTML=`<div class="alert alert-danger">${esc(err.message)}</div>`; return; }
+    if(!searchActive()){ listEl.innerHTML=''; if(typeof showHistCard==='function') showHistCard(true); return; }
+  }
+  renderSearch(filterSearch(searchQuery()));
+}
+/* กด Enter / ปุ่มค้นหา: ยิงบาร์โค้ดหรือพิมพ์เลขแฟ้ม -> เปิดแฟ้มนั้นเลย · เจอแฟ้มเดียวที่กำลังดำเนินการ -> เปิดรายละเอียด */
+async function doTrack(){
+  clearTimeout(LIVE_TIMER);
+  const s=searchQuery(); const kw=s.alt||s.raw;
+  if(!s.dept && !s.date && /^\d{1,4}$/.test(kw)){
+    const n=parseInt(kw,10);
+    if(n>=1 && n<=TOTAL_FOLDERS){
+      try{
+        const d=await api('getFolder',{folderCode:pad4(kw)});
+        if(d.ok && d.folder && (d.folder.status||'ว่าง')!=='ว่าง'){ document.getElementById('trackList').innerHTML=''; if(typeof showHistCard==='function') showHistCard(false); return renderTrack(d.folder); }
+      }catch(e){}
+    }
+  }
+  await liveSearch();
+  if(s.raw && !s.dept && !s.date && SEARCH_ROWS){
+    const m=filterSearch(s);
+    if(m.length===1 && m[0].live){ document.getElementById('trackList').innerHTML=''; return openFolder(m[0].folderCode); }
+  }
+}
+(function wireLiveSearch(){
+  document.getElementById('trackInput').addEventListener('input', scheduleLiveSearch);
+  document.getElementById('trackDept').addEventListener('change', liveSearch);
+  document.getElementById('trackDate').addEventListener('change', liveSearch);
+})();
 /* ---------- ประวัติแฟ้มทั้งหมด (ไทม์ไลน์) ---------- */
 /* จำแนกชื่อผู้บริหารในไทม์ไลน์ว่าเป็น รอง / ผอ. / คณบดี (อิงจากชื่อที่ตั้งค่าไว้) */
 function classifyExec(name){
@@ -2830,13 +2935,21 @@ function histTimeline(logs, timeline){
   const midHigh=deanNames.concat(highNames);         // คณบดี อยู่เหนือ ผอ.
   const stNode=(k)=>{
     const inT=done[k+'|เข้า'], outT=done[k+'|ออก'];
-    const times = inT ? ('เข้า '+tfmt(inT)+(outT?('<br>ออก '+tfmt(outT)):'')) : '<span class="text-muted">ยังไม่ถึง</span>';
-    return { reached:!!inT, cls:outT?'done':(inT?'active':''),
+    const prev=route[route.indexOf(k)-1];
+    // ธุรการ 4 สแกนครั้งเดียว: ถือว่า "มาถึง" เมื่อจุดก่อนหน้าสแกนออกแล้ว
+    const arrived=!!inT || (k==='S4' && !!prev && !!done[prev+'|ออก']);
+    const inLbl=(k==='S1')?'ลงทะเบียน ':'เข้า ';
+    let times;
+    if(inT) times=inLbl+tfmt(inT)+(outT?('<br>ออก '+tfmt(outT)):'');
+    else if(outT) times='ออก '+tfmt(outT);
+    else if(arrived) times='รอสแกนออก';
+    else times='<span class="text-muted">ยังไม่ถึง</span>';
+    return { reached:!!(inT||outT||arrived), cls:outT?'done':(arrived?'active':''),
       inner:`<div class="hist-tl-dot"></div><div class="hist-tl-name">${esc(stationName(k))}</div><div class="hist-tl-times">${times}</div>` };
   };
   /* ป้ายผู้บริหาร: ผ่านแล้วเมื่อจุดถัดไปรับเข้า, อยู่ช่วงนี้เมื่อจุดก่อนหน้าสแกนออกแล้ว */
   const lbNode=(names, prevSt, nextSt)=>{
-    const started=!!done[prevSt+'|ออก'], finished=!!done[nextSt+'|เข้า'];
+    const started=!!done[prevSt+'|ออก'], finished=!!(done[nextSt+'|เข้า']||done[nextSt+'|ออก']);
     const txt=finished?'ผ่านแล้ว':(started?'อยู่ช่วงนี้':'<span class="text-muted">ยังไม่ถึง</span>');
     return { reached:started, cls:'label '+(finished?'done':(started?'active':'')),
       inner:`<div class="hist-tl-dot"></div><div class="hist-tl-name">${names.map(n=>esc(n)).join('<br>')}</div><div class="hist-tl-times">${txt}</div>` };
@@ -2946,16 +3059,17 @@ function renderTrack(f){
   const keys=f.route||routeStations(f.timeline); const dirs=['เข้า','ออก'];   // เฉพาะจุดที่อยู่ในเส้นทางของแฟ้มนี้
   const done={}; (f.logs||[]).forEach(l=>{ done[l.station+'|'+l.direction]=l.timestamp; });
   // หาขั้นถัดไปที่ต้องสแกน (ขั้นแรกที่ยังไม่ done ตามลำดับ)
-  const seqKeys=[]; keys.forEach(k=>{ seqKeys.push(k+'|เข้า'); seqKeys.push(k+'|ออก'); });
+  // ธุรการ 1: เข้า = ลงทะเบียน · ธุรการ 4: สแกนครั้งเดียว (ออก)
+  const seqKeys=[]; keys.forEach(k=>{ if(k!=='S4') seqKeys.push(k+'|เข้า'); seqKeys.push(k+'|ออก'); });
   let nextIdx=0; while(nextIdx<seqKeys.length && done[seqKeys[nextIdx]]) nextIdx++;
-  let steps=''; let idx=0;
-  keys.forEach(k=>{ dirs.forEach(dir=>{
-    const isDone=!!done[k+'|'+dir];
-    const isNext=(idx===nextIdx);
+  let steps='';
+  seqKeys.forEach((sk,idx)=>{
+    const [k,dir]=sk.split('|');
+    const isDone=!!done[sk], isNext=(idx===nextIdx);
+    const lbl=(k==='S1'&&dir==='เข้า')?'ลงทะเบียน':(k==='S4'?'สแกนออก (ส่งคืน)':dir);
     steps+=`<div class="step ${isDone?'done':''} ${isNext?'next':''}"><i class="bi ${dir==='เข้า'?'bi-box-arrow-in-right':'bi-box-arrow-right'}"></i>
-      ${esc(stationName(k))}<br><span class="small">${dir}${isDone?' ✓':(isNext?' ⬅ ถัดไป':'')}</span></div>`;
-    idx++;
-  });});
+      ${esc(stationName(k))}<br><span class="small">${lbl}${isDone?' ✓':(isNext?' ⬅ ถัดไป':'')}</span></div>`;
+  });
   const recs=(f.records||[]);
   const recRows = recs.length ? recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.docNumber)||'—'}</td><td>${esc(r.subject)||'—'}</td><td>${esc(safeType(r.docType))||'—'}</td><td>${r.urgency&&r.urgency!=='ปกติ'?urgencyBadge(r.urgency).replace(' ms-1',''):'<span class="text-muted">ปกติ</span>'}</td><td>${thaiDate(r.docDate)}</td></tr>`).join('')
     : '<tr><td colspan="6" class="text-center text-muted">ไม่มีรายการเอกสาร</td></tr>';
@@ -2977,6 +3091,7 @@ function renderTrack(f){
     if(l.direction==='เข้า'){ if(dw[l.station].enter==null||t<dw[l.station].enter) dw[l.station].enter=t; }
     else { if(dw[l.station].leave==null||t>dw[l.station].leave) dw[l.station].leave=t; }
   });
+  if(dw.S4 && dw.S4.enter==null){ const pv=keys[keys.indexOf('S4')-1]; if(pv && dw[pv] && dw[pv].leave!=null) dw.S4.enter=dw[pv].leave; }
   const nowMs=Date.now(); let firstEnter=null, lastLeave=null;
   const dwellCards=keys.map(k=>{
     const e=dw[k].enter, lv=dw[k].leave;
@@ -3274,6 +3389,35 @@ async function saveNotifyUI(){
     ()=>{ clearCache(); });
 }
 
+/* ---------- ล้างข้อมูลทั้งระบบ ---------- */
+const RESET_WORD='ล้างข้อมูลทั้งหมด';
+function onResetInput(){
+  const okWord=(document.getElementById('rsConfirm').value||'').trim()===RESET_WORD;
+  document.getElementById('rsBtn').disabled = !(okWord && document.getElementById('rsPassword').value);
+}
+async function resetSystemUI(){
+  const el=document.getElementById('rsResult');
+  const opt={ backup:document.getElementById('rsBackup').checked?'1':'0', clearAudit:document.getElementById('rsAudit').checked?'1':'0',
+              clearPrinted:document.getElementById('rsPrinted').checked?'1':'0', clearUsers:document.getElementById('rsUsers').checked?'1':'0' };
+  const lines=['ยืนยันครั้งสุดท้าย: ล้างข้อมูลทั้งระบบ','',
+    '• แฟ้มทุกแฟ้มจะกลับเป็น "ว่าง" และประวัติทั้งหมดจะถูกลบ',
+    opt.clearPrinted==='1'?'• ล้างสถานะพิมพ์บาร์โค้ด':'', opt.clearUsers==='1'?'• ลบบัญชีผู้ใช้อื่นทั้งหมด':'',
+    opt.backup==='1'?'• ระบบจะสำรองข้อมูลก่อนล้าง':'• ⚠ ไม่ได้เลือกสำรองข้อมูล — กู้คืนไม่ได้','','กด OK เพื่อดำเนินการ'].filter(x=>x!=='');
+  if(!confirm(lines.join('\n'))) return;
+  const btn=document.getElementById('rsBtn'); btn.disabled=true;
+  el.innerHTML='<div class="alert alert-warning py-2 small mb-0"><span class="spinner-border spinner-border-sm me-1"></span>'+
+    (opt.backup==='1'?'กำลังสำรองข้อมูลและล้างข้อมูล…':'กำลังล้างข้อมูล…')+' อาจใช้เวลา 30–60 วินาที กรุณาอย่าปิดหน้านี้</div>';
+  try{
+    const d=await api('resetSystem', Object.assign({confirm:RESET_WORD, password:document.getElementById('rsPassword').value}, opt));
+    if(!d.ok){ el.innerHTML=`<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-x-circle me-1"></i>${esc(d.error||'ล้างข้อมูลไม่สำเร็จ')}</div>`; btn.disabled=false; return; }
+    el.innerHTML=`<div class="alert alert-success py-2 small mb-0"><div class="fw-semibold mb-1"><i class="bi bi-check-circle me-1"></i>ล้างข้อมูลเรียบร้อย — ระบบพร้อมใช้งานจริง</div>
+      ${esc(d.message)}${d.backupUrl?`<div class="mt-1">ไฟล์สำรองก่อนล้าง: <a href="${esc(d.backupUrl)}" target="_blank">เปิดไฟล์สำรอง</a></div>`:''}</div>`;
+    document.getElementById('rsConfirm').value=''; document.getElementById('rsPassword').value='';
+    ALL_FOLDERS=[]; clearCache(true);
+    loadDashboard(); loadUsers(); loadMaintenance();
+  }catch(err){ el.innerHTML=`<div class="alert alert-danger py-2 small mb-0">${esc(err.message)}</div>`; btn.disabled=false; }
+}
+
 /* ---------- จัดการผู้ใช้งาน ---------- */
 let ROLE_LIST=[];
 async function loadUsers(){
@@ -3502,6 +3646,7 @@ function prewarm(){
         apiCached('getHistory',{period:'today', onlyCompleted:'1', limit:'50'}, 20000).catch(()=>{});
       }
       if(can('VIEW_FILE')) apiCached('getHistory',{period:'month', limit:'50', light:'1'}, 120000).catch(()=>{});
+      if(can('VIEW_FILE')) setTimeout(()=>loadSearchData().catch(()=>{}), 1500);
     }catch(e){}
   }, 600);
 }
