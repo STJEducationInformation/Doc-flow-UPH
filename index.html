@@ -2631,8 +2631,8 @@ function applyStationLayout(st){
   const s4 = st==='S4';
   inCol.style.display = s4 ? 'none' : '';
   outCol.className = s4 ? 'col-md-12' : 'col-md-6';
-  // ธุรการ 1 ไม่ต้องมีคิวรอเข้า (ลงทะเบียน = เข้าแล้ว) — แสดงเฉพาะเมื่อมีแฟ้มค้างแบบเดิม
-  qCard.style.display = (st==='S1' && !(QUEUE_ROWS||[]).length) ? 'none' : '';
+  // ธุรการ 1 ไม่มีคิวรอเข้า (ลงทะเบียน = เข้าแล้ว) — แฟ้มทั้งหมดอยู่ในถาด "ลงทะเบียนแล้ว — รอสแกนออก"
+  qCard.style.display = (st==='S1') ? 'none' : '';
 }
 /* ถาดเข้า/ออก: เฉพาะจุดที่เลือกอยู่ (ของใครของมัน) */
 function renderTrays(){
@@ -2709,14 +2709,19 @@ async function loadQueue(){
   const station=document.getElementById('scanStation').value;
   document.getElementById('queueStname').textContent = station?('('+stationName(station)+')'):'';
   // ธุรการ 1: แฟ้มที่ลงทะเบียนแล้วรอสแกนออก · ธุรการ 4: แฟ้มที่ส่งมาถึงรอสแกนออก · จุดอื่น: รอสแกนเข้า
-  document.getElementById('queueTitle').textContent = station==='S1' ? 'ลงทะเบียนแล้ว รอสแกนออก'
-    : (station==='S4' ? 'คิวรอสแกนออก (ส่งคืน)' : 'คิวรอสแกนเข้า');
+  document.getElementById('queueTitle').textContent = station==='S4' ? 'คิวรอสแกนออก (ส่งคืน)' : 'คิวรอสแกนเข้า';
   if(!station){ QUEUE_ROWS=[]; renderQueue(); return; }
   try{
     const d=await apiSWR('getStationQueue',{station}, 8000, loadQueue);
     if(!d.ok) throw new Error(d.error||'error');
     QUEUE_ROWS=d.rows||[];
     HERE_ROWS=d.here||[];
+    // ธุรการ 1: ลงทะเบียนแล้ว = อยู่ในมือแล้ว -> รวมทุกแฟ้มไว้ในถาด "ลงทะเบียนแล้ว — รอสแกนออก" ที่เดียว ไม่มีคิวซ้ำ
+    if(station==='S1' && QUEUE_ROWS.length){
+      const seen=new Set(HERE_ROWS.map(r=>pad4(r.folderCode)));
+      QUEUE_ROWS.forEach(r=>{ if(!seen.has(pad4(r.folderCode))) HERE_ROWS.push(Object.assign({}, r, {nextDirection:'ออก'})); });
+      QUEUE_ROWS=[];
+    }
     renderQueue();
     renderTrays();
   }catch(err){ document.getElementById('queueBody').innerHTML=`<tr><td colspan="2" class="text-center text-danger py-3">${esc(err.message)}</td></tr>`; }
@@ -2733,8 +2738,7 @@ function renderQueue(){
     const dt = x.docTypes ? `<div class="text-muted" style="font-size:.76rem">${esc(x.docTypes)}</div>` : '';
     const slaTag = x.sla && x.sla.status==='OVERDUE' ? '<span class="badge sb sb-over ms-1">เกินกำหนด</span>'
                  : (x.sla && x.sla.status==='NEAR' ? '<span class="badge sb sb-near ms-1">ใกล้ครบ</span>' : '');
-    const st=document.getElementById('scanStation').value;
-    const dirTag = (st==='S1' && x.nextDirection==='เข้า') ? '<span class="badge bg-secondary-subtle text-secondary-emphasis ms-1">ยังไม่สแกนเข้า</span>' : '';
+    const dirTag = '';
     return `<tr${x.sla&&x.sla.status==='OVERDUE'?' style="background:#fdf2f2"':''}><td><b>${esc(x.folderCode)}</b>${urgencyBadge(x.urgency)}${slaTag}${editTag}${dirTag}<div class="small text-muted">${esc(x.owner)||''}</div></td>
       <td class="small">${au}${subj}${dt}</td></tr>`;
   }).join('');
