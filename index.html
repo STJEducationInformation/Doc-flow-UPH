@@ -1135,27 +1135,32 @@
 
     <!-- ล้างข้อมูลทั้งระบบ: เฉพาะผู้ดูแลระบบสูงสุด -->
     <div class="card mt-3 danger-zone" data-role="SUPER_ADMIN" style="display:none">
-      <div class="card-header"><i class="bi bi-exclamation-octagon me-1"></i>ล้างข้อมูลทั้งระบบ — ใช้ก่อนเริ่มใช้งานจริง</div>
+      <div class="card-header"><i class="bi bi-exclamation-octagon me-1"></i>ล้างข้อมูลการใช้งาน — เริ่มใช้งานจริง 100%</div>
       <div class="card-body">
         <div class="row g-4">
           <div class="col-lg-6">
-            <div class="small fw-semibold mb-1 text-danger">ข้อมูลที่จะถูกล้าง</div>
+            <div class="small fw-semibold mb-1 text-danger">ล้างเฉพาะข้อมูลการเดินแฟ้ม</div>
             <ul class="small mb-3 ps-3">
-              <li>แฟ้มทุกแฟ้มกลับเป็น "ว่าง" พร้อมลงทะเบียนใหม่</li>
-              <li>รายการเอกสาร การสแกนเข้า-ออก การแจ้งแก้ไข และประวัติแฟ้มทั้งหมด</li>
-              <li>การเข้าสู่ระบบของผู้ใช้อื่น (ต้องเข้าสู่ระบบใหม่ ส่วนคุณอยู่ในระบบต่อได้)</li>
+              <li>การสแกนเข้า-ออกทุกรายการ และการแจ้งแก้ไข</li>
+              <li>เอกสารที่ลงทะเบียนไว้ — แฟ้มทุกแฟ้มกลับเป็น "ว่าง" พร้อมลงทะเบียนใหม่</li>
+              <li>ประวัติแฟ้ม — แดชบอร์ด คิว และรายงานเริ่มนับใหม่จากศูนย์</li>
             </ul>
-            <div class="small fw-semibold mb-1 text-success">ข้อมูลที่เก็บไว้</div>
+            <div class="small fw-semibold mb-1 text-success">ทุกอย่างอื่นยังอยู่ครบ</div>
             <ul class="small mb-0 ps-3">
-              <li>การตั้งค่าทั้งหมด: ชื่อผู้บริหาร จุดสแกน ฝ่ายงาน เกณฑ์เวลา ผู้รับสรุป</li>
-              <li>จำนวนแฟ้มและรหัสแฟ้ม (สติกเกอร์บาร์โค้ดที่ติดแฟ้มแล้วใช้ต่อได้)</li>
-              <li>บัญชีผู้ใช้และสิทธิ์ (ยกเว้นเลือกให้ลบด้านขวา)</li>
+              <li>ชื่อจุดสแกน/ชื่อธุรการ ชื่อและตำแหน่งผู้บริหาร ฝ่ายงาน</li>
+              <li>เกณฑ์เวลา ผู้รับสรุปรายวัน การแจ้งเตือน การทำงานอัตโนมัติ</li>
+              <li>บัญชีผู้ใช้และสิทธิ์ — ทุกคนยังอยู่ในระบบ ไม่ต้องเข้าสู่ระบบใหม่</li>
+              <li>จำนวนแฟ้ม รหัสแฟ้ม และสติกเกอร์บาร์โค้ดที่ติดแล้ว</li>
+              <li>บันทึกการทำงาน และรายชื่อผู้เสนอที่ระบบจำไว้ (ปรับได้ด้านขวา)</li>
             </ul>
           </div>
           <div class="col-lg-6">
             <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="rsBackup" checked>
               <label class="form-check-label small" for="rsBackup"><b>สำรองข้อมูลก่อนล้าง</b> (แนะนำ — ถ้าสำรองไม่สำเร็จ ระบบจะไม่ล้าง)</label></div>
-            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="rsAudit" checked>
+            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="rsKeepOwners" checked>
+              <label class="form-check-label small" for="rsKeepOwners">เก็บรายชื่อผู้เสนอที่ระบบจำไว้ (ใช้แนะนำชื่อตอนลงทะเบียน) — เอาติ๊กออกถ้าช่วงทดสอบใช้ชื่อสมมุติ</label></div>
+            <div class="small text-muted mt-2 mb-1">ตัวเลือกเพิ่มเติม (ไม่ต้องติ๊กถ้าต้องการลบเฉพาะการเดินแฟ้ม)</div>
+            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="rsAudit">
               <label class="form-check-label small" for="rsAudit">ล้างบันทึกการทำงานช่วงทดสอบด้วย</label></div>
             <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="rsPrinted">
               <label class="form-check-label small" for="rsPrinted">ล้างสถานะ "พิมพ์บาร์โค้ดแล้ว" (เลือกเมื่อจะพิมพ์สติกเกอร์ใหม่ทั้งหมด)</label></div>
@@ -1165,7 +1170,7 @@
             <input id="rsConfirm" class="form-control form-control-sm mb-2" autocomplete="off" oninput="onResetInput()">
             <label class="form-label small mb-1">รหัสผ่านของคุณ</label>
             <input id="rsPassword" type="password" class="form-control form-control-sm mb-3" autocomplete="current-password" oninput="onResetInput()">
-            <button id="rsBtn" class="btn btn-danger w-100" disabled onclick="resetSystemUI()"><i class="bi bi-trash3 me-1"></i>ล้างข้อมูลทั้งระบบ</button>
+            <button id="rsBtn" class="btn btn-danger w-100" disabled onclick="resetSystemUI()"><i class="bi bi-trash3 me-1"></i>ล้างข้อมูลการใช้งาน</button>
             <div id="rsResult" class="mt-3"></div>
           </div>
         </div>
@@ -3398,9 +3403,12 @@ function onResetInput(){
 async function resetSystemUI(){
   const el=document.getElementById('rsResult');
   const opt={ backup:document.getElementById('rsBackup').checked?'1':'0', clearAudit:document.getElementById('rsAudit').checked?'1':'0',
+              keepOwners:document.getElementById('rsKeepOwners').checked?'1':'0',
               clearPrinted:document.getElementById('rsPrinted').checked?'1':'0', clearUsers:document.getElementById('rsUsers').checked?'1':'0' };
-  const lines=['ยืนยันครั้งสุดท้าย: ล้างข้อมูลทั้งระบบ','',
-    '• แฟ้มทุกแฟ้มจะกลับเป็น "ว่าง" และประวัติทั้งหมดจะถูกลบ',
+  const lines=['ยืนยันครั้งสุดท้าย: ล้างข้อมูลการใช้งาน','',
+    '• ลบการสแกน เอกสารที่ลงทะเบียน และประวัติแฟ้มทั้งหมด (แฟ้มทุกแฟ้มกลับเป็น "ว่าง")',
+    '• การตั้งค่า ชื่อจุด/ธุรการ/ผู้บริหาร และบัญชีผู้ใช้ ยังอยู่ครบ',
+    opt.clearAudit==='1'?'• ล้างบันทึกการทำงานด้วย':'',
     opt.clearPrinted==='1'?'• ล้างสถานะพิมพ์บาร์โค้ด':'', opt.clearUsers==='1'?'• ลบบัญชีผู้ใช้อื่นทั้งหมด':'',
     opt.backup==='1'?'• ระบบจะสำรองข้อมูลก่อนล้าง':'• ⚠ ไม่ได้เลือกสำรองข้อมูล — กู้คืนไม่ได้','','กด OK เพื่อดำเนินการ'].filter(x=>x!=='');
   if(!confirm(lines.join('\n'))) return;
@@ -3410,10 +3418,10 @@ async function resetSystemUI(){
   try{
     const d=await api('resetSystem', Object.assign({confirm:RESET_WORD, password:document.getElementById('rsPassword').value}, opt));
     if(!d.ok){ el.innerHTML=`<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-x-circle me-1"></i>${esc(d.error||'ล้างข้อมูลไม่สำเร็จ')}</div>`; btn.disabled=false; return; }
-    el.innerHTML=`<div class="alert alert-success py-2 small mb-0"><div class="fw-semibold mb-1"><i class="bi bi-check-circle me-1"></i>ล้างข้อมูลเรียบร้อย — ระบบพร้อมใช้งานจริง</div>
+    el.innerHTML=`<div class="alert alert-success py-2 small mb-0"><div class="fw-semibold mb-1"><i class="bi bi-check-circle me-1"></i>ล้างข้อมูลการใช้งานเรียบร้อย — ระบบพร้อมใช้งานจริง 100%</div>
       ${esc(d.message)}${d.backupUrl?`<div class="mt-1">ไฟล์สำรองก่อนล้าง: <a href="${esc(d.backupUrl)}" target="_blank">เปิดไฟล์สำรอง</a></div>`:''}</div>`;
     document.getElementById('rsConfirm').value=''; document.getElementById('rsPassword').value='';
-    ALL_FOLDERS=[]; clearCache(true);
+    ALL_FOLDERS=[]; SEARCH_ROWS=null; SEARCH_PROMISE=null; clearCache(true);
     loadDashboard(); loadUsers(); loadMaintenance();
   }catch(err){ el.innerHTML=`<div class="alert alert-danger py-2 small mb-0">${esc(err.message)}</div>`; btn.disabled=false; }
 }
