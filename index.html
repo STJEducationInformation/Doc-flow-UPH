@@ -3129,9 +3129,10 @@ function jrTime(iso){
 function jrStages(logs, timeline, x){
   const route=routeStations(timeline);
   const tl=(timeline||'').split(',').map(s=>s.trim()).filter(Boolean);
-  const at={};
-  (logs||[]).forEach(l=>{ const k=l.station+'|'+l.direction; if(!at[k] || new Date(l.timestamp)>new Date(at[k])) at[k]=l.timestamp; });
-  const finished=(x && x.status==='เสร็จสิ้น') || !!at['S4|ออก'];
+  const at={}, has={};    // has = ผ่านขั้นนี้แล้วหรือไม่ (หน้าผู้เสนอไม่มีเวลา) · at = เวลาล่าสุดของขั้น (เฉพาะระบบหลัก)
+  (logs||[]).forEach(l=>{ const k=l.station+'|'+l.direction; has[k]=true;
+    if(l.timestamp && (!at[k] || new Date(l.timestamp)>new Date(at[k]))) at[k]=l.timestamp; });
+  const finished=(x && x.status==='เสร็จสิ้น') || !!has['S4|ออก'];
   const people=k=>tl.filter(n=>{ const g=classifyExec(n); return k==='S2' ? g==='rong' : (g==='dir'||g==='dean'); });
   const icon={S1:'bi-person-badge', S2:'bi-person-check', S3:'bi-award', S4:'bi-arrow-return-left'};
   const st=[{ id:'REG', icon:'bi-journal-check', title:'ลงทะเบียนรับแฟ้ม', state:'done', text:'รับเข้าระบบแล้ว', inAt:at['S1|เข้า'] }];
@@ -3139,8 +3140,8 @@ function jrStages(logs, timeline, x){
   route.forEach(k=>{
     const ppl=(k==='S2'||k==='S3') ? people(k) : [];
     const title = k==='S1' ? 'หัวหน้าสำนักงาน' : (k==='S4' ? 'ส่งคืนเจ้าของแฟ้ม' : (ppl.join(', ') || (k==='S2'?'รองผู้อำนวยการ':'ผู้อำนวยการ')));
-    const out=!!at[k+'|ออก'] || finished;
-    const inside = k==='S1' ? true : (k==='S4' ? prevDone : !!at[k+'|เข้า']);
+    const out=!!has[k+'|ออก'] || finished;
+    const inside = k==='S1' ? true : (k==='S4' ? prevDone : !!has[k+'|เข้า']);
     let state, text;
     if(out){ state='done'; text = k==='S4' ? 'ส่งคืนแล้ว' : 'ผ่านแล้ว'; }
     else if(prevDone && inside){ state='cur'; text = k==='S1' ? 'อยู่ระหว่างดำเนินการ' : (k==='S4' ? 'รอส่งคืน' : 'อยู่ระหว่างเสนอ'); }
